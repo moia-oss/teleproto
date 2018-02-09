@@ -148,16 +148,14 @@ lazy val artifactorySettings =
     credentials ++= Seq(Path.userHome / ".ivy2" / ".credentials")
       .filter(_.exists)
       .map(Credentials(_)),
-//    credentials ++= Seq("ARTIFACTORY_USER")
-//      .filter(sys.env.isDefinedAt)
-//      .map(
-//        user =>
-//          Credentials("Artifactory Realm",
-//                      "moiadev.jfrog.io",
-//                      sys.env(user),
-//                      sys.env("ARTIFACTORY_PASS"))),
-    credentials ++= Seq(
-      Credentials("Artifactory Realm", "moiadev.jfrog.io", "foo", "bar")),
+    credentials ++= Seq("ARTIFACTORY_USER")
+      .filter(sys.env.isDefinedAt)
+      .map(
+        user =>
+          Credentials("Artifactory Realm",
+                      "moiadev.jfrog.io",
+                      sys.env(user),
+                      sys.env("ARTIFACTORY_PASS"))),
     publishTo := Some(
       "Artifactory Realm" at "https://moiadev.jfrog.io/moiadev/sbt-pricing-local")
   )
