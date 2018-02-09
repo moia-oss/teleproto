@@ -1,0 +1,19 @@
+# github codeowners file
+#
+# https://help.github.com/articles/about-codeowners/
+#
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# mentioned account names will be requested for
+# review when someone opens a pull request.
+*   @markusjura
+*   @christoph-wulf-moia
+*   @lxwbr
+*   @aquamatthias
+*   @JonasAckermann
+*   @wi101
+*   @meln1k
+*   @zallesov
+*   @HerrSchwarz
+*   @GodPlaysChess
+*   @msiuts
