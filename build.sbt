@@ -5,11 +5,13 @@
 lazy val `teleproto` =
   project
     .in(file("."))
+    .enablePlugins(GitVersioning, GitBranchPrompt, JavaAppPackaging)
     .configs(IntegrationTest)
     .settings(commonSettings: _*)
+    .settings(packageSettings: _*)
     .settings(Defaults.itSettings: _*)
     .settings(
-      name := "tele-proto",
+      name := "teleproto",
       libraryDependencies ++= Seq(
         library.scalaPBJson % Compile,
         // protobuf extensions, needed for proto generation
@@ -60,7 +62,8 @@ lazy val commonSettings =
     scapegoatSettings
 
 lazy val packageSettings =
-  releaseSettings
+  releaseSettings ++
+    artifactorySettings
 
 lazy val compilerSettings =
   Seq(
@@ -137,6 +140,26 @@ lazy val releaseSettings =
       commitNextVersion,
       pushChanges
     )
+  )
+
+lazy val artifactorySettings =
+  Seq(
+    resolvers += "Artifactory" at "https://moiadev.jfrog.io/moiadev/sbt-release",
+    credentials ++= Seq(Path.userHome / ".ivy2" / ".credentials")
+      .filter(_.exists)
+      .map(Credentials(_)),
+//    credentials ++= Seq("ARTIFACTORY_USER")
+//      .filter(sys.env.isDefinedAt)
+//      .map(
+//        user =>
+//          Credentials("Artifactory Realm",
+//                      "moiadev.jfrog.io",
+//                      sys.env(user),
+//                      sys.env("ARTIFACTORY_PASS"))),
+    credentials ++= Seq(
+      Credentials("Artifactory Realm", "moiadev.jfrog.io", "foo", "bar")),
+    publishTo := Some(
+      "Artifactory Realm" at "https://moiadev.jfrog.io/moiadev/sbt-pricing-local")
   )
 
 lazy val sbtSettings =
