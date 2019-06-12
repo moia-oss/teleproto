@@ -1,4 +1,4 @@
-package io.moia.pricing.mapping.proto
+package io.moia.protos.teleproto
 
 import scala.util.{Failure, Success, Try}
 
@@ -26,10 +26,10 @@ sealed trait PbResult[+T] {
 /**
   * Models the success to read a Protocol Buffers case class into business model type `T`.
   */
-case class PbSuccess[T](value: T) extends PbResult[T] {
+final case class PbSuccess[T](value: T) extends PbResult[T] {
 
   val isSuccess = true
-  val isError = false
+  val isError   = false
 
   def get: T = value
 
@@ -53,10 +53,11 @@ case class PbSuccess[T](value: T) extends PbResult[T] {
   * /prices(1) Value must be a decimal number.  <- Simple array
   * /tripRequests(1)/time Value is required.    <- Nested field in second array entry
   */
-case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothing] {
+@SuppressWarnings(Array("PointlessTypeBounds", "asInstanceOf"))
+final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothing] {
 
   val isSuccess = false
-  val isError = true
+  val isError   = true
 
   def get: Nothing = throw new NoSuchElementException(toString)
 
@@ -64,8 +65,7 @@ case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothing] {
 
   def map[B](f: Nothing => B): PbResult[B] = this.asInstanceOf[PbResult[B]]
 
-  def flatMap[B](f: Nothing => PbResult[B]): PbResult[B] =
-    this.asInstanceOf[PbResult[B]]
+  def flatMap[B](f: Nothing => PbResult[B]): PbResult[B] = this.asInstanceOf[PbResult[B]]
 
   override def withPathPrefix(prefix: String): PbFailure =
     PbFailure(for ((path, message) <- errors) yield (prefix + path, message))

@@ -1,4 +1,4 @@
-package io.moia.pricing.mapping.proto
+package io.moia.protos.teleproto
 
 import org.scalatest.{Matchers, WordSpec}
 
@@ -10,33 +10,33 @@ object OneOfProtocolBuffersTest {
   object protobuf {
 
     case class Foo(price: String) // extends AnyRef!!
-    case class Bar(number: Int) // extends AnyRef!!
+    case class Bar(number: Int)   // extends AnyRef!!
 
     case class FooOrBar(value: FooOrBar.Value)
 
     object FooOrBar {
 
       sealed trait Value {
-        def isEmpty: Boolean = false
-        def isDefined: Boolean = true
-        def isFoo: Boolean = false
-        def isBar: Boolean = false
+        def isEmpty: Boolean                = false
+        def isDefined: Boolean              = true
+        def isFoo: Boolean                  = false
+        def isBar: Boolean                  = false
         def foo: scala.Option[protobuf.Foo] = None
         def bar: scala.Option[protobuf.Bar] = None
       }
       object Value extends {
 
         case object Empty extends Value {
-          override def isEmpty: Boolean = true
+          override def isEmpty: Boolean   = true
           override def isDefined: Boolean = false
         }
 
         case class Foo(value: protobuf.Foo) extends Value {
-          override def isFoo: Boolean = true
+          override def isFoo: Boolean                  = true
           override def foo: scala.Option[protobuf.Foo] = Some(value)
         }
         case class Bar(value: protobuf.Bar) extends Value {
-          override def isBar: Boolean = true
+          override def isBar: Boolean                  = true
           override def bar: scala.Option[protobuf.Bar] = Some(value)
         }
       }
@@ -49,7 +49,7 @@ object OneOfProtocolBuffersTest {
 
     sealed trait FooOrBar
     case class Foo(price: BigDecimal) extends FooOrBar
-    case class Bar(number: Int) extends FooOrBar
+    case class Bar(number: Int)       extends FooOrBar
 
     case class Model(fooOrBar: FooOrBar)
   }
@@ -87,35 +87,29 @@ class OneOfProtocolBuffersTest extends WordSpec with Matchers {
 
     "generate a reader for matching sealed traits" in {
 
-      reader.read(protobuf.Protobuf(
-        protobuf.FooOrBar(protobuf.FooOrBar.Value.Empty))) shouldBe PbFailure(
-        "/fooOrBar",
-        "Value is required.")
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Empty))) shouldBe PbFailure("/fooOrBar", "Value is required.")
 
-      reader.read(
-        protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value
-          .Foo(protobuf.Foo("five-hundred"))))) shouldBe PbFailure(
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("five-hundred"))))) shouldBe PbFailure(
         "/fooOrBar/foo/price",
-        "Value must be a valid decimal number.")
+        "Value must be a valid decimal number."
+      )
 
-      reader.read(
-        protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value
-          .Foo(protobuf.Foo("500.0"))))) shouldBe PbSuccess(
-        model.Model(model.Foo(500.0)))
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("500.0"))))) shouldBe PbSuccess(
+        model.Model(model.Foo(500.0))
+      )
 
-      reader.read(
-        protobuf.Protobuf(protobuf.FooOrBar(
-          protobuf.FooOrBar.Value.Bar(protobuf.Bar(42))))) shouldBe PbSuccess(
-        model.Model(model.Bar(42)))
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(protobuf.Bar(42))))) shouldBe PbSuccess(
+        model.Model(model.Bar(42))
+      )
     }
 
     "generate a writer for matching sealed traits" in {
 
       writer.write(model.Model(model.Foo(500.0))) shouldBe protobuf.Protobuf(
-        protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("500.0"))))
+        protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("500.0")))
+      )
 
-      writer.write(model.Model(model.Bar(42))) shouldBe protobuf.Protobuf(
-        protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(protobuf.Bar(42))))
+      writer.write(model.Model(model.Bar(42))) shouldBe protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(protobuf.Bar(42))))
     }
   }
 }

@@ -1,7 +1,5 @@
 # teleproto
 
-tele**proto** teleports your data between a ScalaPB based API model and a corresponding domain model.
-
 The tele**proto** library reduces the boilerplate required to map case classes generated from [Protofiles](https://developers.google.com/protocol-buffers/docs/proto3)
 using [ScalaPB](https://github.com/scalapb/ScalaPB) to corresponding version-independent business model case classes.
 
@@ -238,7 +236,8 @@ Therefore most of the writers are considered forward compatible. Actually just a
 cause a writer to be incompatible.
 
 Generating a backward/forward compatible reader/writer using the macro will raise a **warning**.
-The similar macros `ProtocolBuffers.backwardReader` and `ProtocolBuffers.forwardWriter` will not raise the warning. 
+Annotations `@backward("signature")` and `@forward("signature")` (signatures are explained in the warning) will remove
+the warning. 
 
 The support of migrations is currently limited to implicit readers/writers of old Protocol Buffers types to the new
 business model wherever possible.
