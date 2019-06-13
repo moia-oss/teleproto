@@ -24,3 +24,8 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
 // This plugin is able to generate a license report from all used licenses.
 // sbt> dumpLicenseReport
 addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
+
+// Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.19")
+
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.8.4"
