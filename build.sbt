@@ -11,7 +11,7 @@ lazy val `teleproto` =
     .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
     .settings(
       name := "teleproto",
-      version := "1.0.1",
+      version := "1.0.2",
       libraryDependencies ++= Seq(
         library.scalaPB     % "protobuf",
         library.scalaPBJson % Compile,
@@ -102,7 +102,9 @@ lazy val organizationSettings =
 lazy val artifactorySettings =
   Seq(
     resolvers += "Artifactory" at "https://moiadev.jfrog.io/moiadev/sbt-release",
-    credentials ++= Seq(Path.userHome / ".ivy2" / ".credentials").filter(_.exists).map(Credentials(_)),
+    credentials ++= Seq(Path.userHome / ".ivy2" / ".credentials")
+      .filter(_.exists)
+      .map(Credentials(_)),
     credentials ++= Seq("ARTIFACTORY_USER")
       .filter(sys.env.isDefinedAt)
       .map(user => Credentials("Artifactory Realm", "moiadev.jfrog.io", sys.env(user), sys.env("ARTIFACTORY_PASS"))),
