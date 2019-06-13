@@ -1,0 +1,85 @@
+version: 2
+
+references:
+
+  configure_ssh: &configure_ssh
+    run:
+      name: Configure ssh for github
+      command: mkdir -p /root/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > /root/.ssh/config
+
+  prepare_docker: &prepare_docker
+    setup_remote_docker:
+      docker_layer_caching: true
+      version: 17.09.0-ce
+
+  dependencies_key: &dependencies_key
+                      sbt-v1-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}-{{ checksum "build.sbt" }}
+
+  restore_dependencies: &restore_dependencies
+    restore_cache:
+      keys:
+        - *dependencies_key
+        - sbt-v1-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}
+        - sbt-v1-deps-{{ checksum "project/build.properties" }}
+        - sbt-v1-deps
+
+  sbt_image: &sbt_image
+               moia/scala-sbt-kubernetes-aws-docker:8u181-2.12.8-1.2.8-1.12.5
+
+  sbtCommand: &sbtCommand
+    docker:
+      - image: *sbt_image
+    steps:
+      - *configure_ssh
+      - checkout
+      - *prepare_docker
+      - *restore_dependencies
+      - run:
+          name: Run sbt command
+          command: |
+            sbt -J-Xms512m -J-Xmx2g -J-XX:+UseConcMarkSweepGC -J-XX:ReservedCodeCacheSize=256m -J-XX:+CMSClassUnloadingEnabled -Djava.awt.headless=true -no-colors -batch "$SBT_COMMAND"
+      - save_cache:
+          key: *dependencies_key
+          paths:
+            - /root/.m2
+            - /root/.ivy2
+            - /root/.sbt
+      - store_artifacts:
+          path: target/license-reports/
+          destination: license-reports
+
+jobs:
+
+  test:
+    <<: *sbtCommand
+    environment:
+      SBT_COMMAND: "; test; scapegoat"
+
+  publishRelease:
+    <<: *sbtCommand
+    environment:
+      SBT_COMMAND: "; dumpLicenseReport; publish"
+
+workflows:
+  version: 2
+
+  # This test workflow is executed for all PRs
+  testDevelopmentBranch:
+    jobs:
+      - test:
+          filters:
+            branches:
+              ignore:
+                - master
+            tags:
+              ignore: /.*/
+
+  # This release workflow is executed once a PR is merged to master
+  publishRelease:
+    jobs:
+      - publishRelease:
+          context: sbt-release-ci-library
+          filters:
+            branches:
+              only:
+                - master
