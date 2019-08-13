@@ -60,7 +60,7 @@ lazy val packageSettings =
 
 lazy val compilerSettings =
   Seq(
-    scalaVersion := "2.12.8",
+    scalaVersion := "2.12.9",
     mappings.in(Compile, packageBin) +=
       baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
     scalacOptions ++= Seq(
