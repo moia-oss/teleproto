@@ -2,35 +2,29 @@ version: 2
 
 references:
 
-  configure_ssh: &configure_ssh
-    run:
-      name: Configure ssh for github
-      command: mkdir -p /root/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > /root/.ssh/config
-
   prepare_docker: &prepare_docker
     setup_remote_docker:
       docker_layer_caching: true
-      version: 17.09.0-ce
+      version: 18.06.0-ce
 
   dependencies_key: &dependencies_key
-                      sbt-v1-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}-{{ checksum "build.sbt" }}
+                      sbt-v2-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}-{{ checksum "build.sbt" }}
 
   restore_dependencies: &restore_dependencies
     restore_cache:
       keys:
         - *dependencies_key
-        - sbt-v1-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}
-        - sbt-v1-deps-{{ checksum "project/build.properties" }}
-        - sbt-v1-deps
+        - sbt-v2-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}
+        - sbt-v2-deps-{{ checksum "project/build.properties" }}
+        - sbt-v2-deps
 
   sbt_image: &sbt_image
-               moia/scala-sbt-kubernetes-aws-docker:8u181-2.12.8-1.2.8-1.12.5
+    moia/scala-on-circleci:8u222-2.12.9-sbtinit
 
   sbtCommand: &sbtCommand
     docker:
       - image: *sbt_image
     steps:
-      - *configure_ssh
       - checkout
       - *prepare_docker
       - *restore_dependencies
@@ -41,9 +35,9 @@ references:
       - save_cache:
           key: *dependencies_key
           paths:
-            - /root/.m2
-            - /root/.ivy2
-            - /root/.sbt
+            - ~/.m2
+            - ~/.ivy2
+            - ~/.sbt
       - store_artifacts:
           path: target/license-reports/
           destination: license-reports
