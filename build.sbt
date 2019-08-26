@@ -107,7 +107,7 @@ lazy val artifactorySettings =
       .map(Credentials(_)),
     credentials ++= Seq("ARTIFACTORY_USER")
       .filter(sys.env.isDefinedAt)
-      .map(user => Credentials("Artifactory Realm", "moiadev.jfrog.io", sys.env(user), sys.env("ARTIFACTORY_PASS"))),
+      .map(user => Credentials("Artifactory Realm", "moiadev.jfrog.io", sys.env(user), sys.env("ARTIFACTORY_APIKEY"))),
     publishTo := Some("Artifactory Realm" at "https://moiadev.jfrog.io/moiadev/sbt-release-local/")
   )
 
