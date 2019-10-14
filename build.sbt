@@ -7,7 +7,7 @@ lazy val `teleproto` =
     .in(file("."))
     .enablePlugins(GitVersioning, GitBranchPrompt)
     .settings(commonSettings: _*)
-    .settings(packageSettings: _*)
+    .settings(sonatypeSettings: _*)
     .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
     .settings(
       name := "teleproto",
@@ -55,9 +55,6 @@ lazy val commonSettings =
     scalaFmtSettings ++
     scapegoatSettings
 
-lazy val packageSettings =
-  artifactorySettings
-
 lazy val compilerSettings =
   Seq(
     scalaVersion := "2.12.9",
@@ -99,20 +96,18 @@ lazy val organizationSettings =
     organization := "io.moia",
     organizationName := "MOIA GmbH",
     startYear := Some(2019),
-    licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0")),
+    licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
   )
 
-lazy val artifactorySettings =
+lazy val sonatypeSettings = {
+  import xerial.sbt.Sonatype._
   Seq(
-    resolvers += "Artifactory" at "https://moiadev.jfrog.io/moiadev/sbt-release",
-    credentials ++= Seq(Path.userHome / ".ivy2" / ".credentials")
-      .filter(_.exists)
-      .map(Credentials(_)),
-    credentials ++= Seq("ARTIFACTORY_USER")
-      .filter(sys.env.isDefinedAt)
-      .map(user => Credentials("Artifactory Realm", "moiadev.jfrog.io", sys.env(user), sys.env("ARTIFACTORY_APIKEY"))),
-    publishTo := Some("Artifactory Realm" at "https://moiadev.jfrog.io/moiadev/sbt-release-local/")
+    publishTo := sonatypePublishTo.value,
+    sonatypeProfileName := organization.value,
+    publishMavenStyle := true,
+    sonatypeProjectHosting := Some(GitHubHosting("moia-dev", "teleproto", "support@moia.io"))
   )
+}
 
 lazy val sbtSettings =
   Seq(
