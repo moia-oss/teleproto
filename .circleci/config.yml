@@ -49,11 +49,6 @@ jobs:
     environment:
       SBT_COMMAND: "; test; scapegoat"
 
-  publishRelease:
-    <<: *sbtCommand
-    environment:
-      SBT_COMMAND: "; dumpLicenseReport; publish"
-
 workflows:
   version: 2
 
@@ -67,13 +62,3 @@ workflows:
                 - master
             tags:
               ignore: /.*/
-
-  # This release workflow is executed once a PR is merged to master
-  publishRelease:
-    jobs:
-      - publishRelease:
-          context: sbt-release-ci-library
-          filters:
-            branches:
-              only:
-                - master
