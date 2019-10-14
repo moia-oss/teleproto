@@ -29,3 +29,5 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.19")
 
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.8.4"
+
+addSbtPlugin("de.heikoseeberger" % "sbt-header" % "5.2.0")

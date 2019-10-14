@@ -96,7 +96,10 @@ lazy val gitSettings =
 
 lazy val organizationSettings =
   Seq(
-    organization := "io.moia"
+    organization := "io.moia",
+    organizationName := "MOIA GmbH",
+    startYear := Some(2019),
+    licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0")),
   )
 
 lazy val artifactorySettings =
