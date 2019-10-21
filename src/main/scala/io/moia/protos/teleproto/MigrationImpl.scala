@@ -18,6 +18,7 @@ package io.moia.protos.teleproto
 
 import io.moia.protos.teleproto.FormatImpl._
 
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))

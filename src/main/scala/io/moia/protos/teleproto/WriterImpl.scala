@@ -16,6 +16,7 @@
 
 package io.moia.protos.teleproto
 
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
@@ -389,7 +390,7 @@ object WriterImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedModelOptions = modelOptions.view.filterKeys(name => !protobufOptions.contains(name)).values.map(_.name.decodedName)
+    val unmatchedModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).toMap.values.map(_.name.decodedName)
 
     if (unmatchedModelOptions.nonEmpty) {
       c.error(
@@ -398,7 +399,7 @@ object WriterImpl {
       )
     }
 
-    val surplusProtobufOptions = protobufOptions.view.filterKeys(name => !modelOptions.contains(name)).values.map(_.name.decodedName)
+    val surplusProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).toMap.values.map(_.name.decodedName)
     val compatibility          = Compatibility(Nil, Nil, surplusProtobufOptions.map(name => (protobufType, name.toString)))
 
     val cases =

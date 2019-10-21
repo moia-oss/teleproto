@@ -18,9 +18,15 @@ lazy val `teleproto` =
         library.scalaPBJson      % Compile,
         library.scalaTest        % Test,
         library.scalaCheck       % Test,
-        "org.scala-lang"         % "scala-reflect" % "2.13.1",
         "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.2"
-      )
+      ),
+      libraryDependencies ++= (CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 13)) =>
+          Seq("org.scala-lang" % "scala-reflect" % "2.13.1")
+        case Some((2, 12)) =>
+          Seq("org.scala-lang" % "scala-reflect" % "2.12.9")
+        case _ => Seq()
+      })
     )
 
 // *****************************************************************************
@@ -60,25 +66,50 @@ lazy val commonSettings =
 
 lazy val compilerSettings =
   Seq(
-    scalaVersion := "2.13.1",
-//    scalaVersion := "2.12.10",
-    crossScalaVersions := List("2.13.1", "2.12.10"),
+//    scalaVersion := "2.13.1",
+    scalaVersion := "2.12.9",
+    crossScalaVersions := List("2.13.1", "2.12.9"),
     mappings.in(Compile, packageBin) +=
       baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
-    scalacOptions ++= Seq(
-      "-unchecked",
-      "-deprecation",
-      "-language:_",
-      "-target:11",
-      "-encoding",
-      "UTF-8",
-      "-Xfatal-warnings",
-      "-Ywarn-dead-code",
-      "-Ymacro-annotations"
-    ),
+    scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => scalacOptions_2_12
+        case Some((2, 13)) => scalacOptions_2_13
+        case _             => Seq()
+      }
+    },
     unmanagedSourceDirectories.in(Compile) := Seq(scalaSource.in(Compile).value),
     unmanagedSourceDirectories.in(Test) := Seq(scalaSource.in(Test).value)
   )
+
+lazy val scalacOptions_2_12 = Seq(
+  "-unchecked",
+  "-deprecation",
+  "-language:_",
+  "-target:jvm-1.8",
+  "-encoding",
+  "UTF-8",
+  "-Xfatal-warnings",
+  "-Ywarn-unused-import",
+  "-Yno-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-inaccessible",
+  "-Ywarn-infer-any",
+  "-Ywarn-nullary-override",
+  "-Ywarn-nullary-unit"
+)
+
+lazy val scalacOptions_2_13 = Seq(
+  "-unchecked",
+  "-deprecation",
+  "-language:_",
+  "-target:11",
+  "-encoding",
+  "UTF-8",
+//  "-Xfatal-warnings",
+  "-Ywarn-dead-code",
+  "-Ymacro-annotations"
+)
 
 lazy val gitSettings =
   Seq(

@@ -22,7 +22,7 @@ import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
 import scala.annotation.implicitNotFound
-import scala.collection.Factory
+import scala.collection.compat._
 import scala.collection.immutable.TreeMap
 import scala.concurrent.duration.{Deadline, Duration, FiniteDuration, MILLISECONDS, NANOSECONDS, SECONDS}
 import scala.util.Try

@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 /**

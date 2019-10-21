@@ -15,7 +15,7 @@
  */
 
 package io.moia.protos.teleproto
-
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
@@ -252,12 +252,12 @@ object ReaderImpl {
 
     import c.universe._
 
-    val protobufByName = protobufParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
-    val modelByName    = modelParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
+    val protobufByName = protobufParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
+    val modelByName    = modelParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
 
     val protobufNames = protobufByName.keySet
 
-    val surplusProtobufNames = protobufNames.toSet -- modelByName.keySet
+    val surplusProtobufNames = protobufNames -- modelByName.keySet
 
     val matchedParams: List[Option[MatchingParam[Type, Tree]]] =
       for ((modelParam, index) <- modelParams.zipWithIndex; number = index + 1) yield {
@@ -417,7 +417,7 @@ object ReaderImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedProtobufOptions = protobufOptions.view.filterKeys(name => !modelOptions.contains(name)).values.map(_.name.decodedName)
+    val unmatchedProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).toMap.values.map(_.name.decodedName)
 
     if (unmatchedProtobufOptions.nonEmpty) {
       c.error(
@@ -426,7 +426,7 @@ object ReaderImpl {
       )
     }
 
-    val surplusModelOptions = modelOptions.view.filterKeys(name => !protobufOptions.contains(name)).values.map(_.name.decodedName)
+    val surplusModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).toMap.values.map(_.name.decodedName)
     val compatibility       = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
 
     val cases =
