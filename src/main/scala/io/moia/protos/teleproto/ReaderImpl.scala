@@ -165,7 +165,7 @@ object ReaderImpl {
                 val innerTo   = innerType(c)(to)
                 withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
                   // sequence also needs an implicit collection generator which must be looked up since the implicit for the value reader is passed explicitly
-                  val canBuildFrom = q"""implicitly[scala.collection.generic.CanBuildFrom[${to.erasure}, $innerTo, $to]]"""
+                  val canBuildFrom = q"""implicitly[scala.collection.Factory[$innerTo, $to]]"""
                   q"""$mapping.Reader.sequence[${to.typeConstructor}, $innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($canBuildFrom, $readerExpr).flatMap { case ${termSymbol.name} => $restTransformed }"""
                 }
               case TransformParam(from, to) =>

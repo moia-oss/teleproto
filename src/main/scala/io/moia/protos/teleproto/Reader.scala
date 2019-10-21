@@ -22,7 +22,7 @@ import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
 import scala.annotation.implicitNotFound
-import scala.collection.compat.Factory
+import scala.collection.Factory
 import scala.collection.immutable.TreeMap
 import scala.concurrent.duration.{Deadline, Duration, FiniteDuration, MILLISECONDS, NANOSECONDS, SECONDS}
 import scala.util.Try
@@ -65,8 +65,8 @@ object Reader extends LowPriorityReads {
   def required[PV, MV](protobuf: Option[PV], path: String)(implicit valueReader: Reader[PV, MV]): PbResult[MV] =
     protobuf.map(valueReader.read).getOrElse(PbFailure("Value is required.")).withPathPrefix(path)
 
-  def sequence[F[_], PV, MV](protobufs: Seq[PV], path: String)(implicit valueReader: Reader[PV, MV],
-                                                               factory: Factory[MV, F[MV]]): PbResult[F[MV]] = {
+  def sequence[F[_], PV, MV](protobufs: Seq[PV], path: String)(implicit factory: Factory[MV, F[MV]],
+                                                               valueReader: Reader[PV, MV]): PbResult[F[MV]] = {
     val results = protobufs.map(valueReader.read).zipWithIndex
 
     val errors =
