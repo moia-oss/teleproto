@@ -1,6 +1,7 @@
 // *****************************************************************************
 // Projects
 // *****************************************************************************
+Global / onChangedBuildSource := ReloadOnSourceChanges
 
 lazy val `teleproto` =
   project
@@ -29,11 +30,11 @@ lazy val library =
 
     object Version {
       val scalaPB      = scalapb.compiler.Version.scalapbVersion
-      val scalaPBJson  = "0.7.2"
+      val scalaPBJson  = "0.10.0"
       val scalaLogging = "3.9.0"
-      val scalaCheck   = "1.14.0"
-      val scalaTest    = "3.0.5"
-      val scapeGoat    = "1.3.8"
+      val scalaCheck   = "1.14.2"
+      val scalaTest    = "3.0.8"
+      val scapeGoat    = "1.3.11"
     }
 
     val scalaPB      = "com.thesamet.scalapb"       %% "scalapb-runtime" % Version.scalaPB
@@ -57,7 +58,9 @@ lazy val commonSettings =
 
 lazy val compilerSettings =
   Seq(
-    scalaVersion := "2.12.9",
+//    scalaVersion := "2.12.10",
+    scalaVersion := "2.13.1",
+    crossScalaVersions := List("2.13.1", "2.12.10"),
     mappings.in(Compile, packageBin) +=
       baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
     scalacOptions ++= Seq(
@@ -68,13 +71,8 @@ lazy val compilerSettings =
       "-encoding",
       "UTF-8",
       "-Xfatal-warnings",
-      "-Ywarn-unused-import",
-      "-Yno-adapted-args",
       "-Ywarn-dead-code",
-      "-Ywarn-inaccessible",
-      "-Ywarn-infer-any",
-      "-Ywarn-nullary-override",
-      "-Ywarn-nullary-unit"
+      "-Ymacro-annotations",
     ),
     javacOptions ++= Seq(
       "-source",
