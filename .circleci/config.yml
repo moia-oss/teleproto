@@ -19,13 +19,7 @@ references:
         - sbt-v2-deps
 
   sbt_image: &sbt_image
-<<<<<<< HEAD
-    moia/scala-on-circleci:8u222-2.12.9-sbtinit
-||||||| parent of 7409a46... 1.3.2 is still building on dockerhub...
-    moia/scala-on-circleci:8u222-2.12.10-sbt-1.3.3
-=======
     moia/scala-on-circleci:8u222-2.12.10-sbt-1.3.2
->>>>>>> 7409a46... 1.3.2 is still building on dockerhub...
 
   sbtCommand: &sbtCommand
     docker:
@@ -53,7 +47,12 @@ jobs:
   test:
     <<: *sbtCommand
     environment:
-      SBT_COMMAND: "; test; scapegoat"
+      SBT_COMMAND: "test"
+
+  scapegoat:
+    <<: *sbtCommand
+    environment:
+      SBT_COMMAND: "scapegoat"
 
 workflows:
   version: 2
@@ -68,3 +67,4 @@ workflows:
                 - master
             tags:
               ignore: /.*/
+      - scapegoat
