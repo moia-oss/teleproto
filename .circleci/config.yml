@@ -19,7 +19,7 @@ references:
         - sbt-v2-deps
 
   sbt_image: &sbt_image
-    moia/scala-on-circleci:8u222-2.12.10-sbt-1.3.3
+    moia/scala-on-circleci:8u222-2.12.10-sbt-1.3.2
 
   sbtCommand: &sbtCommand
     docker:
