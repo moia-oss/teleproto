@@ -14,10 +14,12 @@ lazy val `teleproto` =
       name := "teleproto",
       version := "1.0.3",
       libraryDependencies ++= Seq(
-        library.scalaPB     % "protobuf",
-        library.scalaPBJson % Compile,
-        library.scalaTest   % Test,
-        library.scalaCheck  % Test
+        library.scalaPB          % "protobuf",
+        library.scalaPBJson      % Compile,
+        library.scalaTest        % Test,
+        library.scalaCheck       % Test,
+        "org.scala-lang"         % "scala-reflect" % "2.13.1",
+        "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.2"
       )
     )
 
@@ -58,8 +60,8 @@ lazy val commonSettings =
 
 lazy val compilerSettings =
   Seq(
-//    scalaVersion := "2.12.10",
     scalaVersion := "2.13.1",
+//    scalaVersion := "2.12.10",
     crossScalaVersions := List("2.13.1", "2.12.10"),
     mappings.in(Compile, packageBin) +=
       baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
@@ -67,18 +69,12 @@ lazy val compilerSettings =
       "-unchecked",
       "-deprecation",
       "-language:_",
-      "-target:jvm-1.8",
+      "-target:11",
       "-encoding",
       "UTF-8",
       "-Xfatal-warnings",
       "-Ywarn-dead-code",
-      "-Ymacro-annotations",
-    ),
-    javacOptions ++= Seq(
-      "-source",
-      "1.8",
-      "-target",
-      "1.8"
+      "-Ymacro-annotations"
     ),
     unmanagedSourceDirectories.in(Compile) := Seq(scalaSource.in(Compile).value),
     unmanagedSourceDirectories.in(Test) := Seq(scalaSource.in(Test).value)
