@@ -102,7 +102,7 @@ lazy val scalacOptions_2_13 = Seq(
   "-unchecked",
   "-deprecation",
   "-language:_",
-  "-target:11",
+  "-target:jvm-1.8",
   "-encoding",
   "UTF-8",
 //  "-Xfatal-warnings",
