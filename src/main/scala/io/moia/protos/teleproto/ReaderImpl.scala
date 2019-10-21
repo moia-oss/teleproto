@@ -252,12 +252,12 @@ object ReaderImpl {
 
     import c.universe._
 
-    val protobufByName = protobufParams.groupBy(_.name).mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
-    val modelByName    = modelParams.groupBy(_.name).mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
+    val protobufByName = protobufParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
+    val modelByName    = modelParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
 
     val protobufNames = protobufByName.keySet
 
-    val surplusProtobufNames = protobufNames -- modelByName.keySet
+    val surplusProtobufNames = protobufNames.toSet -- modelByName.keySet
 
     val matchedParams: List[Option[MatchingParam[Type, Tree]]] =
       for ((modelParam, index) <- modelParams.zipWithIndex; number = index + 1) yield {
@@ -270,7 +270,7 @@ object ReaderImpl {
             Some(TransformParam[Type, Tree](protobufParam.typeSignature, targetType))
 
           case None if modelParam.isParamWithDefault =>
-            Some(SkippedDefaultParam[Type, Tree](Unit))
+            Some(SkippedDefaultParam[Type, Tree](()))
 
           case None if modelParam.typeSignature <:< weakTypeOf[Option[_]] =>
             Some(ExplicitDefaultParam[Type, Tree](q"""None"""))
@@ -417,7 +417,7 @@ object ReaderImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).values.map(_.name.decodedName)
+    val unmatchedProtobufOptions = protobufOptions.view.filterKeys(name => !modelOptions.contains(name)).values.map(_.name.decodedName)
 
     if (unmatchedProtobufOptions.nonEmpty) {
       c.error(
@@ -426,7 +426,7 @@ object ReaderImpl {
       )
     }
 
-    val surplusModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).values.map(_.name.decodedName)
+    val surplusModelOptions = modelOptions.view.filterKeys(name => !protobufOptions.contains(name)).values.map(_.name.decodedName)
     val compatibility       = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
 
     val cases =

@@ -22,10 +22,9 @@ import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
 import scala.annotation.implicitNotFound
-import scala.collection.generic.CanBuildFrom
+import scala.collection.Factory
 import scala.collection.immutable.TreeMap
 import scala.concurrent.duration.{Deadline, Duration}
-import scala.language.higherKinds
 
 /**
   * Provides reading of a generated Protocol Buffers model into a business model.
@@ -132,7 +131,8 @@ object Writer extends LowPriorityWrites {
     (model: Map[MK, MV]) => for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
 
   implicit def treeMapWriter[MK, MV, PK, PV](implicit keyWriter: Writer[MK, PK],
-                                             valueWriter: Writer[MV, PV]): Writer[TreeMap[MK, MV], Map[PK, PV]] =
+                                             valueWriter: Writer[MV, PV],
+                                             ordering: Ordering[PK]): Writer[TreeMap[MK, MV], Map[PK, PV]] =
     (model: TreeMap[MK, MV]) => for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
 
   private class Mapped[M, P, Q](wrapped: Writer[M, P], f: P => Q) extends Writer[M, Q] {
@@ -143,12 +143,12 @@ object Writer extends LowPriorityWrites {
 
 trait LowPriorityWrites extends LowestPriorityWrites {
 
-  def sequence[MV, PV](models: TraversableOnce[MV])(implicit valueWriter: Writer[MV, PV]): Seq[PV] =
-    models.map(valueWriter.write).toSeq
+  def sequence[MV, PV](models: IterableOnce[MV])(implicit valueWriter: Writer[MV, PV]): Seq[PV] =
+    models.iterator.map(valueWriter.write).toSeq
 
-  def collection[MV, PV, Col[_]](models: TraversableOnce[MV])(implicit cbf: CanBuildFrom[Nothing, PV, Col[PV]],
-                                                              valueWriter: Writer[MV, PV]): Col[PV] =
-    models.map(valueWriter.write).to[Col]
+  def collection[MV, PV, Col[_]](models: IterableOnce[MV])(implicit cbf: Factory[PV, Col[PV]], valueWriter: Writer[MV, PV]): Col[PV] = {
+    models.iterator.map(valueWriter.write).iterator.to(cbf)
+  }
 }
 
 trait LowestPriorityWrites {
