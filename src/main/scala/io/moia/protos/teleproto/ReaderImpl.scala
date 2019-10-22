@@ -417,7 +417,7 @@ object ReaderImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).toMap.values.map(_.name.decodedName)
+    val unmatchedProtobufOptions = protobufOptions.toList.collect { case (name, v) if !modelOptions.contains(name) => v.name.decodedName }
 
     if (unmatchedProtobufOptions.nonEmpty) {
       c.error(
@@ -426,7 +426,7 @@ object ReaderImpl {
       )
     }
 
-    val surplusModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).toMap.values.map(_.name.decodedName)
+    val surplusModelOptions = modelOptions.toList.collect { case (name, v) if !protobufOptions.contains(name) => v.name.decodedName }
     val compatibility       = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
 
     val cases =

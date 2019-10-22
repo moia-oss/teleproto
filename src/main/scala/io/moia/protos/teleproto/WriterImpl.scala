@@ -390,7 +390,7 @@ object WriterImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).toMap.values.map(_.name.decodedName)
+    val unmatchedModelOptions = modelOptions.toList.collect { case (name, v) if !protobufOptions.contains(name) => v.name.decodedName }
 
     if (unmatchedModelOptions.nonEmpty) {
       c.error(
@@ -399,7 +399,7 @@ object WriterImpl {
       )
     }
 
-    val surplusProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).toMap.values.map(_.name.decodedName)
+    val surplusProtobufOptions = protobufOptions.toList.collect { case (name, v) if !modelOptions.contains(name) => v.name.decodedName }
     val compatibility          = Compatibility(Nil, Nil, surplusProtobufOptions.map(name => (protobufType, name.toString)))
 
     val cases =
