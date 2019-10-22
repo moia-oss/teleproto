@@ -17,15 +17,9 @@ lazy val `teleproto` =
         library.scalaPBJson      % Compile,
         library.scalaTest        % Test,
         library.scalaCheck       % Test,
-        "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.2"
-      ),
-      libraryDependencies ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, 13)) =>
-          Seq("org.scala-lang" % "scala-reflect" % "2.13.1")
-        case Some((2, 12)) =>
-          Seq("org.scala-lang" % "scala-reflect" % "2.12.9")
-        case _ => Seq()
-      })
+        "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.2",
+        "org.scala-lang"         % "scala-reflect" % scalaVersion.in(ThisBuild).value
+      )
     )
 
 // *****************************************************************************
