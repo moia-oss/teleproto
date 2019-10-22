@@ -38,6 +38,7 @@ references:
             - ~/.m2
             - ~/.ivy2
             - ~/.sbt
+            - ~/.cache/coursier/
       - store_artifacts:
           path: target/license-reports/
           destination: license-reports
