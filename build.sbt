@@ -1,7 +1,6 @@
 // *****************************************************************************
 // Projects
 // *****************************************************************************
-Global / onChangedBuildSource := ReloadOnSourceChanges
 
 lazy val `teleproto` =
   project
