@@ -15,7 +15,7 @@
  */
 
 package io.moia.protos.teleproto
-
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
@@ -165,7 +165,7 @@ object ReaderImpl {
                 val innerTo   = innerType(c)(to)
                 withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
                   // sequence also needs an implicit collection generator which must be looked up since the implicit for the value reader is passed explicitly
-                  val canBuildFrom = q"""implicitly[scala.collection.generic.CanBuildFrom[${to.erasure}, $innerTo, $to]]"""
+                  val canBuildFrom = q"""implicitly[scala.collection.Factory[$innerTo, $to]]"""
                   q"""$mapping.Reader.sequence[${to.typeConstructor}, $innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($canBuildFrom, $readerExpr).flatMap { case ${termSymbol.name} => $restTransformed }"""
                 }
               case TransformParam(from, to) =>
@@ -252,8 +252,8 @@ object ReaderImpl {
 
     import c.universe._
 
-    val protobufByName = protobufParams.groupBy(_.name).mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
-    val modelByName    = modelParams.groupBy(_.name).mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
+    val protobufByName = protobufParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
+    val modelByName    = modelParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
 
     val protobufNames = protobufByName.keySet
 
@@ -270,7 +270,7 @@ object ReaderImpl {
             Some(TransformParam[Type, Tree](protobufParam.typeSignature, targetType))
 
           case None if modelParam.isParamWithDefault =>
-            Some(SkippedDefaultParam[Type, Tree](Unit))
+            Some(SkippedDefaultParam[Type, Tree](()))
 
           case None if modelParam.typeSignature <:< weakTypeOf[Option[_]] =>
             Some(ExplicitDefaultParam[Type, Tree](q"""None"""))
@@ -417,7 +417,7 @@ object ReaderImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).values.map(_.name.decodedName)
+    val unmatchedProtobufOptions = protobufOptions.toList.collect { case (name, v) if !modelOptions.contains(name) => v.name.decodedName }
 
     if (unmatchedProtobufOptions.nonEmpty) {
       c.error(
@@ -426,7 +426,7 @@ object ReaderImpl {
       )
     }
 
-    val surplusModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).values.map(_.name.decodedName)
+    val surplusModelOptions = modelOptions.toList.collect { case (name, v) if !protobufOptions.contains(name) => v.name.decodedName }
     val compatibility       = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
 
     val cases =

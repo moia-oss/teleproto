@@ -16,6 +16,7 @@
 
 package io.moia.protos.teleproto
 
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
@@ -157,16 +158,16 @@ object WriterImpl {
                     writerExpr =>
                       q"""$mapping.Writer.optional[${innerType(c)(from)}, ${innerType(c)(to)}](model.${param.name})($writerExpr)"""
                   )
-                } else if (from <:< weakTypeOf[TraversableOnce[_]] && to <:< weakTypeOf[scala.collection.immutable.Seq[_]]) {
+                } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[scala.collection.immutable.Seq[_]]) {
                   val innerFrom = innerType(c)(from)
                   val innerTo   = innerType(c)(to)
                   withImplicitWriter(c)(innerFrom, innerTo) { writerExpr =>
                     // collection also needs an implicit sequence generator which must be looked up since the implicit for the value writer is passed explicitly
                     val canBuildFrom =
-                      q"""implicitly[scala.collection.generic.CanBuildFrom[scala.collection.immutable.Seq[_], $innerTo, $to]]"""
+                      q"""implicitly[scala.collection.Factory[$innerTo, $to]]"""
                     q"""$mapping.Writer.collection[$innerFrom, $innerTo, scala.collection.immutable.Seq](model.${param.name})($canBuildFrom, $writerExpr)"""
                   }
-                } else if (from <:< weakTypeOf[TraversableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {
+                } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {
                   val innerFrom = innerType(c)(from)
                   val innerTo   = innerType(c)(to)
                   withImplicitWriter(c)(innerFrom, innerTo)(
@@ -249,7 +250,7 @@ object WriterImpl {
             TransformParam[Type, Tree](sourceType, protobufParam.typeSignature)
 
           case None =>
-            SkippedDefaultParam[Type, Tree](Unit)
+            SkippedDefaultParam[Type, Tree](())
         }
       }
 
@@ -389,7 +390,7 @@ object WriterImpl {
     val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
     val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
-    val unmatchedModelOptions = modelOptions.filterKeys(name => !protobufOptions.contains(name)).values.map(_.name.decodedName)
+    val unmatchedModelOptions = modelOptions.toList.collect { case (name, v) if !protobufOptions.contains(name) => v.name.decodedName }
 
     if (unmatchedModelOptions.nonEmpty) {
       c.error(
@@ -398,7 +399,7 @@ object WriterImpl {
       )
     }
 
-    val surplusProtobufOptions = protobufOptions.filterKeys(name => !modelOptions.contains(name)).values.map(_.name.decodedName)
+    val surplusProtobufOptions = protobufOptions.toList.collect { case (name, v) if !modelOptions.contains(name) => v.name.decodedName }
     val compatibility          = Compatibility(Nil, Nil, surplusProtobufOptions.map(name => (protobufType, name.toString)))
 
     val cases =

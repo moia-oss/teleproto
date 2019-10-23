@@ -18,6 +18,7 @@ package io.moia.protos.teleproto
 
 import io.moia.protos.teleproto.FormatImpl._
 
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
@@ -215,7 +216,9 @@ object MigrationImpl {
         .getOrElse(sys.error("Scapegoat..."))
         .map(_.asTerm)
         .groupBy(_.name.decodedName.toString)
+        .view
         .mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
+        .toMap
 
     // select the fields in Q as terms
     val targetParamsList = targetCons.paramLists.headOption.getOrElse(sys.error("Scapegoat...")).map(_.asTerm)
@@ -353,7 +356,7 @@ object MigrationImpl {
     import c.universe._
 
     def bothOptions         = sourceType <:< weakTypeOf[Option[_]] && targetType <:< weakTypeOf[Option[_]]
-    def bothCollections     = sourceType <:< weakTypeOf[TraversableOnce[_]] && targetType <:< weakTypeOf[TraversableOnce[_]]
+    def bothCollections     = sourceType <:< weakTypeOf[IterableOnce[_]] && targetType <:< weakTypeOf[IterableOnce[_]]
     def matchingCollections = sourceType.erasure <:< targetType.erasure
     def matchingInnerTypes  = isExpected(c)(innerType(c)(sourceType), innerType(c)(targetType))
 

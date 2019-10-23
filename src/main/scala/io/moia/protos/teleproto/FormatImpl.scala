@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 /**
@@ -131,7 +132,7 @@ object FormatImpl {
   }
 
   private[teleproto] def symbolsByName(c: blackbox.Context)(symbols: Iterable[c.universe.Symbol]): Map[c.universe.Name, c.universe.Symbol] =
-    symbols.groupBy(_.name.decodedName).mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
+    symbols.groupBy(_.name.decodedName).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
 
   /**
     * Uses lower case names without underscores (assuming clashes are already handled by ScalaPB)

@@ -15,7 +15,7 @@ addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
 
 // Static code analysis.
 // sbt> scapegoat
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.9")
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.0.10")
 
 // Make sbt build information available to the runtime
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
@@ -27,7 +27,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 // Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.19")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.8.4"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.9.4"
 
 addSbtPlugin("de.heikoseeberger" % "sbt-header"   % "5.2.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype" % "2.3")

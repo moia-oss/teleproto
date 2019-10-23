@@ -11,12 +11,14 @@ lazy val `teleproto` =
     .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
     .settings(
       name := "teleproto",
-      version := "1.0.3",
+      version := "1.1.0",
       libraryDependencies ++= Seq(
-        library.scalaPB     % "protobuf",
-        library.scalaPBJson % Compile,
-        library.scalaTest   % Test,
-        library.scalaCheck  % Test
+        library.scalaPB          % "protobuf",
+        library.scalaPBJson      % Compile,
+        library.scalaTest        % Test,
+        library.scalaCheck       % Test,
+        "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.2",
+        "org.scala-lang"         % "scala-reflect" % scalaVersion.in(ThisBuild).value
       )
     )
 
@@ -29,11 +31,11 @@ lazy val library =
 
     object Version {
       val scalaPB      = scalapb.compiler.Version.scalapbVersion
-      val scalaPBJson  = "0.7.2"
+      val scalaPBJson  = "0.10.0"
       val scalaLogging = "3.9.0"
-      val scalaCheck   = "1.14.0"
-      val scalaTest    = "3.0.5"
-      val scapeGoat    = "1.3.8"
+      val scalaCheck   = "1.14.2"
+      val scalaTest    = "3.0.8"
+      val scapeGoat    = "1.3.11"
     }
 
     val scalaPB      = "com.thesamet.scalapb"       %% "scalapb-runtime" % Version.scalaPB
@@ -57,34 +59,49 @@ lazy val commonSettings =
 
 lazy val compilerSettings =
   Seq(
-    scalaVersion := "2.12.9",
+    scalaVersion := "2.13.1",
+    crossScalaVersions := List("2.13.1", "2.12.10"),
     mappings.in(Compile, packageBin) +=
       baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
-    scalacOptions ++= Seq(
-      "-unchecked",
-      "-deprecation",
-      "-language:_",
-      "-target:jvm-1.8",
-      "-encoding",
-      "UTF-8",
-      "-Xfatal-warnings",
-      "-Ywarn-unused-import",
-      "-Yno-adapted-args",
-      "-Ywarn-dead-code",
-      "-Ywarn-inaccessible",
-      "-Ywarn-infer-any",
-      "-Ywarn-nullary-override",
-      "-Ywarn-nullary-unit"
-    ),
-    javacOptions ++= Seq(
-      "-source",
-      "1.8",
-      "-target",
-      "1.8"
-    ),
+    scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) => scalacOptions_2_12
+        case Some((2, 13)) => scalacOptions_2_13
+        case _             => Seq()
+      }
+    },
     unmanagedSourceDirectories.in(Compile) := Seq(scalaSource.in(Compile).value),
     unmanagedSourceDirectories.in(Test) := Seq(scalaSource.in(Test).value)
   )
+
+lazy val scalacOptions_2_12 = Seq(
+  "-unchecked",
+  "-deprecation",
+  "-language:_",
+  "-target:jvm-1.8",
+  "-encoding",
+  "UTF-8",
+  "-Xfatal-warnings",
+  "-Ywarn-unused-import",
+  "-Yno-adapted-args",
+  "-Ywarn-dead-code",
+  "-Ywarn-inaccessible",
+  "-Ywarn-infer-any",
+  "-Ywarn-nullary-override",
+  "-Ywarn-nullary-unit"
+)
+
+lazy val scalacOptions_2_13 = Seq(
+  "-unchecked",
+  "-deprecation",
+  "-language:_",
+  "-target:jvm-1.8",
+  "-encoding",
+  "UTF-8",
+  "-Xfatal-warnings",
+  "-Ywarn-dead-code",
+  "-Ymacro-annotations"
+)
 
 lazy val gitSettings =
   Seq(

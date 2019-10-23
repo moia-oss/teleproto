@@ -22,10 +22,9 @@ import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
 import scala.annotation.implicitNotFound
-import scala.collection.generic
+import scala.collection.compat._
 import scala.collection.immutable.TreeMap
-import scala.concurrent.duration.{Deadline, Duration, FiniteDuration, NANOSECONDS, MILLISECONDS, SECONDS}
-import scala.language.higherKinds
+import scala.concurrent.duration.{Deadline, Duration, FiniteDuration, MILLISECONDS, NANOSECONDS, SECONDS}
 import scala.util.Try
 
 /**
@@ -66,7 +65,7 @@ object Reader extends LowPriorityReads {
   def required[PV, MV](protobuf: Option[PV], path: String)(implicit valueReader: Reader[PV, MV]): PbResult[MV] =
     protobuf.map(valueReader.read).getOrElse(PbFailure("Value is required.")).withPathPrefix(path)
 
-  def sequence[F[_], PV, MV](protobufs: Seq[PV], path: String)(implicit bf: generic.CanBuildFrom[F[_], MV, F[MV]],
+  def sequence[F[_], PV, MV](protobufs: Seq[PV], path: String)(implicit factory: Factory[MV, F[MV]],
                                                                valueReader: Reader[PV, MV]): PbResult[F[MV]] = {
     val results = protobufs.map(valueReader.read).zipWithIndex
 
@@ -82,7 +81,7 @@ object Reader extends LowPriorityReads {
       PbFailure(errors)
     else {
       val modelValues = results.map(_._1.getOrElse(sys.error("Scapegoat...")))
-      val builder     = bf()
+      val builder     = factory.newBuilder
       builder.sizeHint(modelValues)
       builder ++= modelValues
       PbSuccess(builder.result())
