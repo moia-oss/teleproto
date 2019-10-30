@@ -1,12 +1,13 @@
 package io.moia.protos.teleproto
 
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 import org.scalatest.{Matchers, OptionValues, WordSpec}
 
-import scala.concurrent.duration.{Duration, DurationLong}
+import scala.concurrent.duration.{Duration, DurationLong, FiniteDuration}
 
 class ReaderTest extends WordSpec with Matchers with OptionValues {
 
@@ -116,6 +117,17 @@ class ReaderTest extends WordSpec with Matchers with OptionValues {
                  Map.empty)
       ) shouldBe
         PbSuccess(Model("foo", 1.2, Instant.ofEpochMilli(0), Duration.Zero, None, List(1, 1.2, 1.23), Map.empty))
+    }
+
+    "read durations in coarsest unit" in {
+
+      FiniteDurationReader.read(PBDuration(3600 * 24 * 7)) shouldBe PbSuccess(FiniteDuration(7, TimeUnit.DAYS))
+      FiniteDurationReader.read(PBDuration(3600 * 3)) shouldBe PbSuccess(FiniteDuration(3, TimeUnit.HOURS))
+      FiniteDurationReader.read(PBDuration(60 * 2)) shouldBe PbSuccess(FiniteDuration(2, TimeUnit.MINUTES))
+      FiniteDurationReader.read(PBDuration(12)) shouldBe PbSuccess(FiniteDuration(12, TimeUnit.SECONDS))
+      FiniteDurationReader.read(PBDuration(12, 345000000)) shouldBe PbSuccess(FiniteDuration(12345, TimeUnit.MILLISECONDS))
+      FiniteDurationReader.read(PBDuration(12, 345678000)) shouldBe PbSuccess(FiniteDuration(12345678, TimeUnit.MICROSECONDS))
+      FiniteDurationReader.read(PBDuration(12, 345678912)) shouldBe PbSuccess(FiniteDuration(12345678912L, TimeUnit.NANOSECONDS))
     }
 
     "read timestamps on nano level" in {
