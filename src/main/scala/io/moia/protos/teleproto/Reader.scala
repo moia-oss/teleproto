@@ -111,7 +111,7 @@ object Reader extends LowPriorityReads {
     */
   implicit object FiniteDurationReader extends Reader[PBDuration, FiniteDuration] {
     def read(protobuf: PBDuration): PbResult[FiniteDuration] =
-      PbSuccess(Duration(protobuf.seconds, SECONDS) + Duration(protobuf.nanos.toLong, NANOSECONDS))
+      PbSuccess((Duration(protobuf.seconds, SECONDS) + Duration(protobuf.nanos.toLong, NANOSECONDS)).toCoarsest)
   }
 
   /**
