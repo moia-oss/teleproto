@@ -34,6 +34,8 @@ sealed trait PbResult[+T] {
 
   def flatMap[B](f: T => PbResult[B]): PbResult[B]
 
+  def orElse[U >: T](that: => PbResult[U]): PbResult[U]
+
   def withPathPrefix(prefix: String): PbResult[T]
 
   def toTry: Try[T]
@@ -54,6 +56,8 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
   def map[B](f: T => B): PbResult[B] = PbSuccess(f(value))
 
   def flatMap[B](f: T => PbResult[B]): PbResult[B] = f(value)
+
+  def orElse[U >: T](that: => PbResult[U]): PbResult[U] = this
 
   override def withPathPrefix(prefix: String): PbSuccess[T] = this
 
@@ -83,6 +87,8 @@ final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothi
 
   def flatMap[B](f: Nothing => PbResult[B]): PbResult[B] = this.asInstanceOf[PbResult[B]]
 
+  def orElse[U](that: => PbResult[U]): PbResult[U] = that
+
   override def withPathPrefix(prefix: String): PbFailure =
     PbFailure(for ((path, message) <- errors) yield (prefix + path, message))
 
@@ -99,4 +105,13 @@ object PbFailure {
 
   def apply(message: String): PbFailure =
     apply("", message)
+
+  /**
+    * Collects and combines all the errors of all failures.
+    */
+  def combine(results: PbResult[_]*): PbFailure =
+    PbFailure(results.flatMap {
+      case PbSuccess(_)      => Seq.empty
+      case PbFailure(errors) => errors
+    })
 }

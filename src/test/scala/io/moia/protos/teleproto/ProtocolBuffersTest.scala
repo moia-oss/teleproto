@@ -84,9 +84,11 @@ class ProtocolBuffersTest extends WordSpec with Matchers {
 
     "generate a reader for matching models" in {
 
-      reader.read(Protobuf(None, Some("bar"), Some(Timestamp.defaultInstance), None, Nil)) shouldBe PbFailure("/id", "Value is required.")
+      reader.read(Protobuf(None, Some("1.2"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))) shouldBe PbFailure(
+        "/id",
+        "Value is required.")
 
-      reader.read(Protobuf(Some("foo"), Some("bar"), Some(Timestamp.defaultInstance), None, Nil)) shouldBe PbFailure(
+      reader.read(Protobuf(Some("foo"), Some("bar"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))) shouldBe PbFailure(
         "/price",
         "Value must be a valid decimal number."
       )
@@ -127,13 +129,41 @@ class ProtocolBuffersTest extends WordSpec with Matchers {
     "generate a reader that provides nested paths in error messages" in {
 
       reader.read(
-        Protobuf(Some("foo"),
-                 Some("1.2"),
-                 Some(Timestamp.defaultInstance),
-                 None,
-                 Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "Milestein One")))
+        Protobuf(
+          Some("foo"),
+          Some("1.2"),
+          Some(Timestamp.defaultInstance),
+          None,
+          Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "Milestein One")),
+          Some(SubProtobuf("1", "2"))
+        )
       ) shouldBe
         PbFailure("/ranges(1)/to", "Value must be a valid decimal number.")
+    }
+
+    "generate a reader that collects all errors" in {
+
+      reader.read(
+        Protobuf(None,
+                 None,
+                 None,
+                 None,
+                 Seq(SubProtobuf("foo", "bar"), SubProtobuf("baz", "qux")),
+                 Some(SubProtobuf("one", "two")),
+                 ProtobufEnum.Unrecognized(42))) shouldBe
+        PbFailure(
+          Seq(
+            "/id"             -> "Value is required.",
+            "/price"          -> "Value is required.",
+            "/time"           -> "Value is required.",
+            "/ranges(0)/from" -> "Value must be a valid decimal number.",
+            "/ranges(0)/to"   -> "Value must be a valid decimal number.",
+            "/ranges(1)/from" -> "Value must be a valid decimal number.",
+            "/ranges(1)/to"   -> "Value must be a valid decimal number.",
+            "/doubleSub/from" -> "Value must be a valid decimal number.",
+            "/doubleSub/to"   -> "Value must be a valid decimal number.",
+            "/enum"           -> "Enumeration value 42 is unrecognized!"
+          ))
     }
 
     "generate a reader for backward compatible models" in {
