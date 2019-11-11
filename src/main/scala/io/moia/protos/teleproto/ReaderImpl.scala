@@ -220,7 +220,7 @@ object ReaderImpl {
             Some(termSymbol.name)
         }
 
-      q"$mapping.PbFailure.combine($monadicValues: _*)"
+      q"$mapping.PbFailure.combine(..$monadicValues)"
     }
 
     def transformation(parameters: Seq[MatchingParam[Type, Tree]], ownCompatibility: Compatibility[Type]): Compiled[Type, Tree] = {
@@ -241,7 +241,7 @@ object ReaderImpl {
       // expression that constructs the successful result: `PbSuccess(ModelClass(transformedParameter..))`
       val cons = q"""$mapping.PbSuccess[$modelType](${modelCompanion.asTerm}.apply(..$passedArgumentNames))"""
 
-      val errorsHandled = q"""${forLoop(matchedParameters, cons)}.orElse(${combineErrors(matchedParameters)})"""
+      val errorsHandled = q"""val result = ${forLoop(matchedParameters, cons)}; result.orElse(${combineErrors(matchedParameters)})"""
 
       val transformed = valDefs.foldRight(errorsHandled)((t1, t2) => q"$t1; $t2")
 
