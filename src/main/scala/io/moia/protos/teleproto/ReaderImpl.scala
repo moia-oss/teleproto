@@ -184,7 +184,7 @@ object ReaderImpl {
     }
 
     /**
-      * Constructs an expression `PbFailure.combine(monadicParameters..)` for all transformed parameters (could fail).
+      * Constructs an expression `PbFailure.combine(convertedParameters..)` for all transformed parameters (could fail).
       */
     def forLoop(parameters: List[(TermSymbol, MatchingParam[Type, Tree])], cons: Tree): Tree =
       parameters match {
@@ -205,10 +205,10 @@ object ReaderImpl {
       }
 
     /**
-      * Constructs an expression `PbFailure.combine(monadicParameters..)` for all transformed parameters (could fail).
+      * Constructs an expression `PbFailure(...)` that contains all errors for all failed parameter transformations.
       */
     def combineErrors(parameters: List[(TermSymbol, MatchingParam[Type, Tree])]): Tree = {
-      val monadicValues =
+      val convertedValues =
         parameters.flatMap {
           case (_, TransformParam(from, to)) if from <:< to =>
             None
@@ -220,7 +220,7 @@ object ReaderImpl {
             Some(termSymbol.name)
         }
 
-      q"$mapping.PbFailure.combine(..$monadicValues)"
+      q"$mapping.PbFailure.combine(..$convertedValues)"
     }
 
     def transformation(parameters: Seq[MatchingParam[Type, Tree]], ownCompatibility: Compatibility[Type]): Compiled[Type, Tree] = {

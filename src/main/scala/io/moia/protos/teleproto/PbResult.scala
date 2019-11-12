@@ -107,7 +107,9 @@ object PbFailure {
     apply("", message)
 
   /**
-    * Collects and combines all the errors of all failures.
+    * Collects and combines all the errors of all failures in the given results.
+    * Please note: This method ignores all successes and collects just error messages from failures. It's intended
+    * to create an overall failure when one of the results is a failure. It doesn't make sense if all are successes.
     */
   def combine(results: PbResult[_]*): PbFailure =
     PbFailure(results.flatMap {
