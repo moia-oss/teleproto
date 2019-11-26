@@ -150,7 +150,7 @@ object ReaderImpl {
 
           matchingParam match {
             case TransformParam(from, to) if from <:< to =>
-              Some(q"val ${termSymbol.name} = protobuf.${termSymbol.name}" -> Compatibility.full)
+              Some(q"val ${termSymbol.name} = protobuf.${termSymbol.name}" -> Compatibility.full[Type])
             case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && !(to <:< weakTypeOf[Option[_]]) =>
               val innerFrom = innerType(c)(from)
               Some(assign(withImplicitReader(c)(innerFrom, to) { readerExpr =>
@@ -158,14 +158,14 @@ object ReaderImpl {
               }))
             case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && (to <:< weakTypeOf[Option[_]]) =>
               val innerFrom = innerType(c)(from)
-              val innerTo   = innerType(c)(to)
+              val innerTo = innerType(c)(to)
               Some(assign(withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
                 q"""$mapping.Reader.optional[$innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($readerExpr)"""
               }))
 
             case TransformParam(from, to) if from <:< weakTypeOf[Seq[_]] && to <:< weakTypeOf[Iterable[_]] =>
               val innerFrom = innerType(c)(from)
-              val innerTo   = innerType(c)(to)
+              val innerTo = innerType(c)(to)
               Some(assign(withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
                 // sequence also needs an implicit collection generator which must be looked up since the implicit for the value reader is passed explicitly
                 val canBuildFrom = q"""implicitly[scala.collection.Factory[$innerTo, $to]]"""
@@ -176,9 +176,9 @@ object ReaderImpl {
                 q"""$mapping.Reader.transform[$from, $to](protobuf.${termSymbol.name}, $path)($readerExpr)"""
               }))
             case ExplicitDefaultParam(expr) =>
-              Some(q"val ${termSymbol.name} = $expr" -> Compatibility.full)
+              Some(q"val ${termSymbol.name} = $expr" -> Compatibility.full[Type])
             case SkippedDefaultParam(_) =>
-              None
+              Option.empty[(Tree, Compatibility[Type])]
           }
       }
     }
