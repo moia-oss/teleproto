@@ -163,8 +163,7 @@ object WriterImpl {
                   val innerTo   = innerType(c)(to)
                   withImplicitWriter(c)(innerFrom, innerTo) { writerExpr =>
                     // collection also needs an implicit sequence generator which must be looked up since the implicit for the value writer is passed explicitly
-                    val canBuildFrom =
-                      q"""implicitly[scala.collection.Factory[$innerTo, $to]]"""
+                    val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
                     q"""$mapping.Writer.collection[$innerFrom, $innerTo, scala.collection.immutable.Seq](model.${param.name})($canBuildFrom, $writerExpr)"""
                   }
                 } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {

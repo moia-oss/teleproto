@@ -15,6 +15,7 @@
  */
 
 package io.moia.protos.teleproto
+
 import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
@@ -158,17 +159,17 @@ object ReaderImpl {
               }))
             case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && (to <:< weakTypeOf[Option[_]]) =>
               val innerFrom = innerType(c)(from)
-              val innerTo = innerType(c)(to)
+              val innerTo   = innerType(c)(to)
               Some(assign(withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
                 q"""$mapping.Reader.optional[$innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($readerExpr)"""
               }))
 
             case TransformParam(from, to) if from <:< weakTypeOf[Seq[_]] && to <:< weakTypeOf[Iterable[_]] =>
               val innerFrom = innerType(c)(from)
-              val innerTo = innerType(c)(to)
+              val innerTo   = innerType(c)(to)
               Some(assign(withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
                 // sequence also needs an implicit collection generator which must be looked up since the implicit for the value reader is passed explicitly
-                val canBuildFrom = q"""implicitly[scala.collection.Factory[$innerTo, $to]]"""
+                val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
                 q"""$mapping.Reader.sequence[${to.typeConstructor}, $innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($canBuildFrom, $readerExpr)"""
               }))
             case TransformParam(from, to) =>
