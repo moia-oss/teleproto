@@ -48,12 +48,12 @@ jobs:
   test:
     <<: *sbtCommand
     environment:
-      SBT_COMMAND: "test"
+      SBT_COMMAND: "+test"
 
   scapegoat:
     <<: *sbtCommand
     environment:
-      SBT_COMMAND: "scapegoat"
+      SBT_COMMAND: "+scapegoat"
 
 workflows:
   version: 2
