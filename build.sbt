@@ -69,9 +69,7 @@ lazy val compilerSettings =
         case Some((2, 13)) => scalacOptions_2_13
         case _             => Seq()
       }
-    },
-    unmanagedSourceDirectories.in(Compile) := Seq(scalaSource.in(Compile).value),
-    unmanagedSourceDirectories.in(Test) := Seq(scalaSource.in(Test).value)
+    }
   )
 
 lazy val scalacOptions_2_12 = Seq(
