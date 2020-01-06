@@ -1,5 +1,7 @@
 # teleproto
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.moia/teleproto_2.13.svg)](https://search.maven.org/search?q=teleproto_2.13)
+
 The tele**proto** library reduces the boilerplate required to map case classes generated from [Protofiles](https://developers.google.com/protocol-buffers/docs/proto3)
 using [ScalaPB](https://github.com/scalapb/ScalaPB) to corresponding version-independent business model case classes.
 
