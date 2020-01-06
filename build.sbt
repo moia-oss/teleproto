@@ -53,6 +53,7 @@ lazy val commonSettings =
   compilerSettings ++
     gitSettings ++
     organizationSettings ++
+    scmSettings ++
     sbtSettings ++
     scalaFmtSettings ++
     scapegoatSettings
@@ -114,13 +115,25 @@ lazy val organizationSettings =
     licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
   )
 
+lazy val scmSettings =
+  Seq(
+    scmInfo := Some(
+      ScmInfo(
+        url("https://github.com/moia-dev/teleproto"),
+        "scm:git@github.com:moia-dev/teleproto.git"
+      )
+    ),
+    homepage := Some(url("https://github.com/moia-dev/teleproto"))
+  )
+
 lazy val sonatypeSettings = {
   import xerial.sbt.Sonatype._
   Seq(
     publishTo := sonatypePublishTo.value,
     sonatypeProfileName := organization.value,
     publishMavenStyle := true,
-    sonatypeProjectHosting := Some(GitHubHosting("moia-dev", "teleproto", "oss-support@moia.io"))
+    sonatypeProjectHosting := Some(GitHubHosting("moia-dev", "teleproto", "oss-support@moia.io")),
+    credentials += Credentials(Path.userHome / ".sbt" / "sonatype_credential")
   )
 }
 
