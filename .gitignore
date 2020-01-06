@@ -28,3 +28,6 @@ target
 
 # Log files
 *.log
+
+publish.sbt
+
