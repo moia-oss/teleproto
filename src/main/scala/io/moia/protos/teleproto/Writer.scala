@@ -27,7 +27,7 @@ import scala.collection.immutable.TreeMap
 import scala.concurrent.duration.{Deadline, Duration}
 
 /**
-  * Provides reading of a generated Protocol Buffers model into a business model.
+  * Provides writing Protocol Buffers model from a business model.
   */
 @implicitNotFound(
   "No mapper from business model type ${M} to Protocol Buffers type ${P} was found. Try to implement an implicit Writer for this type."
