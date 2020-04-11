@@ -41,6 +41,24 @@ sealed trait PbResult[+T] {
   def toTry: Try[T]
 }
 
+object PbResult {
+
+  def fromOption[A](option: Option[A])(ifNone: => PbFailure): PbResult[A] =
+    option.fold[PbResult[A]](ifNone)(PbSuccess.apply)
+
+  def fromEither[E, A](either: Either[E, A])(onLeft: E => PbFailure): PbResult[A] =
+    either.fold(onLeft, PbSuccess.apply)
+
+  def fromEitherString[A](either: Either[String, A]): PbResult[A] =
+    either.fold(PbFailure.apply, PbSuccess.apply)
+
+  def fromEitherThrowable[A](either: Either[Throwable, A]): PbResult[A] =
+    either.fold(PbFailure.fromThrowable, PbSuccess.apply)
+
+  def fromTry[A](tryA: Try[A]): PbResult[A] =
+    tryA.fold(PbFailure.fromThrowable, PbSuccess.apply)
+}
+
 /**
   * Models the success to read a Protocol Buffers case class into business model type `T`.
   */
@@ -105,6 +123,9 @@ object PbFailure {
 
   def apply(message: String): PbFailure =
     apply("", message)
+
+  def fromThrowable(error: Throwable): PbFailure =
+    apply(error.getMessage)
 
   /**
     * Collects and combines all the errors of all failures in the given results.
