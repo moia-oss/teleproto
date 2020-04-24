@@ -20,7 +20,7 @@ import java.io.InputStream
 
 import com.google.protobuf.CodedInputStream
 import scalapb.json4s.Parser
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
@@ -107,7 +107,7 @@ trait VersionedModelReader[Version, DetachedModel] {
     * For a companion of a specific ScalaPB class looks up the corresponding reader to the detached model.
     * If that is available constructs are reader directly from bytes/json to the detached model.
     */
-  protected def readerMapping[SpecificModel <: GeneratedMessage with Message[SpecificModel]](
+  protected def readerMapping[SpecificModel <: GeneratedMessage](
       companion: GeneratedMessageCompanion[SpecificModel]
   )(implicit reader: Reader[SpecificModel, DetachedModel]): VersionReader =
     new VersionReaderImpl(companion, reader)
@@ -128,7 +128,7 @@ trait VersionedModelReader[Version, DetachedModel] {
     * and a reader from that ScalaPB model to a detached model.
     * That models a reader from bytes/json directly to the detached business model.
     */
-  private class VersionReaderImpl[SpecificModel <: GeneratedMessage with Message[SpecificModel]](
+  private class VersionReaderImpl[SpecificModel <: GeneratedMessage](
       companion: GeneratedMessageCompanion[SpecificModel],
       reader: Reader[SpecificModel, DetachedModel]
   ) extends VersionReader {

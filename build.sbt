@@ -31,18 +31,16 @@ lazy val library =
 
     object Version {
       val scalaPB      = scalapb.compiler.Version.scalapbVersion
-      val scalaPBJson  = "0.10.0"
-      val scalaLogging = "3.9.0"
+      val scalaPBJson  = "0.10.1"
       val scalaCheck   = "1.14.2"
       val scalaTest    = "3.0.8"
-      val scapeGoat    = "1.3.11"
+      val scapeGoat    = "1.4.1"
     }
 
-    val scalaPB      = "com.thesamet.scalapb"       %% "scalapb-runtime" % Version.scalaPB
-    val scalaPBJson  = "com.thesamet.scalapb"       %% "scalapb-json4s"  % Version.scalaPBJson
-    val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging"   % Version.scalaLogging
-    val scalaCheck   = "org.scalacheck"             %% "scalacheck"      % Version.scalaCheck
-    val scalaTest    = "org.scalatest"              %% "scalatest"       % Version.scalaTest
+    val scalaPB     = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
+    val scalaPBJson = "com.thesamet.scalapb" %% "scalapb-json4s"  % Version.scalaPBJson
+    val scalaCheck  = "org.scalacheck"       %% "scalacheck"      % Version.scalaCheck
+    val scalaTest   = "org.scalatest"        %% "scalatest"       % Version.scalaTest
   }
 
 // *****************************************************************************
