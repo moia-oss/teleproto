@@ -17,7 +17,7 @@
 package io.moia.protos.teleproto
 
 import scalapb.json4s.Printer
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
@@ -64,7 +64,7 @@ trait VersionedModelWriter[Version, DetachedModel] {
     *
     * @return the written message
     */
-  def toMessage(model: DetachedModel, version: Version): Try[GeneratedMessage with Message[_]] =
+  def toMessage(model: DetachedModel, version: Version): Try[GeneratedMessage] =
     lookupOrFail(version).map(_.write(model))
 
   /**
@@ -105,7 +105,7 @@ trait VersionedModelWriter[Version, DetachedModel] {
   /**
     * For a companion of a specific ScalaPB class looks up the corresponding writer from the detached model.
     */
-  protected def writerMapping[SpecificModel <: GeneratedMessage with Message[SpecificModel]](
+  protected def writerMapping[SpecificModel <: GeneratedMessage](
       companion: GeneratedMessageCompanion[SpecificModel]
   )(implicit writer: Writer[DetachedModel, SpecificModel]): VersionWriter =
     (model: DetachedModel) => writer.write(model)
@@ -113,7 +113,7 @@ trait VersionedModelWriter[Version, DetachedModel] {
   /**
     * Models a writer from the detached business model to a Scala PB instance.
     */
-  type VersionWriter = Writer[DetachedModel, GeneratedMessage with Message[_]]
+  type VersionWriter = Writer[DetachedModel, GeneratedMessage]
 
   private def lookupOrFail(version: Version): Try[VersionWriter] =
     lookupWriter(version).map(Success(_)).getOrElse(Failure(new VersionNotSupportedException(version, supportedWriterVersions)))

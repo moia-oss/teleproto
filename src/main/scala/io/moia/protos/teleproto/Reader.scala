@@ -20,7 +20,7 @@ import java.time.{Instant, LocalTime}
 
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
-import scalapb.{GeneratedMessage, Message}
+import scalapb.GeneratedMessage
 
 import scala.annotation.implicitNotFound
 import scala.collection.compat._
@@ -167,7 +167,7 @@ object Reader extends LowPriorityReads {
     * Use this if you want to allow failures in nested structures and therefore get back a partial result, for example
     * to always deserialize an event to an `Envelope[PbResult[A]]` even if the actual payload of type `A` fails to parse.
     */
-  implicit def pbResultReader[PB <: GeneratedMessage with Message[PB], A](implicit reader: Reader[PB, A]): Reader[PB, PbResult[A]] =
+  implicit def pbResultReader[PB <: GeneratedMessage, A](implicit reader: Reader[PB, A]): Reader[PB, PbResult[A]] =
     pb => PbSuccess(reader.read(pb))
 }
 
