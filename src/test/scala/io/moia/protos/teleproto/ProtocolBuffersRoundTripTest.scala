@@ -4,11 +4,17 @@ import io.moia.food.food
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
+import scala.util.Success
+
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest._
 
-  val mealReader: Reader[food.Meal, Meal] = ProtocolBuffers.reader[food.Meal, Meal]
-  val mealWriter: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
+  implicit val reader: Reader[food.Meal, Meal] = ProtocolBuffers.reader[food.Meal, Meal]
+  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
+
+  val version     = 1
+  val modelReader = VersionedModelReader[Int, Meal](version -> food.Meal)
+  val modelWriter = VersionedModelWriter[Int, Meal](version -> food.Meal)
 
   val colorGen: Gen[Color] =
     Gen.oneOf(Color.Red, Color.Orange, Color.Yellow, Color.Pink, Color.Blue)
@@ -37,7 +43,19 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   "ProtocolBuffers" should {
     "generate writer and reader that round trip successfully" in {
       forAll(mealGen) { meal =>
-        mealReader.read(mealWriter.write(meal)) shouldBe PbSuccess(meal)
+        reader.read(writer.write(meal)) shouldBe PbSuccess(meal)
+      }
+    }
+
+    "create model writer and reader that round trip successfully via JSON" in {
+      forAll(mealGen) { meal =>
+        modelWriter.toJson(meal, version).flatMap(modelReader.fromJson(_, version)) shouldBe Success(PbSuccess(meal))
+      }
+    }
+
+    "create model writer and reader that round trip successfully via Protocol Buffers" in {
+      forAll(mealGen) { meal =>
+        modelWriter.toByteArray(meal, version).flatMap(modelReader.fromProto(_, version)) shouldBe Success(PbSuccess(meal))
       }
     }
   }

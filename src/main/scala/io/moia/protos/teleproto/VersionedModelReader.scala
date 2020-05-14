@@ -40,16 +40,13 @@ import scala.util.{Failure, Success, Try}
   * Usage Example:
   *
   * {{{
-  * implicit val someModelReader: ModelReader[SomeDetachedModel] =
-  *    new ModelReader[MyVersion, SomeDetachedModel] {
-  *      val readerMappings: ReaderMappings =
-  *        ListMap(
-  *          VN -> readerMapping(vN.SomeApiModel),
-  *          ...
-  *          V2 -> readerMapping(v2.SomeApiModel),
-  *          V1 -> readerMapping(v1.SomeApiModel)
-  *        )
-  *    }
+  * implicit val someModelReader: VersionedModelReader[SomeDetachedModel] =
+  *   VersionedModelReader[MyVersion, SomeDetachedModel](
+  *     VN -> vN.SomeApiModel,
+  *     ...
+  *     V2 -> v2.SomeApiModel,
+  *     V1 -> v1.SomeApiModel
+  *   )
   * }}}
   */
 trait VersionedModelReader[Version, DetachedModel] {
@@ -152,5 +149,30 @@ object VersionedModelReader {
       * This is done for binary compatibility but is overridden in the implementation.
       */
     def fromJson(jsonString: String, parser: Parser): Try[PbResult[Model]] = fromJson(jsonString)
+  }
+
+  def apply[Version, DetachedModel](
+      readers: (Version, CompanionReader[DetachedModel])*
+  ): VersionedModelReader[Version, DetachedModel] = new VersionedModelReader[Version, DetachedModel] {
+    val readerMappings: ReaderMappings = ListMap(readers.map { case (v, r) => r.versioned(v)(this) }: _*)
+  }
+
+  sealed trait CompanionReader[DetachedModel] {
+    type SpecificModel <: GeneratedMessage
+    def companion: GeneratedMessageCompanion[SpecificModel]
+    implicit def reader: Reader[SpecificModel, DetachedModel]
+
+    final def versioned[V](version: V)(modelReader: VersionedModelReader[V, DetachedModel]): (V, modelReader.VersionReader) =
+      version -> modelReader.readerMapping(companion)
+  }
+
+  object CompanionReader {
+    implicit def fromCompanion[P <: GeneratedMessage, M](gmc: GeneratedMessageCompanion[P])(
+        implicit rpm: Reader[P, M]
+    ): CompanionReader[M] = new CompanionReader[M] {
+      type SpecificModel = P
+      def companion: GeneratedMessageCompanion[P] = gmc
+      def reader: Reader[P, M]                    = rpm
+    }
   }
 }
