@@ -40,16 +40,13 @@ import scala.util.{Failure, Success, Try}
   * Usage Example:
   *
   * {{{
-  * implicit val someModelReader: ModelReader[SomeDetachedModel] =
-  *    new ModelReader[MyVersion, SomeDetachedModel] {
-  *      val readerMappings: ReaderMappings =
-  *        ListMap(
-  *          VN -> readerMapping(vN.SomeApiModel),
-  *          ...
-  *          V2 -> readerMapping(v2.SomeApiModel),
-  *          V1 -> readerMapping(v1.SomeApiModel)
-  *        )
-  *    }
+  * implicit val someModelReader: VersionedModelReader[SomeDetachedModel] =
+  *   VersionedModelReader[MyVersion, SomeDetachedModel](
+  *     VN -> vN.SomeApiModel,
+  *     ...
+  *     V2 -> v2.SomeApiModel,
+  *     V1 -> v1.SomeApiModel
+  *   )
   * }}}
   */
 trait VersionedModelReader[Version, DetachedModel] {
@@ -141,6 +138,35 @@ trait VersionedModelReader[Version, DetachedModel] {
 }
 
 object VersionedModelReader {
-
   private val parser = new Parser()
+
+  def apply[Version, DetachedModel](
+      readers: (Version, CompanionReader[DetachedModel])*
+  ): VersionedModelReader[Version, DetachedModel] = new VersionedModelReader[Version, DetachedModel] {
+    val readerMappings: ReaderMappings = ListMap(readers.map { case (v, r) => r.versioned(v)(this) }: _*)
+  }
+
+  sealed trait CompanionReader[DetachedModel] {
+    type SpecificModel <: GeneratedMessage
+    def companion: GeneratedMessageCompanion[SpecificModel]
+    def reader: Reader[SpecificModel, DetachedModel]
+
+    final def versioned[V](version: V)(modelReader: VersionedModelReader[V, DetachedModel]): (V, modelReader.VersionReader) =
+      version -> new modelReader.VersionReader {
+        def fromJson(jsonString: String): Try[PbResult[DetachedModel]] =
+          Try(parser.fromJsonString(jsonString)(companion)).map(reader.read)
+        def fromProto(input: CodedInputStream): Try[PbResult[DetachedModel]] =
+          Try(companion.parseFrom(input)).map(reader.read)
+      }
+  }
+
+  object CompanionReader {
+    implicit def fromCompanion[P <: GeneratedMessage, M](gmc: GeneratedMessageCompanion[P])(
+        implicit rpm: Reader[P, M]
+    ): CompanionReader[M] = new CompanionReader[M] {
+      type SpecificModel = P
+      val companion: GeneratedMessageCompanion[P] = gmc
+      val reader: Reader[P, M]                    = rpm
+    }
+  }
 }

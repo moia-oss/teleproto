@@ -37,16 +37,13 @@ import scala.util.{Failure, Success, Try}
   * Usage Example:
   *
   * {{{
-  * implicit val someModelWriter: ModelWriter[SomeDetachedModel] =
-  *    new ModelWriter[MyVersion, SomeDetachedModel] {
-  *      val writerMappings: WriterMappings =
-  *        ListMap(
-  *          VN -> writerMapping(vN.SomeApiModel),
-  *          ...
-  *          V2 -> writerMapping(v2.SomeApiModel),
-  *          V1 -> writerMapping(v1.SomeApiModel)
-  *        )
-  *    }
+  * implicit val someModelWriter: VersionedModelWriter[SomeDetachedModel] =
+  *   VersionedModelWriter[MyVersion, SomeDetachedModel](
+  *     VN -> vN.SomeApiModel,
+  *     ...
+  *     V2 -> v2.SomeApiModel,
+  *     V1 -> v1.SomeApiModel
+  *   )
   * }}}
   */
 trait VersionedModelWriter[Version, DetachedModel] {
@@ -120,6 +117,31 @@ trait VersionedModelWriter[Version, DetachedModel] {
 }
 
 object VersionedModelWriter {
-
   private val printer = new Printer().includingDefaultValueFields.formattingLongAsNumber
+
+  def apply[Version, DetachedModel](
+      writers: (Version, CompanionWriter[DetachedModel])*
+  ): VersionedModelWriter[Version, DetachedModel] = new VersionedModelWriter[Version, DetachedModel] {
+    val writerMappings: WriterMappings = ListMap(writers.map { case (v, w) => w.versioned(v) }: _*)
+  }
+
+  sealed trait CompanionWriter[DetachedModel] {
+    type SpecificModel <: GeneratedMessage
+    def writer: Writer[DetachedModel, SpecificModel]
+
+    final def versioned[V](version: V): (V, Writer[DetachedModel, GeneratedMessage]) =
+      version -> writer
+  }
+
+  object CompanionReader {
+    implicit def fromCompanion[P <: GeneratedMessage, M](gmc: GeneratedMessageCompanion[P])(
+        implicit wmp: Writer[M, P]
+    ): CompanionWriter[M] = {
+      val _ = gmc
+      new CompanionWriter[M] {
+        type SpecificModel = P
+        val writer: Writer[M, P] = wmp
+      }
+    }
+  }
 }
