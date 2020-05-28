@@ -11,7 +11,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
 // sbt> clean
 // sbt> coverage test
 // sbt> coverageReport
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.5.1")
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
 
 // Static code analysis.
 // sbt> scapegoat
