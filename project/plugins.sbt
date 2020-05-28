@@ -1,7 +1,7 @@
 // Formatting in scala
 // See .scalafmt.conf for configuration details.
 // Formatting takes place before the project is compiled.
-addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.15")
+addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.16")
 
 // Use git in sbt, show git prompt and use versions from git.
 // sbt> git <your git command>
