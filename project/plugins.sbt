@@ -5,7 +5,7 @@ addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.15")
 
 // Use git in sbt, show git prompt and use versions from git.
 // sbt> git <your git command>
-addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "0.9.3")
+addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
 // Code coverage report. The code has to be instrumented, therefore a clean build is needed.
 // sbt> clean
