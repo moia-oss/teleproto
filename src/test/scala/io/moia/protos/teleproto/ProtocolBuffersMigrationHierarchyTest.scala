@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 object ProtocolBuffersMigrationHierarchyTest {
 
   // V2
@@ -37,7 +35,7 @@ object ProtocolBuffersMigrationHierarchyTest {
     ProtocolBuffers.migration[ProtoV1, ProtoV2](pb => List.fill(pb.passengers)(PassengerV2(true)))
 }
 
-class ProtocolBuffersMigrationHierarchyTest extends WordSpec with Matchers {
+class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
 
   import ProtocolBuffersMigrationHierarchyTest._
 

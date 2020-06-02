@@ -1,8 +1,6 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, OptionValues, WordSpec}
-
-class OneOfReaderTest extends WordSpec with Matchers with OptionValues {
+class OneOfReaderTest extends UnitTest {
 
   import Reader._
 

@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 /**
   * Tests correct behaviour of generated mappings regarding traits.
   */
@@ -79,7 +77,7 @@ object OneOfProtocolBuffersTest {
     ProtocolBuffers.writer[model.Model, protobuf.Protobuf]
 }
 
-class OneOfProtocolBuffersTest extends WordSpec with Matchers {
+class OneOfProtocolBuffersTest extends UnitTest {
 
   import OneOfProtocolBuffersTest._
 

@@ -1,10 +1,8 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 import scala.concurrent.duration._
 
-class DeadlineFormatTest extends WordSpec with Matchers {
+class DeadlineFormatTest extends UnitTest {
 
   "Writer/Reader for deadlines" should {
 

@@ -5,11 +5,10 @@ import java.util.concurrent.TimeUnit
 
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
-import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.duration.{Duration, DurationLong, FiniteDuration}
 
-class ReaderTest extends WordSpec with Matchers with OptionValues {
+class ReaderTest extends UnitTest {
 
   import Reader._
 
