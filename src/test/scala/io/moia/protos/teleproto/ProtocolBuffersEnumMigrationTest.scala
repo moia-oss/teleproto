@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 object ProtocolBuffersEnumMigrationTest {
   sealed trait EnumV1 {
     type EnumType = EnumV1
@@ -42,7 +40,7 @@ object ProtocolBuffersEnumMigrationTest {
   implicit val messageFromV2toV3: Migration[MessageV2, MessageV3] = ProtocolBuffers.migration[MessageV2, MessageV3]()
 }
 
-class ProtocolBuffersEnumMigrationTest extends WordSpec with Matchers {
+class ProtocolBuffersEnumMigrationTest extends UnitTest {
 
   import ProtocolBuffersEnumMigrationTest._
 

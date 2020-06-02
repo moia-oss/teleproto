@@ -139,7 +139,7 @@ object FormatImpl {
     */
   private[teleproto] def symbolsByTolerantName(c: blackbox.Context)(symbols: Iterable[c.universe.Symbol]): Map[String, c.universe.Symbol] =
     for ((name, symbol) <- symbolsByName(c)(symbols))
-      yield (name.toString.toLowerCase.replaceAllLiterally("_", ""), symbol)
+      yield (name.toString.toLowerCase.replace("_", ""), symbol)
 
   private[teleproto] def isSealedTrait(c: blackbox.Context)(tpe: c.Type): Boolean = {
     import c.universe._

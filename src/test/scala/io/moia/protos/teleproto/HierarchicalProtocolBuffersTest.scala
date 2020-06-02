@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 /**
   * Tests correct behaviour of generated mappings regarding hierarchical types
   * where a reader/writer for an inner case class can be generated, too.
@@ -66,7 +64,7 @@ object HierarchicalProtocolBuffersTest {
   }
 }
 
-class HierarchicalProtocolBuffersTest extends WordSpec with Matchers {
+class HierarchicalProtocolBuffersTest extends UnitTest {
 
   import HierarchicalProtocolBuffersTest._
 

@@ -1,14 +1,12 @@
 package io.moia.protos.teleproto
 
 import java.time.Instant
-
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
-import org.scalatest.{Matchers, OptionValues, WordSpec}
 
 import scala.concurrent.duration.{Duration, DurationLong}
 
-class WriterTest extends WordSpec with Matchers with OptionValues {
+class WriterTest extends UnitTest {
 
   import Writer._
 

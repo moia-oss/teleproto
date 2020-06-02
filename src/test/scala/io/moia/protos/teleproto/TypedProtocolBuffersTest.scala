@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 case class GenericProtobuf1(foo: String, bar: Int)
 
 case class GenericProtobuf2(foo: Int, bar: String)
@@ -23,7 +21,7 @@ object GenericProtobuf {
   val writer2: Writer[BoundModel2, GenericProtobuf2] = ProtocolBuffers.writer[BoundModel2, GenericProtobuf2]
 }
 
-class TypedProtocolBuffersTest extends WordSpec with Matchers {
+class TypedProtocolBuffersTest extends UnitTest {
 
   import GenericProtobuf._
 

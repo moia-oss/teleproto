@@ -3,7 +3,6 @@ package io.moia.protos.teleproto
 import java.time.Instant
 
 import com.google.protobuf.timestamp.Timestamp
-import org.scalatest.{Matchers, WordSpec}
 
 sealed trait ProtobufEnum {
   type EnumType = ProtobufEnum
@@ -76,7 +75,7 @@ object Protobuf {
   val writer3: Writer[ModelLarger, Protobuf] = ProtocolBuffers.writer[ModelLarger, Protobuf]
 }
 
-class ProtocolBuffersTest extends WordSpec with Matchers {
+class ProtocolBuffersTest extends UnitTest {
 
   import Protobuf._
 

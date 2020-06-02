@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 object ProtocolBuffersMigrationChainTest {
 
   // V3 is the latest version, the "business model" matches the latest version
@@ -40,7 +38,7 @@ object ProtocolBuffersMigrationChainTest {
   implicit val readerForV1: Reader[ProtoV1, ModelForV3] = fromV1toV2.reader[ModelForV3]
 }
 
-class ProtocolBuffersMigrationChainTest extends WordSpec with Matchers {
+class ProtocolBuffersMigrationChainTest extends UnitTest {
 
   import ProtocolBuffersMigrationChainTest._
 

@@ -1,10 +1,8 @@
 package io.moia.protos.teleproto
 
-import org.scalatest.{Matchers, WordSpec}
-
 import scala.util.{Failure, Success, Try}
 
-class PbResultTest extends WordSpec with Matchers {
+class PbResultTest extends UnitTest {
 
   "PbResult" should {
     "have constructor from Option" in {
