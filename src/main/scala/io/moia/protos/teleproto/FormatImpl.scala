@@ -46,7 +46,13 @@ object FormatImpl {
                                  defaultParameters: Iterable[(TYPE, String)],
                                  surplusClasses: Iterable[(TYPE, String)]) {
 
-    def hasIssues: Boolean = surplusParameters.nonEmpty || defaultParameters.nonEmpty || surplusClasses.nonEmpty
+    // scalaPB 0.10 introduces a field called unknownFields for every proto by default.
+    // See: https://github.com/scalapb/ScalaPB/issues/778 for alternatives.
+    // The application can either choose to map or ignore this property.
+    // A simple workaround for the moment is to ignore this property completely.
+    def unknownFieldProperty(property: (TYPE, String)): Boolean = property._2 == "unknownFields"
+
+    def hasIssues: Boolean = !(surplusParameters ++ defaultParameters ++ surplusClasses).forall(unknownFieldProperty)
 
     def merge(that: Compatibility[TYPE]): Compatibility[TYPE] =
       Compatibility(
