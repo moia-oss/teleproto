@@ -27,7 +27,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 // Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.31")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.10.3"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.10.4"
 
 addSbtPlugin("de.heikoseeberger" % "sbt-header"   % "5.6.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype" % "3.9.2")
