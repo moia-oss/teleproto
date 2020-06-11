@@ -2,11 +2,6 @@ version: 2
 
 references:
 
-  prepare_docker: &prepare_docker
-    setup_remote_docker:
-      docker_layer_caching: true
-      version: 18.06.0-ce
-
   dependencies_key: &dependencies_key
                       sbt-v2-deps-{{ checksum "project/build.properties" }}-{{ checksum "project/plugins.sbt" }}-{{ checksum "build.sbt" }}
 
@@ -26,7 +21,6 @@ references:
       - image: *sbt_image
     steps:
       - checkout
-      - *prepare_docker
       - *restore_dependencies
       - run:
           name: Run sbt command
