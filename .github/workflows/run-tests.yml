@@ -18,16 +18,16 @@ jobs:
         run: sbt +test
 
   scapegoat:
-    name: Compile and test
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
-        - name: Cache SBT & ivy cache
-          uses: actions/cache@v2
-          with:
-            path: |
-              ~/.ivy2/cache
-              ~/.sbt
-            key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}-${{ hashFiles('**/plugins.sbt') }}-${{ hashFiles('**/build.properties') }}
-        - name: Compile and test
-          run: sbt +scapegoat
+    name: Run scapegoat
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache SBT & ivy cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ivy2/cache
+            ~/.sbt
+          key: ${{ runner.os }}-sbt-ivy-cache-${{ hashFiles('**/build.sbt') }}-${{ hashFiles('**/plugins.sbt') }}-${{ hashFiles('**/build.properties') }}
+      - name: Compile and test
+        run: sbt +scapegoat
