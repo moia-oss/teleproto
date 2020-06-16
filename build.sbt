@@ -149,7 +149,7 @@ lazy val scalaFmtSettings =
 lazy val scapegoatSettings =
   Seq(
     scapegoatVersion in ThisBuild := library.Version.scapeGoat,
-    scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass"),
+    scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "VariableShadowing"),
     // do not check generated files
     scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
   )

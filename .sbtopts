@@ -1,0 +1,6 @@
+-J-Xms512m
+-J-Xmx2g
+-J-XX:+UseConcMarkSweepGC
+-J-XX:ReservedCodeCacheSize=256m
+-J-XX:+CMSClassUnloadingEnabled
+-Djava.awt.headless=true
