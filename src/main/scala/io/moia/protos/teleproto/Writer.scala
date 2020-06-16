@@ -53,7 +53,7 @@ object Writer extends LowPriorityWrites {
     valueWriter.write(model)
 
   def optional[MV, PV](model: Option[MV])(implicit valueWriter: Writer[MV, PV]): Option[PV] =
-    model.map(valueWriter.write)
+    model.map(valueWriter.write(_))
 
   // Opposite of required on Reader side
   def present[MV, PV](model: MV)(implicit valueWriter: Writer[MV, PV]): Option[PV] =
