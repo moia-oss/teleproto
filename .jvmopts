@@ -1,0 +1,4 @@
+-Xms512m
+-Xmx2g
+-XX:ReservedCodeCacheSize=256m
+-Djava.awt.headless=true
