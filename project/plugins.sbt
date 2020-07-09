@@ -30,6 +30,6 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.34")
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.10.4"
 
 addSbtPlugin("de.heikoseeberger" % "sbt-header"   % "5.6.0")
-addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype" % "3.9.3")
+addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype" % "3.9.4")
 addSbtPlugin("com.dwijnand"      % "sbt-dynver"   % "4.1.1")
 addSbtPlugin("com.jsuereth"      % "sbt-pgp"      % "2.0.1")
