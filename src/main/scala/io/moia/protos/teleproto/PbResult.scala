@@ -39,6 +39,8 @@ sealed trait PbResult[+T] {
   def withPathPrefix(prefix: String): PbResult[T]
 
   def toTry: Try[T]
+
+  def toOption: Option[T]
 }
 
 object PbResult {
@@ -80,6 +82,8 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
   override def withPathPrefix(prefix: String): PbSuccess[T] = this
 
   def toTry: Try[T] = Success(get)
+
+  def toOption: Option[T] = Some(get)
 }
 
 /**
@@ -114,6 +118,8 @@ final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothi
     errors.map(e => s"${e._1} ${e._2}".trim).mkString(" ")
 
   def toTry: Try[Nothing] = Failure(new Exception(toString))
+
+  def toOption: Option[Nothing] = None
 }
 
 object PbFailure {
