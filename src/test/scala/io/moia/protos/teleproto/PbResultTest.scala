@@ -41,10 +41,28 @@ class PbResultTest extends UnitTest {
     }
   }
 
+  "PbSuccess" should {
+    "be converted to Some with toOption" in {
+      PbSuccess("success").toOption shouldBe Some("success")
+    }
+
+    "be converted to Success with toTry" in {
+      PbSuccess("success").toTry shouldBe Success("success")
+    }
+  }
+
   "PbFailure" should {
     "have constructor from Throwable" in {
       val message = "Malformed payload"
       PbFailure.fromThrowable(new Exception(message)) shouldBe PbFailure(message)
+    }
+
+    "be converted to None with toOption" in {
+      PbFailure("error").toOption shouldBe None
+    }
+
+    "be converted to Failure with toTry" in {
+      PbFailure("error").toTry.failure.exception.getMessage shouldBe "error"
     }
   }
 }
