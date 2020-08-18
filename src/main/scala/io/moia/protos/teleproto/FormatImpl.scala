@@ -20,14 +20,20 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
-import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 /**
   * Compiler functions shared between both, reader and writer macros
   */
 @SuppressWarnings(Array("all"))
-object FormatImpl {
+trait FormatImpl {
+  val c: blackbox.Context
+  import c.universe._
+
+  def info(message: String, pos: Position = c.enclosingPosition): Unit     = c.info(pos, message, force = true)
+  def warn(message: String, pos: Position = c.enclosingPosition): Unit     = c.warning(pos, message)
+  def error(message: String, pos: Position = c.enclosingPosition): Unit    = c.error(pos, message)
+  def abort(message: String, pos: Position = c.enclosingPosition): Nothing = c.abort(pos, message)
 
   /**
     * A `sealed trait` is mapped to proto via a message that contains a `oneof` with name `value` (`ValueDefinition`).
@@ -37,24 +43,29 @@ object FormatImpl {
   val ValueDefinition = "value"
 
   // Standard result is a tree expression and a compatibility analysis
-  type Compiled[TYPE, TREE] = (TREE, Compatibility[TYPE])
+  type Compiled    = (Tree, Compatibility)
+  type CompatIssue = (Type, String)
 
   /**
     * Within a compiled hierarchy collects backward/forward compatibility issues.
     */
-  case class Compatibility[TYPE](surplusParameters: Iterable[(TYPE, String)],
-                                 defaultParameters: Iterable[(TYPE, String)],
-                                 surplusClasses: Iterable[(TYPE, String)]) {
+  case class Compatibility(
+      surplusParameters: Iterable[CompatIssue],
+      defaultParameters: Iterable[CompatIssue],
+      surplusClasses: Iterable[CompatIssue]
+  ) {
 
     // scalaPB 0.10 introduces a field called unknownFields for every proto by default.
     // See: https://github.com/scalapb/ScalaPB/issues/778 for alternatives.
     // The application can either choose to map or ignore this property.
     // A simple workaround for the moment is to ignore this property completely.
-    def unknownFieldProperty(property: (TYPE, String)): Boolean = property._2 == "unknownFields"
+    private def unknownField(issue: CompatIssue): Boolean             = issue._2 == "unknownFields"
+    private def unknownFields(issues: Iterable[CompatIssue]): Boolean = issues.forall(unknownField)
 
-    def hasIssues: Boolean = !(surplusParameters ++ defaultParameters ++ surplusClasses).forall(unknownFieldProperty)
+    def hasIssues: Boolean =
+      !(unknownFields(surplusParameters) && unknownFields(defaultParameters) && unknownFields(surplusClasses))
 
-    def merge(that: Compatibility[TYPE]): Compatibility[TYPE] =
+    def merge(that: Compatibility): Compatibility =
       Compatibility(
         this.surplusParameters ++ that.surplusParameters,
         this.defaultParameters ++ that.defaultParameters,
@@ -63,54 +74,48 @@ object FormatImpl {
   }
 
   object Compatibility {
-
-    def full[TYPE]: Compatibility[TYPE] = Compatibility[TYPE](Nil, Nil, Nil)
+    val full: Compatibility = Compatibility(Nil, Nil, Nil)
   }
 
   /**
     * From type `S[T]` extracts `T`.
     */
-  private[teleproto] def innerType(c: blackbox.Context)(from: c.universe.Type): c.universe.Type =
-    from.typeArgs.headOption.getOrElse(sys.error("Scapegoat..."))
+  private[teleproto] def innerType(from: Type): Type =
+    from.typeArgs.headOption.getOrElse(abort(s"Type $from does not have type arguments"))
 
   /**
     * Fails if types are not a Protobuf case class and case class pair.
     */
-  private[teleproto] def ensureValidTypes(c: blackbox.Context)(protobufType: c.Type, modelType: c.Type): Unit =
-    if (!checkClassTypes(c)(protobufType, modelType)) {
-      c.abort(c.enclosingPosition, s"`$protobufType` and `$modelType` have to be case classes with a single parameter list!")
+  private[teleproto] def ensureValidTypes(protobufType: Type, modelType: Type): Unit =
+    if (!checkClassTypes(protobufType, modelType)) {
+      abort(s"`$protobufType` and `$modelType` have to be case classes with a single parameter list!")
     }
 
-  private[teleproto] def checkClassTypes(c: blackbox.Context)(protobufType: c.Type, modelType: c.Type): Boolean =
-    isProtobuf(c)(protobufType) && isSimpleCaseClass(c)(modelType)
+  private[teleproto] def checkClassTypes(protobufType: Type, modelType: Type): Boolean =
+    isProtobuf(protobufType) && isSimpleCaseClass(modelType)
 
-  private[teleproto] def checkTraitTypes(c: blackbox.Context)(protobufType: c.Type, modelType: c.Type): Boolean =
-    isSealedTrait(c)(protobufType) && isSealedTrait(c)(modelType)
+  private[teleproto] def checkTraitTypes(protobufType: Type, modelType: Type): Boolean =
+    isSealedTrait(protobufType) && isSealedTrait(modelType)
 
-  private[teleproto] def checkHierarchyTypes(c: blackbox.Context)(protobufType: c.Type, modelType: c.Type): Boolean = {
-    import c.universe._
-    isSealedTrait(c)(modelType) && {
-      val protoClass = protobufType.typeSymbol.asClass
-      protoClass.isCaseClass && {
-        // a case class with a single field named `value`
-        val cons   = protobufType.member(termNames.CONSTRUCTOR).asMethod
-        val params = cons.paramLists.flatten
-        params.lengthCompare(1) == 0 && params.headOption.getOrElse(sys.error("Scapegoat...")).name.decodedName.toString == ValueDefinition
+  private[teleproto] def checkHierarchyTypes(protobufType: Type, modelType: Type): Boolean =
+    isSealedTrait(modelType) && protobufType.typeSymbol.asClass.isCaseClass && {
+      // a case class with a single field named `value`
+      protobufType.member(termNames.CONSTRUCTOR).asMethod.paramLists.flatten match {
+        case param :: Nil => param.name.decodedName.toString == ValueDefinition
+        case _            => false
       }
     }
-  }
 
   /**
     * A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa.
     */
-  private[teleproto] def checkEnumerationTypes(c: blackbox.Context)(protobufType: c.Type, modelType: c.Type): Boolean =
-    isScalaPBEnumeration(c)(protobufType) && isSealedTrait(c)(modelType)
+  private[teleproto] def checkEnumerationTypes(protobufType: Type, modelType: Type): Boolean =
+    isScalaPBEnumeration(protobufType) && isSealedTrait(modelType)
 
-  private[teleproto] def isProtobuf(c: blackbox.Context)(tpe: c.Type): Boolean =
-    isSimpleCaseClass(c)(tpe) // && tpe <:< typeOf[GeneratedMessage]
+  private[teleproto] def isProtobuf(tpe: Type): Boolean =
+    isSimpleCaseClass(tpe) // && tpe <:< typeOf[GeneratedMessage]
 
-  private[teleproto] def isSimpleCaseClass(c: blackbox.Context)(tpe: c.Type): Boolean = {
-    import c.universe._
+  private[teleproto] def isSimpleCaseClass(tpe: Type): Boolean =
     tpe.typeSymbol match {
       case cs: ClassSymbol =>
         cs.isCaseClass && {
@@ -119,46 +124,37 @@ object FormatImpl {
         }
       case _ => false
     }
-  }
 
-  private[teleproto] def hasTraceAnnotation(c: blackbox.Context): Boolean = {
-    import c.universe._
-    c.internal.enclosingOwner.annotations.exists(_.tree.tpe.typeSymbol == typeOf[trace].typeSymbol)
-  }
+  private[teleproto] def hasTraceAnnotation: Boolean =
+    c.internal.enclosingOwner.annotations.exists(_.tree.tpe.typeSymbol == symbolOf[trace])
 
   /**
     * If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given
     * (compiled) tree as info message to the compiler shell.
     */
-  private[teleproto] def traceCompiled(c: blackbox.Context)(tree: c.universe.Tree): c.universe.Tree = {
-    if (hasTraceAnnotation(c)) {
-      c.info(c.enclosingPosition, tree.toString, force = true)
-    }
+  private[teleproto] def traceCompiled(tree: Tree): Tree = {
+    if (hasTraceAnnotation) info(tree.toString)
     tree
   }
 
-  private[teleproto] def symbolsByName(c: blackbox.Context)(symbols: Iterable[c.universe.Symbol]): Map[c.universe.Name, c.universe.Symbol] =
-    symbols.groupBy(_.name.decodedName).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
+  private[teleproto] def symbolsByName(symbols: Iterable[Symbol]): Map[Name, Symbol] =
+    symbols.iterator.map(sym => sym.name.decodedName -> sym).toMap
 
   /**
     * Uses lower case names without underscores (assuming clashes are already handled by ScalaPB)
     */
-  private[teleproto] def symbolsByTolerantName(c: blackbox.Context)(symbols: Iterable[c.universe.Symbol]): Map[String, c.universe.Symbol] =
-    for ((name, symbol) <- symbolsByName(c)(symbols))
+  private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol]): Map[String, Symbol] =
+    for ((name, symbol) <- symbolsByName(symbols))
       yield (name.toString.toLowerCase.replace("_", ""), symbol)
 
-  private[teleproto] def isSealedTrait(c: blackbox.Context)(tpe: c.Type): Boolean = {
-    import c.universe._
+  private[teleproto] def isSealedTrait(tpe: Type): Boolean =
     tpe.typeSymbol match {
       case cs: ClassSymbol => cs.isSealed && cs.isAbstract
       case _               => false
     }
-  }
 
-  private[teleproto] def isScalaPBEnumeration(c: blackbox.Context)(tpe: c.Type): Boolean = {
-    import c.universe._
-    isSealedTrait(c)(tpe) && tpe.member(TypeName("EnumType")) != NoSymbol
-  }
+  private[teleproto] def isScalaPBEnumeration(tpe: Type): Boolean =
+    isSealedTrait(tpe) && tpe.member(TypeName("EnumType")) != NoSymbol
 
   /**
     * To map Scala's sealed traits to Protocol Buffers we use a message object with the name of the sealed trait.
@@ -166,9 +162,7 @@ object FormatImpl {
     *
     * This method collects all to Protocol Buffers case classes declared in `$traitName.Value`.
     */
-  private[teleproto] def protoHierarchyCaseClasses(c: blackbox.Context)(tpe: c.universe.Type): Iterable[c.universe.ClassSymbol] = {
-    import c.universe._
-
+  private[teleproto] def protoHierarchyCaseClasses(tpe: Type): Iterable[ClassSymbol] = {
     val sym       = tpe.typeSymbol.asClass // e.g. case class Condition (generated proto)
     val companion = sym.companion          // e.g. object Condition (generated proto)
 
@@ -176,7 +170,7 @@ object FormatImpl {
 
     val valueModule = // e.g. object Condition { object Value }
       valueModules.headOption.getOrElse(
-        c.abort(c.enclosingPosition, s"Could not find `object Value` in `$tpe`: ${companion.typeSignatureIn(tpe).decls}")
+        abort(s"Could not find `object Value` in `$tpe`: ${companion.typeSignatureIn(tpe).decls}")
       )
 
     valueModule.typeSignatureIn(tpe).decls.collect {
@@ -185,16 +179,13 @@ object FormatImpl {
     }
   }
 
-  private[teleproto] def implicitAvailable(
-      c: blackbox.Context
-  )(genericType: c.universe.Type, from: c.universe.Type, to: c.universe.Type): Boolean = {
-    import c.universe._
+  private[teleproto] def implicitAvailable(genericType: Type, from: Type, to: Type): Boolean = {
     val parametrizedType = appliedType(genericType, List(from, to))
     val implicitValue    = c.inferImplicitValue(parametrizedType)
     implicitValue != EmptyTree
   }
 
-  private[teleproto] def compatibilityInfo(c: blackbox.Context)(compatibility: Compatibility[_]): String = {
+  private[teleproto] def compatibilityInfo(compatibility: Compatibility): String = {
     val surplusInfo =
       for {
         (tpe, tpeAndNames) <- compatibility.surplusParameters.groupBy(_._1)
@@ -217,7 +208,7 @@ object FormatImpl {
   /**
     * Always renders the same hash for a similar incompatibility.
     */
-  private[teleproto] def compatibilitySignature(c: blackbox.Context)(compatibility: Compatibility[_]): String =
+  private[teleproto] def compatibilitySignature(compatibility: Compatibility): String =
     if (compatibility.hasIssues) {
       val baos         = new ByteArrayOutputStream()
       val incompatible = compatibility.surplusParameters ++ compatibility.defaultParameters ++ compatibility.surplusClasses
@@ -239,17 +230,11 @@ object FormatImpl {
   /**
     * Extracts literal signature value of @backward("signature") or @forward("signature").
     */
-  private[teleproto] def compatibilityAnnotation(c: blackbox.Context)(tpe: c.universe.Type): Option[String] = {
-    import c.universe._
-    val maybeAnnotation = c.internal.enclosingOwner.annotations.find(_.tree.tpe.typeSymbol == tpe.typeSymbol)
-    maybeAnnotation.flatMap(
-      annotation =>
-        annotation.tree match {
-          case Apply(_, List(Literal(Constant(signature: String)))) =>
-            Some(signature)
-          case _ =>
-            None
+  private[teleproto] def compatibilityAnnotation(tpe: Type): Option[String] =
+    c.internal.enclosingOwner.annotations.find(_.tree.tpe.typeSymbol == tpe.typeSymbol).flatMap { annotation =>
+      annotation.tree match {
+        case Apply(_, List(Literal(Constant(signature: String)))) => Some(signature)
+        case _                                                    => None
       }
-    )
-  }
+    }
 }
