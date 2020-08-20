@@ -16,39 +16,33 @@
 
 package io.moia.protos.teleproto
 
-import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
-object ReaderImpl {
+class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
+  import c.universe._
 
-  def reader_impl[P: c.WeakTypeTag, M: c.WeakTypeTag](c: blackbox.Context): c.Expr[Reader[P, M]] =
-    compile[P, M](c)
+  def reader_impl[P: WeakTypeTag, M: WeakTypeTag]: Expr[Reader[P, M]] =
+    c.Expr(compile[P, M])
 
-  import FormatImpl._
-
-  private def compile[P: c.WeakTypeTag, M: c.WeakTypeTag](c: blackbox.Context): c.Expr[Reader[P, M]] = {
-
-    import c.universe._
-
+  private def compile[P: WeakTypeTag, M: WeakTypeTag]: Tree = {
     val protobufType = weakTypeTag[P].tpe
     val modelType    = weakTypeTag[M].tpe
 
-    if (checkClassTypes(c)(protobufType, modelType)) {
-      val (result, compatibility) = compileClassMapping(c)(protobufType, modelType)
-      warnBackwardCompatible(c)(protobufType, modelType, compatibility)
-      c.Expr[Reader[P, M]](traceCompiled(c)(result))
-    } else if (checkEnumerationTypes(c)(protobufType, modelType)) {
-      val (result, compatibility) = compileEnumerationMapping(c)(protobufType, modelType)
-      warnBackwardCompatible(c)(protobufType, modelType, compatibility)
-      c.Expr[Reader[P, M]](traceCompiled(c)(result))
-    } else if (checkHierarchyTypes(c)(protobufType, modelType)) {
-      val (result, compatibility) = compileTraitMapping(c)(protobufType, modelType)
-      warnBackwardCompatible(c)(protobufType, modelType, compatibility)
-      c.Expr[Reader[P, M]](traceCompiled(c)(result))
+    if (checkClassTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileClassMapping(protobufType, modelType)
+      warnBackwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
+    } else if (checkEnumerationTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
+      warnBackwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
+    } else if (checkHierarchyTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileTraitMapping(protobufType, modelType)
+      warnBackwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
     } else {
-      c.abort(
-        c.enclosingPosition,
+      abort(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
       )
     }
@@ -65,34 +59,25 @@ object ReaderImpl {
     * The result is `f` applied to the reader expression with the (possible) compatibility issues of reader generation
     * (if happened).
     */
-  private def withImplicitReader(c: blackbox.Context)(protobufType: c.universe.Type, modelType: c.universe.Type)(
-      compileInner: c.universe.Tree => c.universe.Tree
-  ): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
-    val mapping = q"io.moia.protos.teleproto"
-
+  private def withImplicitReader(protobufType: Type, modelType: Type)(compileInner: Tree => Tree): Compiled = {
     // look for an implicit reader
-    val readerType = appliedType(c.weakTypeTag[Reader[_, _]].tpe, protobufType, modelType)
-
+    val readerType     = appliedType(c.weakTypeTag[Reader[_, _]].tpe, protobufType, modelType)
     val existingReader = c.inferImplicitValue(readerType)
 
     // "ask" for the implicit reader or use the found one
-    def ask: Compiled[c.universe.Type, c.universe.Tree] =
-      (compileInner(q"implicitly[$readerType]"), Compatibility.full)
+    def ask: Compiled = (compileInner(q"implicitly[$readerType]"), Compatibility.full)
 
     if (existingReader == EmptyTree)
-      if (checkClassTypes(c)(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileClassMapping(c)(protobufType, modelType)
+      if (checkClassTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else if (checkEnumerationTypes(c)(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileEnumerationMapping(c)(protobufType, modelType)
+      } else if (checkEnumerationTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else if (checkHierarchyTypes(c)(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileTraitMapping(c)(protobufType, modelType)
+      } else if (checkHierarchyTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
       } else
@@ -120,20 +105,14 @@ object ReaderImpl {
     *
     * Return the result expression and whether the matching was just backward compatible.
     */
-  private def compileClassMapping(c: blackbox.Context)(
-      protobufType: c.universe.Type,
-      modelType: c.universe.Type
-  ): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
+  private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
     val modelCompanion = modelType.typeSymbol.companion
 
     val protobufCons = protobufType.member(termNames.CONSTRUCTOR).asMethod
     val modelCons    = modelType.member(termNames.CONSTRUCTOR).asMethod
 
-    val protobufParams = protobufCons.paramLists.headOption.getOrElse(sys.error("Scapegoat...")).map(_.asTerm)
-    val modelParams    = modelCons.paramLists.headOption.getOrElse(sys.error("Scapegoat...")).map(_.asTerm)
+    val protobufParams = protobufCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
+    val modelParams    = modelCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
 
     val mapping = q"io.moia.protos.teleproto"
 
@@ -141,45 +120,45 @@ object ReaderImpl {
       * For each parameter creates a value assignment with the name of the parameter, e.g.
       * `val targetParameter = transformationExpression`
       */
-    def valueDefinitions(parameters: List[(TermSymbol, MatchingParam[Type, Tree])]): List[Compiled[Type, Tree]] = {
+    def valueDefinitions(parameters: List[(TermSymbol, MatchingParam)]): List[Compiled] = {
       parameters.flatMap {
         case (termSymbol, matchingParam) =>
           val path = q""""/"+${termSymbol.name.decodedName.toString}"""
 
-          def assign(compiled: Compiled[Type, Tree]): Compiled[Type, Tree] =
+          def assign(compiled: Compiled): Compiled =
             (q"val ${termSymbol.name} = ${compiled._1}", compiled._2)
 
           matchingParam match {
             case TransformParam(from, to) if from <:< to =>
-              Some(q"val ${termSymbol.name} = protobuf.${termSymbol.name}" -> Compatibility.full[Type])
+              Some(q"val ${termSymbol.name} = protobuf.${termSymbol.name}" -> Compatibility.full)
             case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && !(to <:< weakTypeOf[Option[_]]) =>
-              val innerFrom = innerType(c)(from)
-              Some(assign(withImplicitReader(c)(innerFrom, to) { readerExpr =>
+              val innerFrom = innerType(from)
+              Some(assign(withImplicitReader(innerFrom, to) { readerExpr =>
                 q"""$mapping.Reader.required[$innerFrom, $to](protobuf.${termSymbol.name}, $path)($readerExpr)"""
               }))
             case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && (to <:< weakTypeOf[Option[_]]) =>
-              val innerFrom = innerType(c)(from)
-              val innerTo   = innerType(c)(to)
-              Some(assign(withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
+              val innerFrom = innerType(from)
+              val innerTo   = innerType(to)
+              Some(assign(withImplicitReader(innerFrom, innerTo) { readerExpr =>
                 q"""$mapping.Reader.optional[$innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($readerExpr)"""
               }))
 
             case TransformParam(from, to) if from <:< weakTypeOf[Seq[_]] && to <:< weakTypeOf[Iterable[_]] =>
-              val innerFrom = innerType(c)(from)
-              val innerTo   = innerType(c)(to)
-              Some(assign(withImplicitReader(c)(innerFrom, innerTo) { readerExpr =>
+              val innerFrom = innerType(from)
+              val innerTo   = innerType(to)
+              Some(assign(withImplicitReader(innerFrom, innerTo) { readerExpr =>
                 // sequence also needs an implicit collection generator which must be looked up since the implicit for the value reader is passed explicitly
                 val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
                 q"""$mapping.Reader.sequence[${to.typeConstructor}, $innerFrom, $innerTo](protobuf.${termSymbol.name}, $path)($canBuildFrom, $readerExpr)"""
               }))
             case TransformParam(from, to) =>
-              Some(assign(withImplicitReader(c)(from, to) { readerExpr =>
+              Some(assign(withImplicitReader(from, to) { readerExpr =>
                 q"""$mapping.Reader.transform[$from, $to](protobuf.${termSymbol.name}, $path)($readerExpr)"""
               }))
             case ExplicitDefaultParam(expr) =>
-              Some(q"val ${termSymbol.name} = $expr" -> Compatibility.full[Type])
-            case SkippedDefaultParam(_) =>
-              Option.empty[(Tree, Compatibility[Type])]
+              Some(q"val ${termSymbol.name} = $expr" -> Compatibility.full)
+            case SkippedDefaultParam =>
+              Option.empty[Compiled]
           }
       }
     }
@@ -187,7 +166,7 @@ object ReaderImpl {
     /**
       * Constructs an expression `PbFailure.combine(convertedParameters..)` for all transformed parameters (could fail).
       */
-    def forLoop(parameters: List[(TermSymbol, MatchingParam[Type, Tree])], cons: Tree): Tree =
+    def forLoop(parameters: List[(TermSymbol, MatchingParam)], cons: Tree): Tree =
       parameters match {
         case Nil =>
           cons
@@ -198,7 +177,7 @@ object ReaderImpl {
               restTransformed
             case ExplicitDefaultParam(_) =>
               restTransformed
-            case SkippedDefaultParam(_) =>
+            case SkippedDefaultParam =>
               restTransformed
             case _ =>
               q"""${termSymbol.name}.flatMap { case ${termSymbol.name} => $restTransformed }"""
@@ -208,14 +187,14 @@ object ReaderImpl {
     /**
       * Constructs an expression `PbFailure(...)` that contains all errors for all failed parameter transformations.
       */
-    def combineErrors(parameters: List[(TermSymbol, MatchingParam[Type, Tree])]): Tree = {
+    def combineErrors(parameters: List[(TermSymbol, MatchingParam)]): Tree = {
       val convertedValues =
         parameters.flatMap {
           case (_, TransformParam(from, to)) if from <:< to =>
             None
           case (_, ExplicitDefaultParam(_)) =>
             None
-          case (_, SkippedDefaultParam(_)) =>
+          case (_, SkippedDefaultParam) =>
             None
           case (termSymbol, _) =>
             Some(termSymbol.name)
@@ -224,7 +203,7 @@ object ReaderImpl {
       q"$mapping.PbFailure.combine(..$convertedValues)"
     }
 
-    def transformation(parameters: Seq[MatchingParam[Type, Tree]], ownCompatibility: Compatibility[Type]): Compiled[Type, Tree] = {
+    def transformation(parameters: Seq[MatchingParam], ownCompatibility: Compatibility): Compiled = {
 
       val matchedParameters = modelParams.zip(parameters)
 
@@ -233,8 +212,8 @@ object ReaderImpl {
           .zip(parameters)
           .flatMap(_ match {
             // unmatched parameters with default values are not passed: they get their defaults
-            case (_, SkippedDefaultParam(_)) => None
-            case (param, _)                  => Some(q"${param.name} = ${param.name}")
+            case (_, SkippedDefaultParam) => None
+            case (param, _)               => Some(q"${param.name} = ${param.name}")
           })
 
       val (valDefs, parameterCompatibilities) = valueDefinitions(matchedParameters).unzip
@@ -257,10 +236,9 @@ object ReaderImpl {
       (result, ownCompatibility.merge(parameterCompatibility))
     }
 
-    compareCaseAccessors(c)(modelType, protobufParams, modelParams) match {
+    compareCaseAccessors(modelType, protobufParams, modelParams) match {
       case Incompatible(missingParameters) =>
-        c.abort(
-          c.enclosingPosition,
+        abort(
           s"`$protobufType` and $modelType are not compatible (${missingParameters.map(name => s"`$name`").mkString(", ")} missing in `$protobufType`)!"
         )
 
@@ -272,59 +250,46 @@ object ReaderImpl {
     }
   }
 
-  private sealed trait Matching[+TYPE, +TREE]
+  private sealed trait Matching
 
   /* Same arity */
-  private final case class Compatible[TYPE, TREE](parameters: Seq[MatchingParam[TYPE, TREE]]) extends Matching[TYPE, TREE]
+  private case class Compatible(parameters: Seq[MatchingParam]) extends Matching
 
   /* Missing names on Model side and no missing names Protobuf side that are not optional or without default on model side */
-  private final case class BackwardCompatible[TYPE, TREE](surplusParameters: Iterable[String],
-                                                          defaultParameters: Iterable[String],
-                                                          parameters: Seq[MatchingParam[TYPE, TREE]])
-      extends Matching[TYPE, TREE]
+  private case class BackwardCompatible(
+      surplusParameters: Iterable[String],
+      defaultParameters: Iterable[String],
+      parameters: Seq[MatchingParam]
+  ) extends Matching
 
   /* All remaining */
-  private final case class Incompatible[TYPE, TREE](missingParameters: Iterable[String]) extends Matching[TYPE, TREE]
+  private case class Incompatible(missingParameters: Iterable[String]) extends Matching
 
-  private sealed trait MatchingParam[TYPE, TREE]
+  private sealed trait MatchingParam
+  private case class TransformParam(from: Type, to: Type) extends MatchingParam
+  private case class ExplicitDefaultParam(value: Tree)    extends MatchingParam
+  private case object SkippedDefaultParam                 extends MatchingParam
 
-  private final case class TransformParam[TYPE, TREE](from: TYPE, to: TYPE) extends MatchingParam[TYPE, TREE]
+  private def compareCaseAccessors(
+      modelType: Type,
+      protobufParams: List[TermSymbol],
+      modelParams: List[TermSymbol]
+  ): Matching = {
+    val protobufByName       = symbolsByName(protobufParams)
+    val modelByName          = symbolsByName(modelParams)
+    val surplusProtobufNames = protobufByName.keySet diff modelByName.keySet
 
-  private final case class ExplicitDefaultParam[TYPE, TREE](value: TREE) extends MatchingParam[TYPE, TREE]
-
-  private final case class SkippedDefaultParam[TYPE, TREE](unit: Unit) extends MatchingParam[TYPE, TREE]
-
-  private def compareCaseAccessors(c: blackbox.Context)(
-      modelType: c.universe.Type,
-      protobufParams: List[c.universe.TermSymbol],
-      modelParams: List[c.universe.TermSymbol]
-  ): Matching[c.universe.Type, c.universe.Tree] = {
-
-    import c.universe._
-
-    val protobufByName = protobufParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
-    val modelByName    = modelParams.groupBy(_.name).view.mapValues(_.headOption.getOrElse(sys.error("Scapegoat..."))).toMap
-
-    val protobufNames = protobufByName.keySet
-
-    val surplusProtobufNames = protobufNames -- modelByName.keySet
-
-    val matchedParams: List[Option[MatchingParam[Type, Tree]]] =
-      for ((modelParam, index) <- modelParams.zipWithIndex; number = index + 1) yield {
-
+    val matchedParams: List[Option[MatchingParam]] =
+      for (modelParam <- modelParams) yield {
         // resolve type parameters to their actual bindings
         val targetType = modelParam.typeSignature.asSeenFrom(modelType, modelType.typeSymbol)
-
         protobufByName.get(modelParam.name) match {
           case Some(protobufParam) =>
-            Some(TransformParam[Type, Tree](protobufParam.typeSignature, targetType))
-
+            Some(TransformParam(protobufParam.typeSignature, targetType))
           case None if modelParam.isParamWithDefault =>
-            Some(SkippedDefaultParam[Type, Tree](()))
-
-          case None if modelParam.typeSignature <:< weakTypeOf[Option[_]] =>
-            Some(ExplicitDefaultParam[Type, Tree](q"""None"""))
-
+            Some(SkippedDefaultParam)
+          case None if targetType.typeSymbol == definitions.OptionClass =>
+            Some(ExplicitDefaultParam(reify(None).tree))
           case None =>
             None
         }
@@ -332,30 +297,30 @@ object ReaderImpl {
 
     val namedMatchedParams = modelParams.map(_.name).zip(matchedParams)
 
-    val missingModelParamNames =
-      namedMatchedParams.collect {
-        case (name, None) => name
-      }
+    val missingModelParamNames = namedMatchedParams.collect {
+      case (name, None) => name
+    }
 
-    val matchingModelParams =
-      namedMatchedParams.collect {
-        case (name, Some(matchingParam)) => (name, matchingParam)
-      }
+    val matchingModelParams = namedMatchedParams.collect {
+      case (name, Some(matchingParam)) => (name, matchingParam)
+    }
 
-    val backwardCompatibleModelParamNames =
-      matchingModelParams.collect {
-        case (name, SkippedDefaultParam(_))  => name
-        case (name, ExplicitDefaultParam(_)) => name
-      }
+    val backwardCompatibleModelParamNames = matchingModelParams.collect {
+      case (name, SkippedDefaultParam)     => name
+      case (name, ExplicitDefaultParam(_)) => name
+    }
 
-    if (missingModelParamNames.nonEmpty)
+    if (missingModelParamNames.nonEmpty) {
       Incompatible(missingModelParamNames.map(_.decodedName.toString))
-    else if (surplusProtobufNames.nonEmpty || backwardCompatibleModelParamNames.nonEmpty)
-      BackwardCompatible[Type, Tree](surplusProtobufNames.map(_.decodedName.toString),
-                                     backwardCompatibleModelParamNames.map(_.decodedName.toString),
-                                     matchingModelParams.map(_._2))
-    else
+    } else if (surplusProtobufNames.nonEmpty || backwardCompatibleModelParamNames.nonEmpty) {
+      BackwardCompatible(
+        surplusProtobufNames.map(_.decodedName.toString),
+        backwardCompatibleModelParamNames.map(_.decodedName.toString),
+        matchingModelParams.map(_._2)
+      )
+    } else {
       Compatible(matchingModelParams.map(_._2))
+    }
   }
 
   /**
@@ -369,32 +334,25 @@ object ReaderImpl {
     * .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar")))
     * .getOrElse(PbFailure("Value is required."))
     */
-  private def compileTraitMapping(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
+  private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
     val mapping = q"io.moia.protos.teleproto"
 
-    val protobufSubClasses = symbolsByName(c)(protoHierarchyCaseClasses(c)(protobufType))
-    val modelSubClasses    = symbolsByName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses)
+    val protobufSubClasses = symbolsByName(protoHierarchyCaseClasses(protobufType))
+    val modelSubClasses    = symbolsByName(modelType.typeSymbol.asClass.knownDirectSubclasses)
 
     if (protobufSubClasses.isEmpty)
-      c.error(
-        c.enclosingPosition,
+      error(
         s"No case classes were found in object `Value` in `${protobufType.typeSymbol.fullName}`. Your protofile is most likely not as it should!"
       )
 
-    val unmatchedProtobufClasses = protobufSubClasses.keySet -- modelSubClasses.keySet
+    val unmatchedProtobufClasses = protobufSubClasses.keySet diff modelSubClasses.keySet
 
     if (unmatchedProtobufClasses.nonEmpty)
-      c.error(
-        c.enclosingPosition,
+      error(
         s"`${modelType.typeSymbol.name}` does not match ${unmatchedProtobufClasses.map(c => s"`$c`").mkString(", ")} of object `Value` in `${protobufType.typeSymbol.name}`."
       )
 
-    val surplusModelClasses = modelSubClasses.keySet -- protobufSubClasses.keySet
+    val surplusModelClasses = modelSubClasses.keySet diff protobufSubClasses.keySet
     val ownCompatibility    = Compatibility(Nil, Nil, surplusModelClasses.map(name => (modelType, name.toString)))
 
     val maybeTransformedTrees =
@@ -408,11 +366,11 @@ object ReaderImpl {
 
         val method = protobufClass.typeSignature.decl(methodName)
 
-        val protobufWrappedType = innerType(c)(method.asMethod.returnType)
+        val protobufWrappedType = innerType(method.asMethod.returnType)
 
         val specificModelType = modelClass.asClass.selfType
 
-        withImplicitReader(c)(protobufWrappedType, specificModelType) { readerExpr =>
+        withImplicitReader(protobufWrappedType, specificModelType) { readerExpr =>
           q"""protobuf.value.$methodName.map(value => $mapping.Reader.transform[$protobufWrappedType, $specificModelType](value, "/" + ${methodName.toString})($readerExpr))"""
         }
       }
@@ -435,7 +393,7 @@ object ReaderImpl {
             def read(protobuf: $protobufType) = $transformed
           }"""
     // a type cast is needed due to type inferencer limitations
-    (result, ownCompatibility.merge(subClassesCompatibility.asInstanceOf[Compatibility[Type]]))
+    (result, ownCompatibility.merge(subClassesCompatibility.asInstanceOf[Compatibility]))
   }
 
   /**
@@ -454,24 +412,17 @@ object ReaderImpl {
     *   case Unrecognized(other) => PbFailure(s"Enumeration value $other is unrecognized!")
     * }
     */
-  private def compileEnumerationMapping(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
-    val mapping = q"io.moia.protos.teleproto"
-
+  private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
+    val mapping           = q"io.moia.protos.teleproto"
     val protobufCompanion = protobufType.typeSymbol.companion
 
-    val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
-    val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
+    val protobufOptions = symbolsByTolerantName(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
+    val modelOptions    = symbolsByTolerantName(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
     val unmatchedProtobufOptions = protobufOptions.toList.collect { case (name, v) if !modelOptions.contains(name) => v.name.decodedName }
 
     if (unmatchedProtobufOptions.nonEmpty) {
-      c.error(
-        c.enclosingPosition,
+      error(
         s"The options in `${modelType.typeSymbol.fullName}` do not match ${unmatchedProtobufOptions.map(c => s"`$c`").mkString(", ")} in `${protobufType.typeSymbol.fullName}`."
       )
     }
@@ -512,29 +463,21 @@ object ReaderImpl {
     (result, compatibility)
   }
 
-  private[teleproto] def warnBackwardCompatible(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type, compatibility: Compatibility[c.universe.Type]): Unit = {
+  private[teleproto] def warnBackwardCompatible(protobufType: Type, modelType: Type, compatibility: Compatibility): Unit = {
+    def info           = compatibilityInfo(compatibility)
+    lazy val signature = compatibilitySignature(compatibility)
 
-    def info           = compatibilityInfo(c)(compatibility)
-    lazy val signature = compatibilitySignature(c)(compatibility)
-
-    compatibilityAnnotation(c)(c.typeOf[backward]) match {
+    compatibilityAnnotation(typeOf[backward]) match {
       case None if compatibility.hasIssues =>
-        c.warning(
-          c.enclosingPosition,
+        warn(
           s"""`$protobufType` is just backward compatible to `$modelType`:\n$info\nAnnotate `@backward("$signature")` to remove this warning!"""
         )
 
       case Some(_) if !compatibility.hasIssues =>
-        c.error(
-          c.enclosingPosition,
-          s"""`$protobufType` is compatible to `$modelType`.\nAnnotation `@backward` should be removed!"""
-        )
+        error(s"""`$protobufType` is compatible to `$modelType`.\nAnnotation `@backward` should be removed!""")
 
       case Some(actual) if actual != signature =>
-        c.error(
-          c.enclosingPosition,
+        error(
           s"""Backward compatibility of `$protobufType` to `$modelType` changed!\n$info\nValidate the compatibility and annotate `@backward("$signature")` to remove this error!"""
         )
 

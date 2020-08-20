@@ -20,41 +20,36 @@ import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
-object WriterImpl {
+class WriterImpl(val c: blackbox.Context) extends FormatImpl {
+  import c.universe._
 
   /**
     * Validates if business model type can be written to the Protocol Buffers type
     * (matching case classes or matching sealed trait hierarchy).
     * If just forward compatible then raise a warning.
     */
-  def writer_impl[M: c.WeakTypeTag, P: c.WeakTypeTag](c: blackbox.Context): c.Expr[Writer[M, P]] =
-    compile[M, P](c)
+  def writer_impl[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] =
+    c.Expr(compile[M, P])
 
-  import FormatImpl._
-
-  private def compile[M: c.WeakTypeTag, P: c.WeakTypeTag](c: blackbox.Context): c.Expr[Writer[M, P]] = {
-
-    import c.universe._
-
+  private def compile[M: WeakTypeTag, P: WeakTypeTag]: Tree = {
     val modelType    = weakTypeTag[M].tpe
     val protobufType = weakTypeTag[P].tpe
 
-    if (checkClassTypes(c)(protobufType, modelType)) {
-      ensureValidTypes(c)(protobufType, modelType)
-      val (result, compatibility) = compileClassMapping(c)(protobufType, modelType)
-      warnForwardCompatible(c)(protobufType, modelType, compatibility)
-      c.Expr[Writer[M, P]](traceCompiled(c)(result))
-    } else if (checkEnumerationTypes(c)(protobufType, modelType)) {
-      val (result, compatibility) = compileEnumerationMapping(c)(protobufType, modelType)
-      warnForwardCompatible(c)(protobufType, modelType, compatibility)
-      c.Expr[Writer[M, P]](traceCompiled(c)(result))
-    } else if (checkHierarchyTypes(c)(protobufType, modelType)) {
-      val (result, compatibility) = compileTraitMapping(c)(protobufType, modelType)
-      warnForwardCompatible(c)(protobufType, modelType, compatibility)
-      c.Expr[Writer[M, P]](traceCompiled(c)(result))
+    if (checkClassTypes(protobufType, modelType)) {
+      ensureValidTypes(protobufType, modelType)
+      val (result, compatibility) = compileClassMapping(protobufType, modelType)
+      warnForwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
+    } else if (checkEnumerationTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
+      warnForwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
+    } else if (checkHierarchyTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileTraitMapping(protobufType, modelType)
+      warnForwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
     } else {
-      c.abort(
-        c.enclosingPosition,
+      abort(
         s"Cannot create a writer from `$modelType` to `$protobufType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
       )
     }
@@ -71,34 +66,26 @@ object WriterImpl {
     * The result is `f` applied to the writer expression with the (possible) compatibility issues of writer generation
     * (if happened).
     */
-  private def withImplicitWriter(c: blackbox.Context)(modelType: c.universe.Type, protobufType: c.universe.Type)(
-      compileInner: c.universe.Tree => c.universe.Tree
-  ): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
-    val mapping = q"io.moia.protos.teleproto"
-
+  private def withImplicitWriter(modelType: Type, protobufType: Type)(compileInner: Tree => Tree): Compiled = {
     // look for an implicit writer
     val writerType = appliedType(c.weakTypeTag[Writer[_, _]].tpe, modelType, protobufType)
 
     val existingWriter = c.inferImplicitValue(writerType)
 
     // "ask" for the implicit writer or use the found one
-    def ask: Compiled[c.universe.Type, c.universe.Tree] =
-      (compileInner(q"implicitly[$writerType]"), Compatibility.full)
+    def ask: Compiled = (compileInner(q"implicitly[$writerType]"), Compatibility.full)
 
     if (existingWriter == EmptyTree)
-      if (checkClassTypes(c)(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileClassMapping(c)(protobufType, modelType)
+      if (checkClassTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else if (checkEnumerationTypes(c)(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileEnumerationMapping(c)(protobufType, modelType)
+      } else if (checkEnumerationTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else if (checkHierarchyTypes(c)(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileTraitMapping(c)(protobufType, modelType)
+      } else if (checkHierarchyTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
       } else
@@ -117,63 +104,54 @@ object WriterImpl {
     * - If name is missing in model but is optional, pass `None` (forward compatible)
     * - Otherwise convert using `transform`, `optional` or `present`.
     */
-  private def compileClassMapping(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
+  private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
     // at this point all errors are assumed to be due to evolution
-
     val protobufCompanion = protobufType.typeSymbol.companion
 
     val protobufCons = protobufType.member(termNames.CONSTRUCTOR).asMethod
     val modelCons    = modelType.member(termNames.CONSTRUCTOR).asMethod
 
-    val protobufParams = protobufCons.paramLists.headOption.getOrElse(sys.error("Scapegoat...")).map(_.asTerm)
-    val modelParams    = modelCons.paramLists.headOption.getOrElse(sys.error("Scapegoat...")).map(_.asTerm)
+    val protobufParams = protobufCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
+    val modelParams    = modelCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
 
     val mapping = q"io.moia.protos.teleproto"
 
-    val genericWriterType = c.typeOf[Writer[_, _]]
-
-    def transformation(parameters: Seq[MatchingParam[Type, Tree]], ownCompatibility: Compatibility[Type]): Compiled[Type, Tree] = {
+    def transformation(parameters: Seq[MatchingParam], ownCompatibility: Compatibility): Compiled = {
 
       val namedArguments =
         protobufParams
           .zip(parameters)
           .flatMap(_ match {
             // unmatched parameters with default values are not passed: they get their defaults
-            case (_, SkippedDefaultParam(_)) => None
+            case (_, SkippedDefaultParam) => None
             case (param, TransformParam(from, to)) =>
               val arg =
                 if (from <:< to) {
                   (q"""model.${param.name}""", Compatibility.full)
                 } else if (to <:< weakTypeOf[Option[_]] && !(from <:< weakTypeOf[Option[_]])) {
-                  withImplicitWriter(c)(from, innerType(c)(to))(
-                    writerExpr => q"""$mapping.Writer.present[$from, ${innerType(c)(to)}](model.${param.name})($writerExpr)"""
+                  withImplicitWriter(from, innerType(to))(
+                    writerExpr => q"""$mapping.Writer.present[$from, ${innerType(to)}](model.${param.name})($writerExpr)"""
                   )
                 } else if (to <:< weakTypeOf[Option[_]] && from <:< weakTypeOf[Option[_]]) {
-                  withImplicitWriter(c)(innerType(c)(from), innerType(c)(to))(
-                    writerExpr =>
-                      q"""$mapping.Writer.optional[${innerType(c)(from)}, ${innerType(c)(to)}](model.${param.name})($writerExpr)"""
+                  withImplicitWriter(innerType(from), innerType(to))(
+                    writerExpr => q"""$mapping.Writer.optional[${innerType(from)}, ${innerType(to)}](model.${param.name})($writerExpr)"""
                   )
                 } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[scala.collection.immutable.Seq[_]]) {
-                  val innerFrom = innerType(c)(from)
-                  val innerTo   = innerType(c)(to)
-                  withImplicitWriter(c)(innerFrom, innerTo) { writerExpr =>
+                  val innerFrom = innerType(from)
+                  val innerTo   = innerType(to)
+                  withImplicitWriter(innerFrom, innerTo) { writerExpr =>
                     // collection also needs an implicit sequence generator which must be looked up since the implicit for the value writer is passed explicitly
                     val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
                     q"""$mapping.Writer.collection[$innerFrom, $innerTo, scala.collection.immutable.Seq](model.${param.name})($canBuildFrom, $writerExpr)"""
                   }
                 } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {
-                  val innerFrom = innerType(c)(from)
-                  val innerTo   = innerType(c)(to)
-                  withImplicitWriter(c)(innerFrom, innerTo)(
+                  val innerFrom = innerType(from)
+                  val innerTo   = innerType(to)
+                  withImplicitWriter(innerFrom, innerTo)(
                     writerExpr => q"""$mapping.Writer.sequence[$innerFrom, $innerTo](model.${param.name})($writerExpr)"""
                   )
                 } else {
-                  withImplicitWriter(c)(from, to)(
+                  withImplicitWriter(from, to)(
                     writerExpr => q"""$mapping.Writer.transform[$from, $to](model.${param.name})($writerExpr)"""
                   )
                 }
@@ -187,7 +165,7 @@ object WriterImpl {
       // a type cast is needed due to type inferencer limitations
       val innerCompatibilities =
         for ((_, (_, innerCompatibility)) <- namedArguments)
-          yield innerCompatibility.asInstanceOf[Compatibility[c.universe.Type]]
+          yield innerCompatibility.asInstanceOf[Compatibility]
 
       val compatibility = innerCompatibilities.foldRight(ownCompatibility)(_.merge(_))
 
@@ -200,7 +178,7 @@ object WriterImpl {
       (result, compatibility)
     }
 
-    compareCaseAccessors(c)(modelType, protobufParams, modelParams) match {
+    compareCaseAccessors(modelType, protobufParams, modelParams) match {
       case Compatible(parameters) =>
         transformation(parameters, Compatibility.full)
 
@@ -209,47 +187,41 @@ object WriterImpl {
     }
   }
 
-  private sealed trait Matching[+TYPE, +TREE]
+  private sealed trait Matching
 
   /* Same arity */
-  private final case class Compatible[TYPE, TREE](parameters: Seq[MatchingParam[TYPE, TREE]]) extends Matching[TYPE, TREE]
+  private case class Compatible(parameters: Seq[MatchingParam]) extends Matching
 
   /* Missing names on Protobuf side and missing names on Model side */
-  private final case class ForwardCompatible[TYPE, TREE](surplusParameters: Iterable[String],
-                                                         defaultParameters: Iterable[String],
-                                                         parameters: Seq[MatchingParam[TYPE, TREE]])
-      extends Matching[TYPE, TREE]
+  private case class ForwardCompatible(
+      surplusParameters: Iterable[String],
+      defaultParameters: Iterable[String],
+      parameters: Seq[MatchingParam]
+  ) extends Matching
 
-  private sealed trait MatchingParam[TYPE, TREE]
+  private sealed trait MatchingParam
+  private case class TransformParam(from: Type, to: Type) extends MatchingParam
+  private case object SkippedDefaultParam                 extends MatchingParam
 
-  private final case class TransformParam[TYPE, TREE](from: TYPE, to: TYPE) extends MatchingParam[TYPE, TREE]
+  private def compareCaseAccessors(
+      modelType: Type,
+      protobufParams: List[TermSymbol],
+      modelParams: List[TermSymbol]
+  ): Matching = {
+    val protobufByName = symbolsByName(protobufParams)
+    val modelByName    = symbolsByName(modelParams)
 
-  private final case class SkippedDefaultParam[TYPE, TREE](unit: Unit) extends MatchingParam[TYPE, TREE]
+    val surplusModelNames = modelByName.keySet diff protobufByName.keySet
 
-  private def compareCaseAccessors(c: blackbox.Context)(
-      modelType: c.universe.Type,
-      protobufParams: List[c.universe.TermSymbol],
-      modelParams: List[c.universe.TermSymbol]
-  ): Matching[c.universe.Type, c.universe.Tree] = {
-
-    import c.universe._
-
-    val protobufByName = FormatImpl.symbolsByName(c)(protobufParams)
-    val modelByName    = FormatImpl.symbolsByName(c)(modelParams)
-
-    val surplusModelNames = modelByName.keySet -- protobufByName.keySet
-
-    val matchingProtobufParams: List[MatchingParam[Type, Tree]] =
-      for ((protobufParam, index) <- protobufParams.zipWithIndex; number = index + 1) yield {
+    val matchingProtobufParams: List[MatchingParam] =
+      for (protobufParam <- protobufParams) yield {
         modelByName.get(protobufParam.name) match {
           case Some(modelParam) =>
             // resolve type parameters to their actual bindings
             val sourceType = modelParam.typeSignature.asSeenFrom(modelType, modelType.typeSymbol)
-
-            TransformParam[Type, Tree](sourceType, protobufParam.typeSignature)
-
+            TransformParam(sourceType, protobufParam.typeSignature)
           case None =>
-            SkippedDefaultParam[Type, Tree](())
+            SkippedDefaultParam
         }
       }
 
@@ -257,15 +229,18 @@ object WriterImpl {
 
     val forwardCompatibleModelParamNames =
       namedMatchedParams.collect {
-        case (name, SkippedDefaultParam(_)) => name
+        case (name, SkippedDefaultParam) => name
       }
 
-    if (surplusModelNames.nonEmpty || forwardCompatibleModelParamNames.nonEmpty)
-      ForwardCompatible[Type, Tree](surplusModelNames.map(_.decodedName.toString),
-                                    forwardCompatibleModelParamNames.map(_.decodedName.toString),
-                                    matchingProtobufParams)
-    else
+    if (surplusModelNames.nonEmpty || forwardCompatibleModelParamNames.nonEmpty) {
+      ForwardCompatible(
+        surplusModelNames.map(_.decodedName.toString),
+        forwardCompatibleModelParamNames.map(_.decodedName.toString),
+        matchingProtobufParams
+      )
+    } else {
       Compatible(matchingProtobufParams)
+    }
   }
 
   /**
@@ -279,38 +254,30 @@ object WriterImpl {
     *   else
     *     protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(transform[model.Bar, protobuf.Bar](value.asInstanceOf[model.Bar])))
     */
-  private def compileTraitMapping(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
-    val mapping = q"io.moia.protos.teleproto"
-
+  private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
+    val mapping           = q"io.moia.protos.teleproto"
     val protobufCompanion = protobufType.typeSymbol.companion
 
-    val protobufSubClasses = symbolsByName(c)(protoHierarchyCaseClasses(c)(protobufType))
-    val modelSubClasses    = symbolsByName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses)
+    val protobufSubClasses = symbolsByName(protoHierarchyCaseClasses(protobufType))
+    val modelSubClasses    = symbolsByName(modelType.typeSymbol.asClass.knownDirectSubclasses)
 
     if (protobufSubClasses.isEmpty)
-      c.error(
-        c.enclosingPosition,
+      error(
         s"No case classes were found in object `Value` in `${protobufType.typeSymbol.fullName}`. Your protofile is most likely not as it should!"
       )
 
-    val unmatchedModelClasses = modelSubClasses.keySet -- protobufSubClasses.keySet
+    val unmatchedModelClasses = modelSubClasses.keySet diff protobufSubClasses.keySet
 
     if (unmatchedModelClasses.nonEmpty) {
-      c.error(
-        c.enclosingPosition,
+      error(
         s"Object `Value` in `${protobufType.typeSymbol.fullName}` does not match ${unmatchedModelClasses.map(c => s"`$c`").mkString(", ")} in `${modelType.typeSymbol.fullName}`."
       )
     }
 
-    val surplusProtobufClasses = protobufSubClasses.keySet -- modelSubClasses.keySet
+    val surplusProtobufClasses = protobufSubClasses.keySet diff modelSubClasses.keySet
     val ownCompatibility       = Compatibility(Nil, Nil, surplusProtobufClasses.map(name => (protobufType, name.toString)))
 
-    val checkAndTransforms: Iterable[(Tree, Tree, Compatibility[Type])] =
+    val checkAndTransforms: Iterable[(Tree, Tree, Compatibility)] =
       for {
         (className, protobufClass) <- protobufSubClasses
         modelClass                 <- modelSubClasses.get(className)
@@ -321,14 +288,14 @@ object WriterImpl {
 
         val method = protobufClass.typeSignature.decl(methodName)
 
-        val protobufWrappedType = innerType(c)(method.asMethod.returnType)
+        val protobufWrappedType = innerType(method.asMethod.returnType)
 
         val specificModelType = modelClass.asClass.selfType
 
         val checkSpecific = q"model.isInstanceOf[$specificModelType]"
 
         val (transformSpecific, compatibility) =
-          withImplicitWriter(c)(specificModelType, protobufWrappedType)(
+          withImplicitWriter(specificModelType, protobufWrappedType)(
             writerExpr =>
               q"""$mapping.Writer.transform[$specificModelType, $protobufWrappedType](model.asInstanceOf[$specificModelType])($writerExpr)"""
           )
@@ -339,7 +306,7 @@ object WriterImpl {
         (checkSpecific, transformWrapped, compatibility)
       }
 
-    def ifElses(checkAndTransforms: List[(Tree, Tree, Compatibility[Type])]): Compiled[Type, Tree] =
+    def ifElses(checkAndTransforms: List[(Tree, Tree, Compatibility)]): Compiled =
       checkAndTransforms match {
         // last entry: cast has to match (in `else` or on top-level)
         case List((_, transform, classCompatibility)) =>
@@ -378,22 +345,16 @@ object WriterImpl {
     *   case ModelEnum.OPTION_N => ProtoEnum.OPTION_N
     * }
     */
-  private def compileEnumerationMapping(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type): Compiled[c.universe.Type, c.universe.Tree] = {
-    import FormatImpl._
-    import c.universe._
-
+  private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
     val mapping = q"io.moia.protos.teleproto"
 
-    val protobufOptions = symbolsByTolerantName(c)(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
-    val modelOptions    = symbolsByTolerantName(c)(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
+    val protobufOptions = symbolsByTolerantName(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
+    val modelOptions    = symbolsByTolerantName(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
     val unmatchedModelOptions = modelOptions.toList.collect { case (name, v) if !protobufOptions.contains(name) => v.name.decodedName }
 
     if (unmatchedModelOptions.nonEmpty) {
-      c.error(
-        c.enclosingPosition,
+      error(
         s"The options in `${protobufType.typeSymbol.fullName}` do not match ${unmatchedModelOptions.map(c => s"`$c`").mkString(", ")} in `${modelType.typeSymbol.fullName}`."
       )
     }
@@ -427,29 +388,23 @@ object WriterImpl {
     (result, compatibility)
   }
 
-  private[teleproto] def warnForwardCompatible(
-      c: blackbox.Context
-  )(protobufType: c.universe.Type, modelType: c.universe.Type, compatibility: Compatibility[c.universe.Type]): Unit = {
+  private[teleproto] def warnForwardCompatible(protobufType: Type, modelType: Type, compatibility: Compatibility): Unit = {
+    def info           = compatibilityInfo(compatibility)
+    lazy val signature = compatibilitySignature(compatibility)
 
-    def info           = compatibilityInfo(c)(compatibility)
-    lazy val signature = compatibilitySignature(c)(compatibility)
-
-    compatibilityAnnotation(c)(c.typeOf[forward]) match {
+    compatibilityAnnotation(typeOf[forward]) match {
       case None if compatibility.hasIssues =>
-        c.warning(
-          c.enclosingPosition,
+        warn(
           s"""`$modelType` is just forward compatible to `$protobufType`:\n$info\nAnnotate `@forward("$signature")` to remove this warning!"""
         )
 
       case Some(_) if !compatibility.hasIssues =>
-        c.error(
-          c.enclosingPosition,
+        error(
           s"""`$modelType` is compatible to `$protobufType`.\nAnnotation `@forward` should be removed!"""
         )
 
       case Some(actual) if actual != signature =>
-        c.error(
-          c.enclosingPosition,
+        error(
           s"""Forward compatibility of `$modelType` to `$protobufType` changed!\n$info\nValidate the compatibility and annotate `@forward("$signature")` to remove this error!"""
         )
 

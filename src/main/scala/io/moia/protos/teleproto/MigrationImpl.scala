@@ -16,31 +16,26 @@
 
 package io.moia.protos.teleproto
 
-import io.moia.protos.teleproto.FormatImpl._
-
 import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
-object MigrationImpl {
+class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
+  import c.universe._
 
-  def migration_impl[P: c.WeakTypeTag, Q: c.WeakTypeTag](c: blackbox.Context)(args: c.Expr[P => Any]*): c.Expr[Migration[P, Q]] = {
-    import c.universe._
+  def migration_impl[P: WeakTypeTag, Q: WeakTypeTag](args: c.Expr[P => Any]*): c.Expr[Migration[P, Q]] = {
     val sourceType = weakTypeTag[P].tpe
     val targetType = weakTypeTag[Q].tpe
-    c.Expr[Migration[P, Q]](traceCompiled(c)(compile(c)(sourceType, targetType, args.map(_.tree).toList)))
+    c.Expr[Migration[P, Q]](traceCompiled(compile(sourceType, targetType, args.map(_.tree).toList)))
   }
 
-  private def compile(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type, args: List[c.universe.Tree]): c.universe.Tree =
-    if (isProtobuf(c)(sourceType) && isProtobuf(c)(targetType))
-      compileClassMigration(c)(sourceType, targetType, args)
-    else if (isScalaPBEnumeration(c)(sourceType) && isScalaPBEnumeration(c)(targetType))
-      compileEnumerationMigration(c)(sourceType, targetType, args)
+  private def compile(sourceType: Type, targetType: Type, args: List[Tree]): Tree =
+    if (isProtobuf(sourceType) && isProtobuf(targetType))
+      compileClassMigration(sourceType, targetType, args)
+    else if (isScalaPBEnumeration(sourceType) && isScalaPBEnumeration(targetType))
+      compileEnumerationMigration(sourceType, targetType)
     else
-      c.abort(
-        c.enclosingPosition,
+      abort(
         s"Cannot create a migration from `$sourceType` to `$targetType`. Just migrations between a) case classes b) sealed traits from enums are possible."
       )
 
@@ -49,26 +44,22 @@ object MigrationImpl {
     * a) both are case classes (protobuf messages)
     * b) both are sealed traits from ScalaPB enums
     */
-  private def isExpected(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type): Boolean = {
-    def classMigration = isProtobuf(c)(sourceType) && isProtobuf(c)(targetType)
-    def enumMigration  = isScalaPBEnumeration(c)(sourceType) && isScalaPBEnumeration(c)(targetType)
+  private def isExpected(sourceType: Type, targetType: Type): Boolean = {
+    def classMigration = isProtobuf(sourceType) && isProtobuf(targetType)
+    def enumMigration  = isScalaPBEnumeration(sourceType) && isScalaPBEnumeration(targetType)
     classMigration || enumMigration
   }
 
   /**
     * Checks if a migration from source to target type can be compiled without additional code.
     */
-  private def isTrivial(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type): Boolean =
-    if (isProtobuf(c)(sourceType) && isProtobuf(c)(targetType))
+  private def isTrivial(sourceType: Type, targetType: Type): Boolean =
+    if (isProtobuf(sourceType) && isProtobuf(targetType))
       // case class migration is trivial if all parameters can be migrated automatically
-      compareClassParameters(c)(sourceType, targetType).forall(_.isInstanceOf[Automatically[_, _]])
-    else if (checkEnumerationTypes(c)(sourceType, targetType))
+      compareClassParameters(sourceType, targetType).forall(_.isInstanceOf[Automatically])
+    else if (checkEnumerationTypes(sourceType, targetType))
       // enum migration is trivial if there are no unmatched options from the source
-      compareEnumerationOptions(c)(sourceType, targetType).isEmpty
+      compareEnumerationOptions(sourceType, targetType).isEmpty
     else
       false
 
@@ -81,35 +72,25 @@ object MigrationImpl {
     * Otherwise expect it anyway and let the Scala compiler complain about it.
     * That allows to generate as much as possible from the hierarchy and just complain about the missing parts.
     */
-  private def implicitMigration(c: blackbox.Context)(sourceType: c.universe.Type, targetType: c.universe.Type): c.universe.Tree = {
-
-    import c.universe._
-
+  private def implicitMigration(sourceType: Type, targetType: Type): Tree = {
     // look for an implicit migration
-    val migrationType = appliedType(c.weakTypeTag[Migration[_, _]].tpe, sourceType, targetType)
-
+    val migrationType     = appliedType(weakTypeTag[Migration[_, _]].tpe, sourceType, targetType)
     val existingMigration = c.inferImplicitValue(migrationType)
 
-    if (existingMigration == EmptyTree && isTrivial(c)(sourceType, targetType))
+    if (existingMigration == EmptyTree && isTrivial(sourceType, targetType))
       // compile the nested migration
-      compile(c)(sourceType, targetType, Nil)
+      compile(sourceType, targetType, Nil)
     else
       // "ask" for the implicit migration
       q"implicitly[$migrationType]"
   }
 
-  private def compileClassMigration(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type, args: List[c.universe.Tree]): c.universe.Tree = {
-
-    import c.universe._
-
+  private def compileClassMigration(sourceType: Type, targetType: Type, args: List[Tree]): Tree = {
     // Analyze the source and target
-    val paramMigrations = compareClassParameters(c)(sourceType, targetType)
+    val paramMigrations = compareClassParameters(sourceType, targetType)
 
     // For each required values the macro expects a function parameter as part of the var. args.
-
-    val requiredMigrations = paramMigrations.collect { case required: Required[Type] => required }
+    val requiredMigrations = paramMigrations.collect { case required: Required => required }
 
     val signatureLengthInfo =
       if (requiredMigrations.size == 1)
@@ -125,10 +106,9 @@ object MigrationImpl {
     // Validate the signature of the function application
 
     if (requiredMigrations.size < args.length) {
-      c.abort(args(requiredMigrations.size).pos, s"Too many migration functions! $signatureInfo")
+      abort(s"Too many migration functions! $signatureInfo", args(requiredMigrations.size).pos)
     } else if (requiredMigrations.size > args.length) {
-      val pos = args.lastOption.map(_.pos).getOrElse(c.enclosingPosition)
-      c.abort(pos, s"Missing migration! $signatureInfo")
+      abort(s"Missing migration! $signatureInfo", args.lastOption.fold(c.enclosingPosition)(_.pos))
     } else {
       var hadError = false
       for ((required, index) <- requiredMigrations.zipWithIndex) {
@@ -137,18 +117,18 @@ object MigrationImpl {
         // the corresponding argument must be a migration function
         val migrationFunction = c.typecheck(args(index))
 
-        val migrationFunctionType = appliedType(c.weakTypeTag[_ => _].tpe, sourceType, required.typeSignature)
+        val migrationFunctionType = appliedType(weakTypeTag[_ => _].tpe, sourceType, required.typeSignature)
 
         if (!(migrationFunction.tpe <:< migrationFunctionType)) {
           hadError = true
-          c.error(
-            migrationFunction.pos,
-            s"`${migrationFunction.tpe}` is not a valid migration function for `${required.name}` (`$sourceType => ${required.typeSignature}` is expected)."
+          error(
+            s"`${migrationFunction.tpe}` is not a valid migration function for `${required.name}` (`$sourceType => ${required.typeSignature}` is expected).",
+            migrationFunction.pos
           )
         }
       }
       if (hadError) {
-        c.error(c.enclosingPosition, s"Invalid migration! $signatureInfo")
+        error(s"Invalid migration! $signatureInfo")
       }
     }
 
@@ -170,13 +150,12 @@ object MigrationImpl {
     val result = q"""$mapping.Migration[$sourceType, $targetType]((pb: $sourceType) => $cons)"""
 
     // if @trace is placed, explain the migration in detail
-    if (hasTraceAnnotation(c)) {
+    if (hasTraceAnnotation) {
       val migrationInfo =
         paramMigrations.map {
           case Automatically(_, explanation) =>
             explanation
-          case Required(param, typeSignature, idx, explanation) =>
-            val migrationFunctionType = appliedType(c.weakTypeTag[_ => _].tpe, sourceType, typeSignature)
+          case Required(_, typeSignature, idx, explanation) =>
             s"$explanation => argument no. ${idx + 1} of type `$sourceType => $typeSignature`"
         }
 
@@ -186,14 +165,13 @@ object MigrationImpl {
     result
   }
 
-  sealed trait ParamMigration[+TYPE, +TREE]
+  sealed trait ParamMigration
 
   // models a field in Q that can be automatically filled
-  final case class Automatically[TYPE, TREE](expression: TREE, explanation: String) extends ParamMigration[TYPE, Nothing]
+  case class Automatically(expression: Tree, explanation: String) extends ParamMigration
 
   // models a field in Q that requires a migration function
-  final case class Required[TYPE](name: String, typeSignature: TYPE, argIndex: Int, explanation: String)
-      extends ParamMigration[TYPE, Nothing]
+  case class Required(name: String, typeSignature: Type, argIndex: Int, explanation: String) extends ParamMigration
 
   /**
     * Compares given source and target Protocol Buffers class types.
@@ -202,29 +180,21 @@ object MigrationImpl {
     * If all returned parameter migrations are `Automatically` the whole migration is trivial.
     * That might include generating nested trivial migration for nested Protocol Buffers classes.
     */
-  private def compareClassParameters(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type): List[ParamMigration[c.universe.Type, c.universe.Tree]] = {
-    import c.universe._
-
+  private def compareClassParameters(sourceType: Type, targetType: Type): List[ParamMigration] = {
     val sourceCons = sourceType.member(termNames.CONSTRUCTOR).asMethod
     val targetCons = targetType.member(termNames.CONSTRUCTOR).asMethod
 
     // from the fields in P (source) create a map by name to the term symbol to select it in `pb.$field` where `pb` is the source
     val sourceParamsMap: Map[String, TermSymbol] =
-      sourceCons.paramLists.headOption
-        .getOrElse(sys.error("Scapegoat..."))
-        .map(_.asTerm)
-        .groupBy(_.name.decodedName.toString)
-        .view
-        .mapValues(_.headOption.getOrElse(sys.error("Scapegoat...")))
-        .toMap
+      symbolsByName(sourceCons.paramLists.headOption.getOrElse(Nil)).map {
+        case (name, symbol) => name.toString -> symbol.asTerm
+      }
 
     // select the fields in Q as terms
-    val targetParamsList = targetCons.paramLists.headOption.getOrElse(sys.error("Scapegoat...")).map(_.asTerm)
+    val targetParamsList = targetCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
 
     // walks through all fields of Q and tries to match with fields from P.
-    def compareParams(targetParams: List[TermSymbol], idx: Int): List[ParamMigration[Type, Tree]] =
+    def compareParams(targetParams: List[TermSymbol], idx: Int): List[ParamMigration] =
       targetParams match {
         case Nil => Nil
 
@@ -246,22 +216,22 @@ object MigrationImpl {
                 compareParams(rest, idx)
 
             // field exists in P and Q and the type in Q has been made optional
-            case Some(from) if to <:< weakTypeOf[Option[_]] && from <:< innerType(c)(to) =>
+            case Some(from) if to <:< weakTypeOf[Option[_]] && from <:< innerType(to) =>
               Automatically(q"scala.Some(pb.${targetParam.name})", s"`$targetParam` can be copied wrapped with (`Some(...)`).") ::
                 compareParams(rest, idx)
 
             // field exists and migrations between both types are generally possible
-            case Some(from) if isExpected(c)(from, to) =>
-              val migrationExpr = implicitMigration(c)(from, to)
+            case Some(from) if isExpected(from, to) =>
+              val migrationExpr = implicitMigration(from, to)
 
               Automatically(q"$migrationExpr.migrate(pb.${targetParam.name})",
                             s"`$targetParam` can be copied with an implicit `Migration[$from, $to]`.") ::
                 compareParams(rest, idx)
 
             // field exists and both are option/collection values for matching collection types and migrations between both inner types are generally possible
-            case Some(from) if matchingContainers(c)(from, to) =>
+            case Some(from) if matchingContainers(from, to) =>
               // migrate the inner types of both collections
-              val migrationExpr = implicitMigration(c)(innerType(c)(from), innerType(c)(to))
+              val migrationExpr = implicitMigration(innerType(from), innerType(to))
 
               // just migrate a value if it's present
               Automatically(
@@ -287,25 +257,20 @@ object MigrationImpl {
     compareParams(targetParamsList, 0)
   }
 
-  private def compileEnumerationMigration(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type, args: List[c.universe.Tree]): c.universe.Tree = {
-
-    import c.universe._
-
+  private def compileEnumerationMigration(sourceType: Type, targetType: Type): Tree = {
     val mapping = q"io.moia.protos.teleproto"
 
     // Enum migration is just possible if target has same or more options than the source type.
     // Then each value from the source type can be mapped to the target.
 
-    val unmatchedSourceOptions = compareEnumerationOptions(c)(sourceType, targetType)
+    val unmatchedSourceOptions = compareEnumerationOptions(sourceType, targetType)
 
     if (unmatchedSourceOptions.isEmpty) {
 
       val sourceCompanion = sourceType.typeSymbol.companion
       val targetCompanion = targetType.typeSymbol.companion
 
-      def options(tpe: c.universe.Type) = symbolsByName(c)(tpe.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
+      def options(tpe: Type) = symbolsByName(tpe.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
 
       val sourceOptions = options(sourceType)
       val targetOptions = options(targetType)
@@ -338,8 +303,7 @@ object MigrationImpl {
       q"""$mapping.Migration[$sourceType, $targetType]((pb: $sourceType) => ${ifElses(cases)})"""
 
     } else
-      c.abort(
-        c.enclosingPosition,
+      abort(
         s"A migration from `$sourceType` to `$targetType` is not possible: ${unmatchedSourceOptions.mkString("`", "`, `", "`")} from `$sourceType` not matched in `$targetType`."
       )
   }
@@ -352,29 +316,19 @@ object MigrationImpl {
     *
     * `sourceValue.map(innerValue => migration.migrate(innerValue))` would be a valid target value.
     */
-  private def matchingContainers(c: blackbox.Context)(sourceType: c.universe.Type, targetType: c.universe.Type): Boolean = {
-    import c.universe._
-
+  private def matchingContainers(sourceType: Type, targetType: Type): Boolean = {
     def bothOptions         = sourceType <:< weakTypeOf[Option[_]] && targetType <:< weakTypeOf[Option[_]]
     def bothCollections     = sourceType <:< weakTypeOf[IterableOnce[_]] && targetType <:< weakTypeOf[IterableOnce[_]]
     def matchingCollections = sourceType.erasure <:< targetType.erasure
-    def matchingInnerTypes  = isExpected(c)(innerType(c)(sourceType), innerType(c)(targetType))
-
+    def matchingInnerTypes  = isExpected(innerType(sourceType), innerType(targetType))
     (bothOptions || (bothCollections && matchingCollections)) && matchingInnerTypes
   }
 
   /**
     * Returns the options in the source (enum sealed trait) type that are not matched in the target type.
     */
-  private def compareEnumerationOptions(
-      c: blackbox.Context
-  )(sourceType: c.universe.Type, targetType: c.universe.Type): Set[c.universe.Name] = {
-
-    def optionNames(tpe: c.universe.Type) = tpe.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass).map(_.name.decodedName)
-
-    val sourceOptions = optionNames(sourceType)
-    val targetOptions = optionNames(targetType)
-
-    sourceOptions -- targetOptions
+  private def compareEnumerationOptions(sourceType: Type, targetType: Type): Set[Name] = {
+    def optionNames(tpe: Type) = tpe.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass).map(_.name.decodedName)
+    optionNames(sourceType) diff optionNames(targetType)
   }
 }
