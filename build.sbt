@@ -1,3 +1,7 @@
+import com.typesafe.tools.mima.core._
+
+addCommandAlias("validate", "all test scapegoat mimaReportBinaryIssues")
+
 // *****************************************************************************
 // Projects
 // *****************************************************************************
@@ -47,14 +51,16 @@ lazy val library =
 // Settings
 // *****************************************************************************
 
-lazy val commonSettings =
-  compilerSettings ++
-    gitSettings ++
-    organizationSettings ++
-    scmSettings ++
-    sbtSettings ++
-    scalaFmtSettings ++
-    scapegoatSettings
+lazy val commonSettings = Seq.concat(
+  compilerSettings,
+  gitSettings,
+  organizationSettings,
+  scmSettings,
+  sbtSettings,
+  scalaFmtSettings,
+  scapegoatSettings,
+  mimaSettings
+)
 
 lazy val compilerSettings =
   Seq(
@@ -153,6 +159,21 @@ lazy val scapegoatSettings =
     // do not check generated files
     scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
   )
+
+lazy val mimaSettings = Seq(
+  // First 2.13 release of 1.x
+  mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "1.2.0"),
+  mimaBinaryIssueFilters ++= Seq(
+    // No binary compatibility guarantees for macro implementations (they run at compile time).
+    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.FormatImpl*"),
+    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.MigrationImpl*"),
+    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.ReaderImpl*"),
+    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.WriterImpl*"),
+    // PbResult is a sealed trait so linking from Scala should be fine.
+    // Also, this method was added before introducing MiMa.
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toOption")
+  )
+)
 
 PB.targets in Test := Seq(scalapb.gen(flatPackage = false) -> (sourceManaged in Test).value)
 PB.protoSources in Test := Seq(file("src/test/protobuf"))
