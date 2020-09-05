@@ -32,7 +32,7 @@ import scala.util.Try
   * Provides reading of a generated Protocol Buffers model into a business model.
   */
 @implicitNotFound("No Protocol Buffers mapper from type ${P} to ${M} was found. Try to implement an implicit Reader for this type.")
-trait Reader[-P, +M] { self =>
+trait Reader[-P, +M] {
 
   /**
     * Returns the read business model or an error message.
@@ -43,17 +43,62 @@ trait Reader[-P, +M] { self =>
     * Transforms successfully read results.
     */
   def map[N](f: M => N): Reader[P, N] =
-    (protobuf: P) => self.read(protobuf).map(f)
+    read(_).map(f)
+
+  /**
+    * Transforms the protobuf before reading.
+    */
+  final def contramap[Q](f: Q => P): Reader[Q, M] =
+    protobuf => read(f(protobuf))
 
   /**
     * Transforms successfully read results with the option to fail.
     */
-  def flatMap[N](f: M => PbSuccess[N]): Reader[P, N] =
-    (protobuf: P) => self.read(protobuf).flatMap(f)
+  final def emap[N](f: M => PbResult[N]): Reader[P, N] =
+    read(_).flatMap(f)
 
+  @deprecated("Use a function that returns a Reader with flatMap or one that returns a PbResult with emap", "1.8.0")
+  def flatMap[N](f: M => PbSuccess[N]): Reader[P, N] =
+    read(_).flatMap(f)
+
+  /**
+    * Transforms successfully read results by stacking another reader on top of the original protobuf.
+    */
+  final def flatMap[Q <: P, N](f: M => Reader[Q, N])(implicit dummy: DummyImplicit): Reader[Q, N] =
+    protobuf => read(protobuf).flatMap(f(_).read(protobuf))
+
+  /**
+    * Combines two readers with a specified function.
+    */
+  final def zipWith[Q <: P, N, O](that: Reader[Q, N])(f: (M, N) => O): Reader[Q, O] =
+    protobuf =>
+      for {
+        m <- this.read(protobuf)
+        n <- that.read(protobuf)
+      } yield f(m, n)
+
+  /**
+    * Combines two readers into a reader of a tuple.
+    */
+  final def zip[Q <: P, N](that: Reader[Q, N]): Reader[Q, (M, N)] =
+    zipWith(that)((_, _))
+
+  /**
+    * Chain `that` reader after `this` one.
+    */
+  final def andThen[N](that: Reader[M, N]): Reader[P, N] =
+    read(_).flatMap(that.read)
+
+  /**
+    * Chain `this` reader after `that` one.
+    */
+  final def compose[Q](that: Reader[Q, P]): Reader[Q, M] =
+    that.andThen(this)
 }
 
 object Reader extends LowPriorityReads {
+
+  def apply[P, M](implicit reader: Reader[P, M]): Reader[P, M] = reader
 
   /* Combinators */
 
