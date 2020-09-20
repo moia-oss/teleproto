@@ -54,11 +54,11 @@ trait Reader[-P, +M] {
   /**
     * Transforms successfully read results with the option to fail.
     */
-  final def emap[N](f: M => PbResult[N]): Reader[P, N] =
+  final def pbmap[N](f: M => PbResult[N]): Reader[P, N] =
     read(_).flatMap(f)
 
   @deprecated("Use a function that returns a Reader with flatMap or one that returns a PbResult with emap", "1.8.0")
-  def flatMap[N](f: M => PbSuccess[N]): Reader[P, N] =
+  protected def flatMap[N](f: M => PbSuccess[N]): Reader[P, N] =
     read(_).flatMap(f)
 
   /**
