@@ -32,7 +32,7 @@ import scala.concurrent.duration.{Deadline, Duration}
 @implicitNotFound(
   "No mapper from business model type ${M} to Protocol Buffers type ${P} was found. Try to implement an implicit Writer for this type."
 )
-trait Writer[-M, +P] { self =>
+trait Writer[-M, +P] {
 
   /**
     * Returns the written Protocol Buffer object.
@@ -42,10 +42,49 @@ trait Writer[-M, +P] { self =>
   /**
     * Transforms each written result.
     */
-  def map[Q](f: P => Q): Writer[M, Q] = new Writer.Mapped(this, f)
+  def map[Q](f: P => Q): Writer[M, Q] =
+    model => f(write(model))
+
+  /**
+    * Transforms the model before writing.
+    */
+  final def contramap[N](f: N => M): Writer[N, P] =
+    model => write(f(model))
+
+  /**
+    * Transforms written results by stacking another writer on top of the original model.
+    */
+  final def flatMap[N <: M, Q](f: P => Writer[N, Q]): Writer[N, Q] =
+    model => f(write(model)).write(model)
+
+  /**
+    * Combines two writers with a specified function.
+    */
+  final def zipWith[N <: M, Q, R](that: Writer[N, Q])(f: (P, Q) => R): Writer[N, R] =
+    model => f(this.write(model), that.write(model))
+
+  /**
+    * Combines two writers into a writer of a tuple.
+    */
+  final def zip[N <: M, Q](that: Writer[N, Q]): Writer[N, (P, Q)] =
+    zipWith(that)((_, _))
+
+  /**
+    * Chain `that` writer after `this` one.
+    */
+  final def andThen[Q](that: Writer[P, Q]): Writer[M, Q] =
+    model => that.write(this.write(model))
+
+  /**
+    * Chain `this` writer after `that` one.
+    */
+  final def compose[N](that: Writer[N, M]): Writer[N, P] =
+    that.andThen(this)
 }
 
 object Writer extends LowPriorityWrites {
+
+  def apply[M, P](implicit writer: Writer[M, P]): Writer[M, P] = writer
 
   /* Combinators */
 
