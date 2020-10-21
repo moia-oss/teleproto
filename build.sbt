@@ -38,7 +38,7 @@ lazy val library =
       val scalaPBJson = "0.10.1"
       val scalaCheck  = "1.14.3"
       val scalaTest   = "3.2.2"
-      val scapeGoat   = "1.4.4"
+      val scapeGoat   = "1.4.6"
     }
 
     val scalaPB     = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
@@ -64,8 +64,8 @@ lazy val commonSettings = Seq.concat(
 
 lazy val compilerSettings =
   Seq(
-    scalaVersion := "2.13.2",
-    crossScalaVersions := List("2.13.2", "2.12.10"),
+    scalaVersion := crossScalaVersions.value.head,
+    crossScalaVersions := List("2.13.3", "2.12.12"),
     mappings.in(Compile, packageBin) +=
       baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
     scalacOptions ++= {
