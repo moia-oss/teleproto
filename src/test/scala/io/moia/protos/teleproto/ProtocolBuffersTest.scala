@@ -2,27 +2,52 @@ package io.moia.protos.teleproto
 
 import java.time.Instant
 
+import com.google.protobuf.Descriptors
 import com.google.protobuf.timestamp.Timestamp
+import scalapb.descriptors.EnumDescriptor
+import scalapb.{GeneratedEnum, GeneratedEnumCompanion, UnrecognizedEnum}
 
-sealed trait ProtobufEnum {
+sealed abstract class ProtobufEnum(val value: Int) extends GeneratedEnum {
   type EnumType = ProtobufEnum
+  override def companion: GeneratedEnumCompanion[ProtobufEnum] = ProtobufEnum
 }
-object ProtobufEnum {
-  case object FirstCase               extends ProtobufEnum
-  case object SECOND_CASE             extends ProtobufEnum
-  case object Third_Case              extends ProtobufEnum
-  case class Unrecognized(other: Int) extends ProtobufEnum
+
+object ProtobufEnum extends GeneratedEnumCompanion[ProtobufEnum] {
+  // Not used for testing.
+  override def fromValue(value: Int): ProtobufEnum        = ???
+  override def values: Seq[ProtobufEnum]                  = ???
+  override def javaDescriptor: Descriptors.EnumDescriptor = ???
+  override def scalaDescriptor: EnumDescriptor            = ???
+
+  case object FirstCase extends ProtobufEnum(0) {
+    override def index: Int   = value
+    override def name: String = "FirstCase"
+  }
+
+  case object SECOND_CASE extends ProtobufEnum(1) {
+    override def index: Int   = value
+    override def name: String = "SECOND_CASE"
+  }
+
+  case object Third_Case extends ProtobufEnum(2) {
+    override def index: Int   = value
+    override def name: String = "Third_Case"
+  }
+
+  final case class Unrecognized(other: Int) extends ProtobufEnum(other) with UnrecognizedEnum
 }
 
 case class SubProtobuf(from: String, to: String)
 
-case class Protobuf(id: Option[String] = None,
-                    price: Option[String] = None,
-                    time: Option[Timestamp] = None,
-                    pickupId: Option[String] = None,
-                    ranges: Seq[SubProtobuf] = Seq.empty,
-                    doubleSub: Option[SubProtobuf] = None,
-                    enum: ProtobufEnum = ProtobufEnum.FirstCase)
+case class Protobuf(
+    id: Option[String] = None,
+    price: Option[String] = None,
+    time: Option[Timestamp] = None,
+    pickupId: Option[String] = None,
+    ranges: Seq[SubProtobuf] = Seq.empty,
+    doubleSub: Option[SubProtobuf] = None,
+    enum: ProtobufEnum = ProtobufEnum.FirstCase
+)
 
 sealed trait ModelEnum
 object ModelEnum {
@@ -33,26 +58,30 @@ object ModelEnum {
 
 case class SubModel(from: BigDecimal, to: BigDecimal)
 
-case class Model(id: String,
-                 price: BigDecimal,
-                 time: Instant,
-                 pickupId: Option[String],
-                 ranges: List[SubModel],
-                 doubleSub: SubModel,
-                 enum: ModelEnum)
+case class Model(
+    id: String,
+    price: BigDecimal,
+    time: Instant,
+    pickupId: Option[String],
+    ranges: List[SubModel],
+    doubleSub: SubModel,
+    enum: ModelEnum
+)
 
 case class ModelSmaller(id: String, price: BigDecimal)
 
-case class ModelLarger(id: String,
-                       price: BigDecimal,
-                       foo: Option[String] = Some("bar"),
-                       time: Instant,
-                       bar: String = "baz",
-                       pickupId: Option[String],
-                       baz: Option[String],
-                       ranges: List[SubModel],
-                       doubleSub: SubModel,
-                       enum: ModelEnum)
+case class ModelLarger(
+    id: String,
+    price: BigDecimal,
+    foo: Option[String] = Some("bar"),
+    time: Instant,
+    bar: String = "baz",
+    pickupId: Option[String],
+    baz: Option[String],
+    ranges: List[SubModel],
+    doubleSub: SubModel,
+    enum: ModelEnum
+)
 
 object Protobuf {
 

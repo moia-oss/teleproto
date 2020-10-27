@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package io.moia.migration;
+
+message V1 {
+  enum Enum {
+    Case1 = 0;
+    Case2 = 1;
+  }
+}
+
+message V2 {
+  enum Enum {
+    Case1 = 0;
+    Case2 = 1;
+  }
+}
+
+message V3 {
+  enum Enum {
+    Case1 = 0;
+    Case2 = 1;
+    Case3 = 2;
+  }
+}

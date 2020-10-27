@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package io.moia.food;
+
+message Meal {
+    enum Color {
+        COLOR_INVALID = 0;
+        COLOR_RED = 1;
+        COLOR_ORANGE = 2;
+        COLOR_YELLOW = 3;
+        COLOR_PINK = 4;
+        COLOR_BLUE = 5;
+    }
+
+    message Fruit {
+        string name = 1;
+        Color color = 2;
+    }
+
+    message Drink {
+        string name = 1;
+        Color color = 2;
+    }
+
+    message FruitBasket {
+        repeated Fruit fruits = 1;
+    }
+
+    message LunchBox {
+        Fruit fruit = 1;
+        Drink drink = 2;
+    }
+
+    oneof Lunch {
+        FruitBasket fruit_basket = 1;
+        LunchBox lunch_box = 2;
+    }
+}
