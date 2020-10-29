@@ -112,13 +112,8 @@ trait VersionedModelReader[Version, DetachedModel] {
   )(implicit reader: Reader[SpecificModel, DetachedModel]): VersionReader =
     new VersionReaderImpl(companion, reader)
 
-  /**
-    * Models a reader from bytes/json directly to the detached business model.
-    */
-  protected trait VersionReader {
-    def fromJson(jsonString: String): Try[PbResult[DetachedModel]]
-    def fromProto(input: CodedInputStream): Try[PbResult[DetachedModel]]
-  }
+  /** Models a reader from bytes/json directly to the detached business model. */
+  type VersionReader = VersionedModelReader.VersionReader[DetachedModel]
 
   private def lookupOrFail(version: Version): Try[VersionReader] =
     lookupReader(version).map(Success(_)).getOrElse(Failure(new VersionNotSupportedException(version, supportedReaderVersions)))
@@ -132,8 +127,11 @@ trait VersionedModelReader[Version, DetachedModel] {
       companion: GeneratedMessageCompanion[SpecificModel],
       reader: Reader[SpecificModel, DetachedModel]
   ) extends VersionReader {
+    override final def fromJson(jsonString: String, parser: Parser): Try[PbResult[DetachedModel]] =
+      Try(parser.fromJsonString(jsonString)(companion)).map(reader.read)
+
     def fromJson(jsonString: String): Try[PbResult[DetachedModel]] =
-      Try(VersionedModelReader.parser.fromJsonString(jsonString)(companion)).map(reader.read)
+      fromJson(jsonString, VersionedModelReader.parser)
 
     def fromProto(input: CodedInputStream): Try[PbResult[DetachedModel]] =
       Try(companion.parseFrom(input)).map(reader.read)
@@ -141,6 +139,18 @@ trait VersionedModelReader[Version, DetachedModel] {
 }
 
 object VersionedModelReader {
-
   private val parser = new Parser()
+
+  /** Models a reader from bytes/json directly to the detached business model. */
+  sealed trait VersionReader[Model] {
+    def fromJson(jsonString: String): Try[PbResult[Model]]
+    def fromProto(input: CodedInputStream): Try[PbResult[Model]]
+
+    /** Read a `Model` class directly from JSON with a custom [[Parser]].
+      *
+      * Note: This method has a default implementation that forwards to the other `fromJson` and ignores `parser`.
+      * This is done for binary compatibility but is overridden in the implementation.
+      */
+    def fromJson(jsonString: String, parser: Parser): Try[PbResult[Model]] = fromJson(jsonString)
+  }
 }
