@@ -1,6 +1,6 @@
 import com.typesafe.tools.mima.core._
 
-addCommandAlias("validate", "all test scapegoat mimaReportBinaryIssues")
+addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
 
 // *****************************************************************************
 // Projects
