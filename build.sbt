@@ -17,12 +17,13 @@ lazy val `teleproto` =
       name := "teleproto",
       version := "1.9.0",
       libraryDependencies ++= Seq(
-        library.scalaPB          % "protobuf",
-        library.scalaPBJson      % Compile,
-        library.scalaTest        % Test,
-        library.scalaCheck       % Test,
-        "org.scala-lang.modules" %% "scala-collection-compat" % "2.2.0",
-        "org.scala-lang"         % "scala-reflect" % scalaVersion.in(ThisBuild).value
+        library.scalaPB            % "protobuf",
+        library.scalaPBJson        % Compile,
+        library.scalaTest          % Test,
+        library.scalaTestPlusCheck % Test,
+        library.scalaCheck         % Test,
+        "org.scala-lang.modules"   %% "scala-collection-compat" % "2.2.0",
+        "org.scala-lang"           % "scala-reflect" % scalaVersion.in(ThisBuild).value
       )
     )
 
@@ -30,22 +31,22 @@ lazy val `teleproto` =
 // Dependencies
 // *****************************************************************************
 
-lazy val library =
-  new {
-
-    object Version {
-      val scalaPB     = scalapb.compiler.Version.scalapbVersion
-      val scalaPBJson = "0.10.1"
-      val scalaCheck  = "1.14.3"
-      val scalaTest   = "3.2.2"
-      val scapeGoat   = "1.4.6"
-    }
-
-    val scalaPB     = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
-    val scalaPBJson = "com.thesamet.scalapb" %% "scalapb-json4s"  % Version.scalaPBJson
-    val scalaCheck  = "org.scalacheck"       %% "scalacheck"      % Version.scalaCheck
-    val scalaTest   = "org.scalatest"        %% "scalatest"       % Version.scalaTest
+lazy val library = new {
+  object Version {
+    val scalaPB            = scalapb.compiler.Version.scalapbVersion
+    val scalaPBJson        = "0.10.1"
+    val scalaCheck         = "1.14.3"
+    val scalaTest          = "3.2.2"
+    val scalaTestPlusCheck = "3.1.2.0"
+    val scapeGoat          = "1.4.6"
   }
+
+  val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
+  val scalaPBJson        = "com.thesamet.scalapb" %% "scalapb-json4s"  % Version.scalaPBJson
+  val scalaCheck         = "org.scalacheck"       %% "scalacheck"      % Version.scalaCheck
+  val scalaTest          = "org.scalatest"        %% "scalatest"       % Version.scalaTest
+  val scalaTestPlusCheck = "org.scalatestplus"    %% "scalacheck-1-14" % Version.scalaTestPlusCheck
+}
 
 // *****************************************************************************
 // Settings

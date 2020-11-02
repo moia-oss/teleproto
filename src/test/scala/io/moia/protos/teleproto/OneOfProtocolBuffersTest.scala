@@ -1,5 +1,7 @@
 package io.moia.protos.teleproto
 
+import scalapb.GeneratedOneof
+
 /**
   * Tests correct behaviour of generated mappings regarding traits.
   */
@@ -7,40 +9,43 @@ object OneOfProtocolBuffersTest {
 
   object protobuf {
 
-    case class Foo(price: String) // extends AnyRef!!
-    case class Bar(number: Int)   // extends AnyRef!!
+    final case class Foo(price: String) // extends AnyRef!!
+    final case class Bar(number: Int)   // extends AnyRef!!
 
-    case class FooOrBar(value: FooOrBar.Value)
+    sealed trait FooOrBar extends GeneratedOneof {
+      def isEmpty: Boolean                = false
+      def isDefined: Boolean              = true
+      def isFoo: Boolean                  = false
+      def isBar: Boolean                  = false
+      def foo: scala.Option[protobuf.Foo] = None
+      def bar: scala.Option[protobuf.Bar] = None
+    }
 
     object FooOrBar {
-
-      sealed trait Value {
-        def isEmpty: Boolean                = false
-        def isDefined: Boolean              = true
-        def isFoo: Boolean                  = false
-        def isBar: Boolean                  = false
-        def foo: scala.Option[protobuf.Foo] = None
-        def bar: scala.Option[protobuf.Bar] = None
+      case object Empty extends FooOrBar {
+        override type ValueType = Nothing
+        override def number: Int        = 0
+        override def value: ValueType   = ???
+        override def isEmpty: Boolean   = true
+        override def isDefined: Boolean = false
       }
-      object Value extends {
 
-        case object Empty extends Value {
-          override def isEmpty: Boolean   = true
-          override def isDefined: Boolean = false
-        }
+      final case class Foo(value: protobuf.Foo) extends FooOrBar {
+        override type ValueType = protobuf.Foo
+        override def number: Int                     = 1
+        override def isFoo: Boolean                  = true
+        override def foo: scala.Option[protobuf.Foo] = Some(value)
+      }
 
-        case class Foo(value: protobuf.Foo) extends Value {
-          override def isFoo: Boolean                  = true
-          override def foo: scala.Option[protobuf.Foo] = Some(value)
-        }
-        case class Bar(value: protobuf.Bar) extends Value {
-          override def isBar: Boolean                  = true
-          override def bar: scala.Option[protobuf.Bar] = Some(value)
-        }
+      final case class Bar(value: protobuf.Bar) extends FooOrBar {
+        override type ValueType = protobuf.Bar
+        override def number: Int                     = 2
+        override def isBar: Boolean                  = true
+        override def bar: scala.Option[protobuf.Bar] = Some(value)
       }
     }
 
-    case class Protobuf(fooOrBar: FooOrBar)
+    final case class Protobuf(fooOrBar: FooOrBar)
   }
 
   object model {
@@ -85,18 +90,18 @@ class OneOfProtocolBuffersTest extends UnitTest {
 
     "generate a reader for matching sealed traits" in {
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Empty))) shouldBe PbFailure("/fooOrBar", "Value is required.")
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Empty)) shouldBe PbFailure("/fooOrBar", "Oneof field is empty!")
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("five-hundred"))))) shouldBe PbFailure(
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Foo(protobuf.Foo("five-hundred")))) shouldBe PbFailure(
         "/fooOrBar/foo/price",
         "Value must be a valid decimal number."
       )
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("500.0"))))) shouldBe PbSuccess(
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Foo(protobuf.Foo("500.0")))) shouldBe PbSuccess(
         model.Model(model.Foo(500.0))
       )
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(protobuf.Bar(42))))) shouldBe PbSuccess(
+      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Bar(protobuf.Bar(42)))) shouldBe PbSuccess(
         model.Model(model.Bar(42))
       )
     }
@@ -104,10 +109,10 @@ class OneOfProtocolBuffersTest extends UnitTest {
     "generate a writer for matching sealed traits" in {
 
       writer.write(model.Model(model.Foo(500.0))) shouldBe protobuf.Protobuf(
-        protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(protobuf.Foo("500.0")))
+        protobuf.FooOrBar.Foo(protobuf.Foo("500.0"))
       )
 
-      writer.write(model.Model(model.Bar(42))) shouldBe protobuf.Protobuf(protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(protobuf.Bar(42))))
+      writer.write(model.Model(model.Bar(42))) shouldBe protobuf.Protobuf(protobuf.FooOrBar.Bar(protobuf.Bar(42)))
     }
   }
 }

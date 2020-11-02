@@ -335,65 +335,49 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     * .getOrElse(PbFailure("Value is required."))
     */
   private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
-    val mapping = q"io.moia.protos.teleproto"
-
-    val protobufSubClasses = symbolsByName(protoHierarchyCaseClasses(protobufType))
-    val modelSubClasses    = symbolsByName(modelType.typeSymbol.asClass.knownDirectSubclasses)
+    val protobufClass      = protobufType.typeSymbol.asClass
+    val modelClass         = modelType.typeSymbol.asClass
+    val protobufSubClasses = symbolsByName(protobufClass.knownDirectSubclasses)
+    val modelSubclasses    = symbolsByName(modelClass.knownDirectSubclasses)
 
     if (protobufSubClasses.isEmpty)
-      error(
-        s"No case classes were found in object `Value` in `${protobufType.typeSymbol.fullName}`. Your protofile is most likely not as it should!"
-      )
+      error(s"No subclasses of sealed trait `${protobufClass.fullName}` found.")
 
-    val unmatchedProtobufClasses = protobufSubClasses.keySet diff modelSubClasses.keySet
+    val unmatchedProtobufClasses = protobufSubClasses.keySet - EmptyOneOf diff modelSubclasses.keySet
 
     if (unmatchedProtobufClasses.nonEmpty)
-      error(
-        s"`${modelType.typeSymbol.name}` does not match ${unmatchedProtobufClasses.map(c => s"`$c`").mkString(", ")} of object `Value` in `${protobufType.typeSymbol.name}`."
-      )
+      error(s"`${modelClass.name}` does not match ${showNames(unmatchedProtobufClasses)} subclasses of `${protobufClass.name}`.")
 
-    val surplusModelClasses = modelSubClasses.keySet diff protobufSubClasses.keySet
+    val surplusModelClasses = modelSubclasses.keySet diff protobufSubClasses.keySet
     val ownCompatibility    = Compatibility(Nil, Nil, surplusModelClasses.map(name => (modelType, name.toString)))
+    val valueMethod         = protobufType.member(ValueMethod).asMethod
 
-    val maybeTransformedTrees =
-      for {
-        (className, protobufClass) <- protobufSubClasses.toSeq
-        modelClass                 <- modelSubClasses.get(className)
-      } yield {
-
-        val classNameDecoded = className.decodedName.toString
-        val methodName       = TermName(classNameDecoded.take(1).toLowerCase + classNameDecoded.drop(1))
-
-        val method = protobufClass.typeSignature.decl(methodName)
-
-        val protobufWrappedType = innerType(method.asMethod.returnType)
-
-        val specificModelType = modelClass.asClass.selfType
-
-        withImplicitReader(protobufWrappedType, specificModelType) { readerExpr =>
-          q"""protobuf.value.$methodName.map(value => $mapping.Reader.transform[$protobufWrappedType, $specificModelType](value, "/" + ${methodName.toString})($readerExpr))"""
-        }
+    val subTypes = for {
+      (className, protobufSubclass) <- protobufSubClasses.toSeq
+      modelSubclass                 <- modelSubclasses.get(className)
+    } yield {
+      val name = className.toString
+      val path = s"/${name.head.toLower}${name.tail}"
+      withImplicitReader(valueMethod.infoIn(classTypeOf(protobufSubclass)), classTypeOf(modelSubclass)) { reader =>
+        val value = c.freshName(ValueMethod)
+        cq"${protobufSubclass.companion}($value) => $reader.read($value).withPathPrefix($path)"
       }
+    }
 
-    // combine the `Option[...]` trees with `orElse` and merge their compatibility
-    val (maybeTransformedTree, subClassesCompatibility) =
-      maybeTransformedTrees
-        .reduceOption { (fst, snd) =>
-          val (t1, c1) = fst
-          val (t2, c2) = snd
-          (q"$t1.orElse($t2)", c1.merge(c2))
-        }
-        .getOrElse((q"None", Compatibility.full))
+    val (cases, compatibility) = subTypes.unzip
+    val emptyCase = for (protobufClass <- protobufSubClasses.get(EmptyOneOf) if !modelSubclasses.contains(EmptyOneOf))
+      yield cq"""`${objectReferenceTo(protobufClass)}` => $mapping.PbFailure("Oneof field is empty!")"""
 
-    val transformed = q"""$maybeTransformedTree.getOrElse($mapping.PbFailure("Value is required."))"""
+    val reader = c.freshName(TermName("reader"))
+    val result = q"""{
+      val $reader: $mapping.Reader[$protobufType, $modelType] = {
+        case ..$cases
+        case ..${emptyCase.toList}
+      }
+      $reader
+    }"""
 
-    val result =
-      q"""
-          new $mapping.Reader[$protobufType, $modelType] {
-            def read(protobuf: $protobufType) = $transformed
-          }"""
-    // a type cast is needed due to type inferencer limitations
-    (result, ownCompatibility.merge(subClassesCompatibility.asInstanceOf[Compatibility]))
+    (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
   /**
@@ -413,52 +397,46 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     * }
     */
   private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
-    val mapping           = q"io.moia.protos.teleproto"
-    val protobufCompanion = protobufType.typeSymbol.companion
+    val protobufClass     = protobufType.typeSymbol.asClass
+    val protobufCompanion = protobufClass.companion
+    val modelClass        = modelType.typeSymbol.asClass
+    val protobufOptions   = symbolsByTolerantName(protobufClass.knownDirectSubclasses.filter(_.isModuleClass), protobufClass)
+    val modelOptions      = symbolsByTolerantName(modelClass.knownDirectSubclasses.filter(_.isModuleClass), modelClass)
 
-    val protobufOptions = symbolsByTolerantName(protobufType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
-    val modelOptions    = symbolsByTolerantName(modelType.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass))
-
-    val unmatchedProtobufOptions = protobufOptions.toList.collect { case (name, v) if !modelOptions.contains(name) => v.name.decodedName }
-
-    if (unmatchedProtobufOptions.nonEmpty) {
-      error(
-        s"The options in `${modelType.typeSymbol.fullName}` do not match ${unmatchedProtobufOptions.map(c => s"`$c`").mkString(", ")} in `${protobufType.typeSymbol.fullName}`."
-      )
+    val unmatchedProtobufOptions = protobufOptions.toList.collect {
+      case (name, symbol) if !modelOptions.contains(name) && name != InvalidEnum => symbol.name.decodedName
     }
 
-    val surplusModelOptions = modelOptions.toList.collect { case (name, v) if !protobufOptions.contains(name) => v.name.decodedName }
-    val compatibility       = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
+    if (unmatchedProtobufOptions.nonEmpty)
+      error(s"The options in `${modelClass.fullName}` do not match ${showNames(unmatchedProtobufOptions)} in `${protobufClass.fullName}`.")
 
-    val cases =
-      for {
-        (optionName, modelOption) <- modelOptions.toList
-        protobufOption            <- protobufOptions.get(optionName)
-      } yield {
-        (protobufOption.asClass.selfType.termSymbol, modelOption.asClass.selfType.termSymbol) // expected value to right hand side value
+    val surplusModelOptions = modelOptions.toList.collect {
+      case (name, symbol) if !protobufOptions.contains(name) => symbol.name.decodedName
+    }
+
+    val compatibility = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
+
+    val cases = for {
+      (optionName, modelOption) <- modelOptions.toList
+      protobufOption            <- protobufOptions.get(optionName)
+    } yield cq"`${objectReferenceTo(protobufOption)}` => $mapping.PbSuccess(${objectReferenceTo(modelOption)})"
+
+    val invalidCase = for (protobufOption <- protobufOptions.get(InvalidEnum) if !modelOptions.contains(InvalidEnum)) yield {
+      val reference = objectReferenceTo(protobufOption)
+      cq"""`$reference` => $mapping.PbFailure(s"Enumeration value $${$reference} is invalid!")"""
+    }
+
+    val reader = c.freshName(TermName("reader"))
+    val other  = c.freshName(TermName("other"))
+    val result = q"""{
+      val $reader: $mapping.Reader[$protobufType, $modelType] = {
+        case ..$cases
+        case ..${invalidCase.toList}
+        case ${protobufCompanion.asTerm}.Unrecognized($other) =>
+          $mapping.PbFailure(s"Enumeration value $${$other} is unrecognized!")
       }
-
-    // construct a de-sugared pattern matching as a cascade of if elses
-    def ifElses(cs: List[(Symbol, Symbol)]): Tree =
-      cs match {
-        case (expected, rhs) :: rest =>
-          q"""if(protobuf == $expected) $mapping.PbSuccess($rhs) else ${ifElses(rest)}"""
-
-        case Nil =>
-          q"""
-              protobuf match {
-                case ${protobufCompanion.asTerm}.Unrecognized(other) =>
-                  $mapping.PbFailure("Enumeration value " + other + " is unrecognized!")
-                case _ =>
-                  throw new IllegalStateException("teleproto contains a software bug compiling enums readers: " + protobuf + " is not a matched value.")
-              }
-             """
-      }
-
-    val result = q"""
-          new $mapping.Reader[$protobufType, $modelType] {
-            def read(protobuf: $protobufType) = ${ifElses(cases)}
-          }"""
+      $reader
+    }"""
 
     (result, compatibility)
   }

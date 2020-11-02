@@ -20,6 +20,8 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+import scalapb.{GeneratedEnum, GeneratedOneof}
+
 import scala.reflect.macros.blackbox
 
 /**
@@ -35,12 +37,22 @@ trait FormatImpl {
   def error(message: String, pos: Position = c.enclosingPosition): Unit    = c.error(pos, message)
   def abort(message: String, pos: Position = c.enclosingPosition): Nothing = c.abort(pos, message)
 
-  /**
-    * A `sealed trait` is mapped to proto via a message that contains a `oneof` with name `value` (`ValueDefinition`).
-    * The corresponding generated companion for the `oneof` is `Value` (`ValueModule`).
+  private[teleproto] val mapping =
+    q"io.moia.protos.teleproto"
+
+  /** A `oneof` proto definition is mapped to a `sealed trait` in Scala.
+    * Each variant of the `oneof` definition is mapped to a `case class` with exactly one field `value`
+    * that contains a reference to the `case class` mapping of the corresponding `message` proto definition.
     */
-  val ValueModule     = "Value"
-  val ValueDefinition = "value"
+  val ValueMethod: TermName = TermName("value")
+
+  /** En enum case with this name can remain unmapped in [[Reader]].
+    * It is assumed that this is the default case.
+    */
+  val InvalidEnum = "invalid"
+
+  /** OneOf variant that encodes an empty field. */
+  val EmptyOneOf: TypeName = TypeName("Empty")
 
   // Standard result is a tree expression and a compatibility analysis
   type Compiled    = (Tree, Compatibility)
@@ -97,14 +109,9 @@ trait FormatImpl {
   private[teleproto] def checkTraitTypes(protobufType: Type, modelType: Type): Boolean =
     isSealedTrait(protobufType) && isSealedTrait(modelType)
 
+  /** A sealed trait with that is a subtype of [[GeneratedOneof]]. */
   private[teleproto] def checkHierarchyTypes(protobufType: Type, modelType: Type): Boolean =
-    isSealedTrait(modelType) && protobufType.typeSymbol.asClass.isCaseClass && {
-      // a case class with a single field named `value`
-      protobufType.member(termNames.CONSTRUCTOR).asMethod.paramLists.flatten match {
-        case param :: Nil => param.name.decodedName.toString == ValueDefinition
-        case _            => false
-      }
-    }
+    isSealedTrait(modelType) && isSealedTrait(protobufType) && protobufType <:< typeOf[GeneratedOneof]
 
   /**
     * A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa.
@@ -138,14 +145,22 @@ trait FormatImpl {
   }
 
   private[teleproto] def symbolsByName(symbols: Iterable[Symbol]): Map[Name, Symbol] =
-    symbols.iterator.map(sym => sym.name.decodedName -> sym).toMap
+    symbols.iterator.map(symbol => symbol.name.decodedName -> symbol).toMap
 
-  /**
-    * Uses lower case names without underscores (assuming clashes are already handled by ScalaPB)
-    */
+  /** Uses lower case names without underscores (assuming clashes are already handled by ScalaPB). */
   private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol]): Map[String, Symbol] =
-    for ((name, symbol) <- symbolsByName(symbols))
-      yield (name.toString.toLowerCase.replace("_", ""), symbol)
+    for ((name, symbol) <- symbolsByName(symbols)) yield name.toString.toLowerCase.replace("_", "") -> symbol
+
+  /** Uses lower case names without underscores (assuming clashes are already handled by ScalaPB).
+    * Strips the parent name from the the beginning of each symbol name.
+    */
+  private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol], parent: Symbol): Map[String, Symbol] = {
+    val prefix = parent.name.decodedName.toString.toLowerCase
+    for ((name, symbol) <- symbolsByTolerantName(symbols)) yield name.stripPrefix(prefix) -> symbol
+  }
+
+  private[teleproto] def showNames(symbols: Iterable[Name]): String =
+    symbols.iterator.map(name => s"`$name`").mkString(", ")
 
   private[teleproto] def isSealedTrait(tpe: Type): Boolean =
     tpe.typeSymbol match {
@@ -154,30 +169,13 @@ trait FormatImpl {
     }
 
   private[teleproto] def isScalaPBEnumeration(tpe: Type): Boolean =
-    isSealedTrait(tpe) && tpe.member(TypeName("EnumType")) != NoSymbol
+    isSealedTrait(tpe) && tpe <:< typeOf[GeneratedEnum]
 
-  /**
-    * To map Scala's sealed traits to Protocol Buffers we use a message object with the name of the sealed trait.
-    * It contains a single oneof named `value` that maps to the case classes of the sealed trait.
-    *
-    * This method collects all to Protocol Buffers case classes declared in `$traitName.Value`.
-    */
-  private[teleproto] def protoHierarchyCaseClasses(tpe: Type): Iterable[ClassSymbol] = {
-    val sym       = tpe.typeSymbol.asClass // e.g. case class Condition (generated proto)
-    val companion = sym.companion          // e.g. object Condition (generated proto)
+  private[teleproto] def classTypeOf(classSymbol: Symbol): Type =
+    classSymbol.asClass.selfType
 
-    val valueModules = companion.typeSignatureIn(tpe).decls.filter(sym => sym.isModule && sym.name.decodedName.toString == ValueModule)
-
-    val valueModule = // e.g. object Condition { object Value }
-      valueModules.headOption.getOrElse(
-        abort(s"Could not find `object Value` in `$tpe`: ${companion.typeSignatureIn(tpe).decls}")
-      )
-
-    valueModule.typeSignatureIn(tpe).decls.collect {
-      case cs: ClassSymbol if cs.isCaseClass => cs
-      // e.g. e.g. object Condition { object Value { case class TimeOfDayWindow } }
-    }
-  }
+  private[teleproto] def objectReferenceTo(objectClass: Symbol): Symbol =
+    classTypeOf(objectClass).termSymbol
 
   private[teleproto] def implicitAvailable(genericType: Type, from: Type, to: Type): Boolean = {
     val parametrizedType = appliedType(genericType, List(from, to))
