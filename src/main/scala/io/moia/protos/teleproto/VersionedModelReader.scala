@@ -146,7 +146,7 @@ object VersionedModelReader {
     def fromJson(jsonString: String): Try[PbResult[Model]]
     def fromProto(input: CodedInputStream): Try[PbResult[Model]]
 
-    /** Read a `Model` class directly from JSON with a custom [[Parser]].
+    /** Read a `Model` class directly from JSON with a custom `Parser`.
       *
       * Note: This method has a default implementation that forwards to the other `fromJson` and ignores `parser`.
       * This is done for binary compatibility but is overridden in the implementation.
