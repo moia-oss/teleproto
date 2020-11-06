@@ -18,12 +18,12 @@ Reading/writing for the current protocol buffers model should be straightforward
 Reading/writing a previous model should reflect similar semantics regarding the current business model.
 
 **For now** the library supports mapping of matching models and therefore for the parts of models that have not changed
-in a evolution. That reduces the code required to support previous versions (and a lot of code to support the current version, too...). 
+in an evolution. That reduces the code required to support previous versions (and a lot of code to support the current version, too...). 
 
 ## Mapping DSL
 
 The library defines abstractions for both directions: `Reader[PROTO, MODEL]` and `Writer[MODEL, PROTO]`.
-Readers/writers are converters between business model and Protocol Buffers model from the business model user's perspective.
+Readers/writers are converters between the business model and Protocol Buffers model from the business model user's perspective.
 
 It is assumed that a writer can never fail and if it fails it fails with a **5xx Internal Server Error**.
 But a client cannot be trusted and therefore a `Reader[PROTO, MODEL]` produces either a `PbSuccess(model: MODEL)` or a
@@ -117,7 +117,7 @@ There is no reader from `v1.ServiceClass` to `ServiceClass` since these are not 
 To provide that implicit one can either code a custom reader or generate a reader using the macro.  
 But one may also omit the implicit in this case: if no implicit reader for `ServiceClass` is available in the scope of
 the reader macro for `ServiceRegion`, the macro will create the reader for `ServiceClass`, too. That is, the macro
-supports hierarchical types. It will generated readers for not yet mapped parts of the hierarchy if a reader can be
+supports hierarchical types. It will generate readers for not yet mapped parts of the hierarchy if a reader can be
 generated for those parts. The user just has to provide implicit readers for the types that cannot be generated.
 
 **Please note:** This will not work for recursive case classes.
@@ -181,10 +181,26 @@ object Result {
 
 The reader/writer macros can map the generated objects/traits/case classes to the business model trait (and its case
 classes). The reader will reject `Empty` with a `PbFailure` and read the content of the other two constructors.  
-Similar to the mapping of case classes the reader requires implicit readers for the inner types (`Error` and `Success`).
+Similar to the mapping of case classes the reader/writer requires implicit readers/writers for the inner types (`Error` and `Success`).
 One can either define them or let the macro generate them, too.
 
 **Please note:** This will not work for recursive trait types. case objects would be empty messages and are also not supported.
+
+Example usage:
+```
+sealed trait Calculation
+case class Error(message: String) extends Calculation
+case class Success(result: BigDecimal) extends Calculation
+
+implicit val errorReader: Reader[v1.Error, Error] = ProtocolBuffers.reader[v1.Error, Error]
+implicit val errorWriter: Writer[Error, v1.Error] = ProtocolBuffers.writer[Error, v1.Error]
+
+implicit val successReader: Reader[v1.Success, Success] = ProtocolBuffers.reader[v1.Success, Success]
+implicit val successWriter: Writer[Success, v1.Success] = ProtocolBuffers.writer[Success, v1.Success]
+
+implicit val calculationReader: Reader[v1.Calculation, Calculation] = ProtocolBuffers.reader[v1.Calculation, Calculation]
+implicit val calculationWriter: Writer[Calculation, v1.Calculation] = ProtocolBuffers.writer[Calculation, v1.Calculation]
+```
 
 ## Special Mappings
 
@@ -194,7 +210,7 @@ The `Reader`/`Writer` companions already define some conversions:
 * ... *(look into the source code)* 
 
 If a mapping generation is not possible one has to define reader/writer programmatically.
-Usually a mapping cannot be generated for generic types in the business model due to the *impedance
+Usually, a mapping cannot be generated for generic types in the business model due to the *impedance
 mismatch* between PB's and Scala's types.
 
 ## Evolutions and (In-)Compatibility
@@ -233,7 +249,7 @@ Defining local implicit readers/writers from older to new types is a strategy fo
 
 The forward compatibility of writers is symmetric: Surplus fields in the business model declare the mapping to be
 forward compatible. By default all values in ScalaPB generated classes have default values.
-Therefore most of the writers are considered forward compatible. Actually just a new case class in a trait mappings can
+Therefore most of the writers are considered forward compatible. Actually, just a new case class in a trait mappings can
 cause a writer to be incompatible.
 
 Generating a backward/forward compatible reader/writer using the macro will raise a **warning**.
@@ -258,7 +274,7 @@ To publish a release to Maven Central follow these steps:
    ```
    sbt +publishSigned
    ```  
-   Note that your Sonatype credentials needs to be configured on your machine and you need to have access writes to publish artifacts to the group id `io.moia`.
+   Note that your Sonatype credentials need to be configured on your machine and you need to have access writes to publish artifacts to the group id `io.moia`.
 3. Release artifact to Maven Central with:
    ```
    sbt +sonatypeRelease
