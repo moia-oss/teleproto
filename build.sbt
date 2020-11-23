@@ -22,7 +22,7 @@ lazy val `teleproto` =
         library.scalaTest          % Test,
         library.scalaTestPlusCheck % Test,
         library.scalaCheck         % Test,
-        "org.scala-lang.modules"   %% "scala-collection-compat" % "2.2.0",
+        "org.scala-lang.modules"   %% "scala-collection-compat" % "2.3.0",
         "org.scala-lang"           % "scala-reflect" % scalaVersion.in(ThisBuild).value
       )
     )
