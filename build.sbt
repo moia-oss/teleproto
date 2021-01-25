@@ -17,7 +17,7 @@ lazy val `teleproto` =
       name := "teleproto",
       version := "1.10.0",
       libraryDependencies ++= Seq(
-        library.scalaPB            % "protobuf",
+        library.scalaPB            % "protobuf;compile",
         library.scalaPBJson        % Compile,
         library.scalaTest          % Test,
         library.scalaTestPlusCheck % Test,
