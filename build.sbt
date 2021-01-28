@@ -172,7 +172,9 @@ lazy val mimaSettings = Seq(
     ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.WriterImpl*"),
     // PbResult is a sealed trait so linking from Scala should be fine.
     // Also, this method was added before introducing MiMa.
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toOption")
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toOption"),
+    // Writer.Mapped was an unused private class.
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Writer$Mapped")
   )
 )
 
