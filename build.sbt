@@ -153,13 +153,11 @@ lazy val scalaFmtSettings =
     scalafmtOnCompile := true
   )
 
-lazy val scapegoatSettings =
-  Seq(
-    scapegoatVersion in ThisBuild := library.Version.scapeGoat,
-    scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "VariableShadowing"),
-    // do not check generated files
-    scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
-  )
+lazy val scapegoatSettings = Seq(
+  scapegoatVersion in ThisBuild := library.Version.scapeGoat,
+  // do not check generated files
+  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
+)
 
 lazy val mimaSettings = Seq(
   // First 2.13 release of 1.x
