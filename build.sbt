@@ -38,7 +38,7 @@ lazy val library = new {
     val scalaCheck         = "1.15.2"
     val scalaTest          = "3.2.2"
     val scalaTestPlusCheck = "3.2.2.0"
-    val scapeGoat          = "1.4.6"
+    val scapeGoat          = "1.4.7"
   }
 
   val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
@@ -63,20 +63,19 @@ lazy val commonSettings = Seq.concat(
   mimaSettings
 )
 
-lazy val compilerSettings =
-  Seq(
-    scalaVersion := crossScalaVersions.value.head,
-    crossScalaVersions := List("2.13.3", "2.12.12"),
-    mappings.in(Compile, packageBin) +=
-      baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
-    scalacOptions ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, 12)) => scalacOptions_2_12
-        case Some((2, 13)) => scalacOptions_2_13
-        case _             => Seq()
-      }
+lazy val compilerSettings = Seq(
+  scalaVersion := crossScalaVersions.value.head,
+  crossScalaVersions := List("2.13.4", "2.12.12"),
+  mappings.in(Compile, packageBin) +=
+    baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 12)) => scalacOptions_2_12
+      case Some((2, 13)) => scalacOptions_2_13
+      case _             => Seq()
     }
-  )
+  }
+)
 
 lazy val scalacOptions_2_12 = Seq(
   "-unchecked",
@@ -103,6 +102,7 @@ lazy val scalacOptions_2_13 = Seq(
   "-encoding",
   "UTF-8",
   "-Xfatal-warnings",
+  "-Xlint",
   "-Ywarn-dead-code",
   "-Ymacro-annotations"
 )

@@ -16,11 +16,10 @@
 
 package io.moia.protos.teleproto
 
-import java.time.{Instant, LocalTime}
-
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
+import java.time.{Instant, LocalTime}
 import scala.annotation.implicitNotFound
 import scala.collection.compat._
 import scala.collection.immutable.TreeMap
@@ -173,11 +172,6 @@ object Writer extends LowPriorityWrites {
                                              valueWriter: Writer[MV, PV],
                                              ordering: Ordering[PK]): Writer[TreeMap[MK, MV], Map[PK, PV]] =
     (model: TreeMap[MK, MV]) => for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
-
-  private class Mapped[M, P, Q](wrapped: Writer[M, P], f: P => Q) extends Writer[M, Q] {
-
-    def write(model: M): Q = f(wrapped.write(model))
-  }
 }
 
 trait LowPriorityWrites extends LowestPriorityWrites {

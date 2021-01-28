@@ -139,8 +139,8 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
     // collect the expressions for the constructor of the target proto
     val passedExpressions =
       paramMigrations.map {
-        case Automatically(tree: Tree, _) => tree
-        case Required(_, _, index, _)     => q"""${args(index)}(pb)"""
+        case Automatically(tree, _)   => tree
+        case Required(_, _, index, _) => q"""${args(index)}(pb)"""
       }
 
     // TargetProto(...)
