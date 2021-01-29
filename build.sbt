@@ -15,7 +15,7 @@ lazy val `teleproto` =
     .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
     .settings(
       name := "teleproto",
-      version := "1.10.0",
+      version := "1.11.0",
       libraryDependencies ++= Seq(
         library.scalaPB            % "protobuf;compile",
         library.scalaPBJson        % Compile,
@@ -63,20 +63,19 @@ lazy val commonSettings = Seq.concat(
   mimaSettings
 )
 
-lazy val compilerSettings =
-  Seq(
-    scalaVersion := crossScalaVersions.value.head,
-    crossScalaVersions := List("2.13.3", "2.12.12"),
-    mappings.in(Compile, packageBin) +=
-      baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
-    scalacOptions ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, 12)) => scalacOptions_2_12
-        case Some((2, 13)) => scalacOptions_2_13
-        case _             => Seq()
-      }
+lazy val compilerSettings = Seq(
+  scalaVersion := crossScalaVersions.value.head,
+  crossScalaVersions := List("2.13.4", "2.12.13"),
+  mappings.in(Compile, packageBin) +=
+    baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 12)) => scalacOptions_2_12
+      case Some((2, 13)) => scalacOptions_2_13
+      case _             => Seq()
     }
-  )
+  }
+)
 
 lazy val scalacOptions_2_12 = Seq(
   "-unchecked",
@@ -103,6 +102,7 @@ lazy val scalacOptions_2_13 = Seq(
   "-encoding",
   "UTF-8",
   "-Xfatal-warnings",
+  "-Xlint",
   "-Ywarn-dead-code",
   "-Ymacro-annotations"
 )
@@ -153,13 +153,11 @@ lazy val scalaFmtSettings =
     scalafmtOnCompile := true
   )
 
-lazy val scapegoatSettings =
-  Seq(
-    scapegoatVersion in ThisBuild := library.Version.scapeGoat,
-    scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "VariableShadowing"),
-    // do not check generated files
-    scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
-  )
+lazy val scapegoatSettings = Seq(
+  scapegoatVersion in ThisBuild := library.Version.scapeGoat,
+  // do not check generated files
+  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
+)
 
 lazy val mimaSettings = Seq(
   // First 2.13 release of 1.x
@@ -172,7 +170,9 @@ lazy val mimaSettings = Seq(
     ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.WriterImpl*"),
     // PbResult is a sealed trait so linking from Scala should be fine.
     // Also, this method was added before introducing MiMa.
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toOption")
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toOption"),
+    // Writer.Mapped was an unused private class.
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Writer$Mapped")
   )
 )
 

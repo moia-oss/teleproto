@@ -17,7 +17,6 @@
 package io.moia.protos.teleproto
 
 import scala.concurrent.Future
-import scala.language.experimental.macros
 
 @SuppressWarnings(Array("all"))
 object ProtocolBuffers {

@@ -148,7 +148,7 @@ object VersionedModelReader {
       * Note: This method has a default implementation that forwards to the other `fromJson` and ignores `parser`.
       * This is done for binary compatibility but is overridden in the implementation.
       */
-    def fromJson(jsonString: String, parser: Parser): Try[PbResult[Model]] = fromJson(jsonString)
+    def fromJson(jsonString: String, unusedParser: Parser): Try[PbResult[Model]] = fromJson(jsonString)
   }
 
   def apply[Version, DetachedModel](

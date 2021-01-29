@@ -116,10 +116,10 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
 
     val mapping = q"io.moia.protos.teleproto"
 
-    /**
-      * For each parameter creates a value assignment with the name of the parameter, e.g.
-      * `val targetParameter = transformationExpression`
-      */
+    /*
+     * For each parameter creates a value assignment with the name of the parameter, e.g.
+     * `val targetParameter = transformationExpression`
+     */
     def valueDefinitions(parameters: List[(TermSymbol, MatchingParam)]): List[Compiled] = {
       parameters.flatMap {
         case (termSymbol, matchingParam) =>
@@ -163,9 +163,9 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       }
     }
 
-    /**
-      * Constructs an expression `PbFailure.combine(convertedParameters..)` for all transformed parameters (could fail).
-      */
+    /*
+     * Constructs an expression `PbFailure.combine(convertedParameters..)` for all transformed parameters (could fail).
+     */
     def forLoop(parameters: List[(TermSymbol, MatchingParam)], cons: Tree): Tree =
       parameters match {
         case Nil =>
@@ -184,9 +184,9 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
           }
       }
 
-    /**
-      * Constructs an expression `PbFailure(...)` that contains all errors for all failed parameter transformations.
-      */
+    /*
+     * Constructs an expression `PbFailure(...)` that contains all errors for all failed parameter transformations.
+     */
     def combineErrors(parameters: List[(TermSymbol, MatchingParam)]): Tree = {
       val convertedValues =
         parameters.flatMap {

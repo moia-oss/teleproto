@@ -1,5 +1,7 @@
 package io.moia.protos.teleproto
 
+import scala.annotation.nowarn
+
 object ProtocolBuffersMigrationHierarchyTest {
 
   // V2
@@ -57,6 +59,7 @@ class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
 
     "prefer a custom nested migration over a generated" in {
 
+      @nowarn("cat=unused")
       implicit val upperCasingMatchingSubProtoV1toV2: Migration[MatchingSubProtoV1, MatchingSubProtoV2] =
         Migration[MatchingSubProtoV1, MatchingSubProtoV2](src => MatchingSubProtoV2(src.same.toUpperCase))
 
