@@ -38,7 +38,7 @@ lazy val library = new {
     val scalaCheck         = "1.15.3"
     val scalaTest          = "3.2.5"
     val scalaTestPlusCheck = "3.2.2.0"
-    val scapeGoat          = "1.4.7"
+    val scapeGoat          = "1.4.8"
   }
 
   val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
