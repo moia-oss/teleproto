@@ -1,4 +1,5 @@
 import com.typesafe.tools.mima.core._
+import xerial.sbt.Sonatype._
 
 addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
 
@@ -6,26 +7,25 @@ addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
 // Projects
 // *****************************************************************************
 
-lazy val `teleproto` =
-  project
-    .in(file("."))
-    .enablePlugins(GitVersioning, GitBranchPrompt)
-    .settings(commonSettings: _*)
-    .settings(sonatypeSettings: _*)
-    .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
-    .settings(
-      name := "teleproto",
-      version := "1.11.0",
-      libraryDependencies ++= Seq(
-        library.scalaPB            % "protobuf;compile",
-        library.scalaPBJson        % Compile,
-        library.scalaTest          % Test,
-        library.scalaTestPlusCheck % Test,
-        library.scalaCheck         % Test,
-        "org.scala-lang.modules"   %% "scala-collection-compat" % "2.4.2",
-        "org.scala-lang"           % "scala-reflect" % scalaVersion.in(ThisBuild).value
-      )
+lazy val `teleproto` = project
+  .in(file("."))
+  .enablePlugins(GitVersioning, GitBranchPrompt)
+  .settings(commonSettings: _*)
+  .settings(sonatypeSettings: _*)
+  .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
+  .settings(
+    name := "teleproto",
+    version := "1.11.0",
+    libraryDependencies ++= Seq(
+      library.scalaPB            % "protobuf;compile",
+      library.scalaPBJson        % Compile,
+      library.scalaTest          % Test,
+      library.scalaTestPlusCheck % Test,
+      library.scalaCheck         % Test,
+      "org.scala-lang.modules"   %% "scala-collection-compat" % "2.4.2",
+      "org.scala-lang"           % "scala-reflect" % (ThisBuild / scalaVersion).value
     )
+  )
 
 // *****************************************************************************
 // Dependencies
@@ -66,15 +66,12 @@ lazy val commonSettings = Seq.concat(
 lazy val compilerSettings = Seq(
   scalaVersion := crossScalaVersions.value.head,
   crossScalaVersions := List("2.13.5", "2.12.13"),
-  mappings.in(Compile, packageBin) +=
-    baseDirectory.in(ThisBuild).value / "LICENSE" -> "LICENSE",
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 12)) => scalacOptions_2_12
-      case Some((2, 13)) => scalacOptions_2_13
-      case _             => Seq()
-    }
-  }
+  Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
+  scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, 12)) => scalacOptions_2_12
+    case Some((2, 13)) => scalacOptions_2_13
+    case _             => Nil
+  })
 )
 
 lazy val scalacOptions_2_12 = Seq(
@@ -107,54 +104,46 @@ lazy val scalacOptions_2_13 = Seq(
   "-Ymacro-annotations"
 )
 
-lazy val gitSettings =
-  Seq(
-    git.useGitDescribe := false
-  )
+lazy val gitSettings = Seq(
+  git.useGitDescribe := false
+)
 
-lazy val organizationSettings =
-  Seq(
-    organization := "io.moia",
-    organizationName := "MOIA GmbH",
-    startYear := Some(2019),
-    licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
-  )
+lazy val organizationSettings = Seq(
+  organization := "io.moia",
+  organizationName := "MOIA GmbH",
+  startYear := Some(2019),
+  licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
+)
 
-lazy val scmSettings =
-  Seq(
-    scmInfo := Some(
-      ScmInfo(
-        url("https://github.com/moia-dev/teleproto"),
-        "scm:git@github.com:moia-dev/teleproto.git"
-      )
-    ),
-    homepage := Some(url("https://github.com/moia-dev/teleproto"))
-  )
+lazy val scmSettings = Seq(
+  scmInfo := Some(
+    ScmInfo(
+      url("https://github.com/moia-dev/teleproto"),
+      "scm:git@github.com:moia-dev/teleproto.git"
+    )
+  ),
+  homepage := Some(url("https://github.com/moia-dev/teleproto"))
+)
 
-lazy val sonatypeSettings = {
-  import xerial.sbt.Sonatype._
-  Seq(
-    publishTo := sonatypePublishTo.value,
-    sonatypeProfileName := organization.value,
-    publishMavenStyle := true,
-    sonatypeProjectHosting := Some(GitHubHosting("moia-dev", "teleproto", "oss-support@moia.io")),
-    credentials += Credentials(Path.userHome / ".sbt" / "sonatype_credential")
-  )
-}
+lazy val sonatypeSettings = Seq(
+  publishTo := sonatypePublishTo.value,
+  sonatypeProfileName := organization.value,
+  publishMavenStyle := true,
+  sonatypeProjectHosting := Some(GitHubHosting("moia-dev", "teleproto", "oss-support@moia.io")),
+  credentials += Credentials(Path.userHome / ".sbt" / "sonatype_credential")
+)
 
-lazy val sbtSettings =
-  Seq(
-    cancelable in Global := true,
-    logLevel in sourceGenerators := Level.Error
-  )
+lazy val sbtSettings = Seq(
+  Global / cancelable := true,
+  sourceGenerators / logLevel := Level.Error
+)
 
-lazy val scalaFmtSettings =
-  Seq(
-    scalafmtOnCompile := true
-  )
+lazy val scalaFmtSettings = Seq(
+  scalafmtOnCompile := true
+)
 
 lazy val scapegoatSettings = Seq(
-  scapegoatVersion in ThisBuild := library.Version.scapeGoat,
+  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
   // do not check generated files
   scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
 )
@@ -176,5 +165,5 @@ lazy val mimaSettings = Seq(
   )
 )
 
-PB.targets in Test := Seq(scalapb.gen(flatPackage = false) -> (sourceManaged in Test).value)
-PB.protoSources in Test := Seq(file("src/test/protobuf"))
+Test / PB.targets := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value)
+Test / PB.protoSources := Seq(file("src/test/protobuf"))
