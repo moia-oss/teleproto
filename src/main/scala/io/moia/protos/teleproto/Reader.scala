@@ -17,11 +17,11 @@
 package io.moia.protos.teleproto
 
 import java.time.{Instant, LocalTime}
-
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 import scalapb.GeneratedMessage
 
+import java.util.UUID
 import scala.annotation.implicitNotFound
 import scala.collection.compat._
 import scala.collection.immutable.TreeMap
@@ -158,6 +158,13 @@ object Reader extends LowPriorityReads {
   implicit object FiniteDurationReader extends Reader[PBDuration, FiniteDuration] {
     def read(protobuf: PBDuration): PbResult[FiniteDuration] =
       PbSuccess((Duration(protobuf.seconds, SECONDS) + Duration(protobuf.nanos.toLong, NANOSECONDS)).toCoarsest)
+  }
+
+  /**
+    * Transforms a string into a UUID.
+    */
+  implicit object UUIDReader extends Reader[String, UUID] {
+    def read(uuid: UUID): PbResult[UUID] = Try(UUID.fromString(uuid)).fold(PbFailure(_), PbSuccess(_))
   }
 
   /**

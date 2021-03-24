@@ -130,6 +130,13 @@ object Writer extends LowPriorityWrites {
   }
 
   /**
+    * Writes a UUID as string.
+    */
+  implicit object UUIDWriter extends Writer[UUID, String] {
+    def write(uuid: UUID): String = _.toString
+  }
+
+  /**
     * Writes a Scala deadline into a ScalaPB Timestamp as fixed point in time.
     *
     * The decoding of this value is side-effect free but has a problem with divergent system clocks!
