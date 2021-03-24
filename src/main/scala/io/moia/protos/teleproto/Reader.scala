@@ -164,7 +164,7 @@ object Reader extends LowPriorityReads {
     * Transforms a string into a UUID.
     */
   implicit object UUIDReader extends Reader[String, UUID] {
-    def read(uuid: UUID): PbResult[UUID] = Try(UUID.fromString(uuid)).fold(PbFailure(_), PbSuccess(_))
+    def read(uuid: String): PbResult[UUID] = Try(PbSuccess(UUID.fromString(uuid))).getOrElse(PbFailure("Value must be a UUID."))
   }
 
   /**
