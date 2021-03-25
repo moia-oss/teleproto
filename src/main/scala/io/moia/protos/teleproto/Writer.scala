@@ -20,6 +20,7 @@ import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
 import java.time.{Instant, LocalTime}
+import java.util.UUID
 import scala.annotation.implicitNotFound
 import scala.collection.compat._
 import scala.collection.immutable.TreeMap
@@ -127,6 +128,13 @@ object Writer extends LowPriorityWrites {
   implicit object DurationWriter extends Writer[Duration, PBDuration] {
     def write(duration: Duration): PBDuration =
       PBDuration(duration.toSeconds, (duration.toNanos % 1000000000).toInt)
+  }
+
+  /**
+    * Writes a UUID as string.
+    */
+  implicit object UUIDWriter extends Writer[UUID, String] {
+    def write(uuid: UUID): String = uuid.toString
   }
 
   /**
