@@ -15,7 +15,8 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name := "teleproto",
-    version := "1.11.0",
+    version := "1.12.0",
+    versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
       library.scalaPBJson        % Compile,
@@ -105,7 +106,7 @@ lazy val scalacOptions_2_13 = Seq(
 )
 
 lazy val gitSettings = Seq(
-  git.useGitDescribe := false
+  git.useGitDescribe.withRank(KeyRanks.Invisible) := false
 )
 
 lazy val organizationSettings = Seq(
@@ -135,7 +136,7 @@ lazy val sonatypeSettings = Seq(
 
 lazy val sbtSettings = Seq(
   Global / cancelable := true,
-  sourceGenerators / logLevel := Level.Error
+  sourceGenerators / logLevel.withRank(KeyRanks.Invisible) := Level.Error
 )
 
 lazy val scalaFmtSettings = Seq(
