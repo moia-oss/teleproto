@@ -7,12 +7,6 @@ addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.16")
 // sbt> git <your git command>
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
-// Code coverage report. The code has to be instrumented, therefore a clean build is needed.
-// sbt> clean
-// sbt> coverage test
-// sbt> coverageReport
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
-
 // Static code analysis.
 // sbt> scapegoat
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.0")
