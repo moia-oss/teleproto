@@ -1,5 +1,9 @@
 name: Run tests
-on: push
+on:
+  pull_request:
+    branches: ['*']
+  push:
+    branches: ['master']
 
 jobs:
   test:
@@ -17,15 +21,3 @@ jobs:
           key: ${{ runner.os }}-sbt-cache-${{ hashFiles('**/build.sbt') }}-${{ hashFiles('**/plugins.sbt') }}-${{ hashFiles('**/build.properties') }}
       - name: Compile and validate
         run: sbt +validate
-
-  merge:
-    name: Merge
-    needs:
-      - test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Merge me!
-        uses: ridedott/merge-me-action@v1
-        with:
-          GITHUB_LOGIN: moia-pipeline
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

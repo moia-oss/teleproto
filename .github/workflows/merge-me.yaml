@@ -1,0 +1,21 @@
+name: Merge me!
+
+on:
+  workflow_run:
+    types:
+      - completed
+    workflows:
+      - 'Run tests'
+
+jobs:
+  merge-me:
+    name: Merge me!
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge me!
+        if: ${{ github.event.workflow_run.conclusion == 'success' }}
+        uses: ridedott/merge-me-action@v2
+        with:
+          GITHUB_LOGIN: moia-pipeline
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENABLED_FOR_MANUAL_CHANGES: 'true'
