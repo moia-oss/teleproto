@@ -7,12 +7,6 @@ addSbtPlugin("com.lucidchart" % "sbt-scalafmt" % "1.16")
 // sbt> git <your git command>
 addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
-// Code coverage report. The code has to be instrumented, therefore a clean build is needed.
-// sbt> clean
-// sbt> coverage test
-// sbt> coverageReport
-addSbtPlugin("org.scoverage" % "sbt-scoverage" % "1.6.1")
-
 // Static code analysis.
 // sbt> scapegoat
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.0")
@@ -25,7 +19,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
 addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 
 // Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
-addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.2")
+addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.3")
 
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.10.11"
 
@@ -33,4 +27,4 @@ addSbtPlugin("de.heikoseeberger" % "sbt-header"      % "5.6.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"    % "3.9.7")
 addSbtPlugin("com.dwijnand"      % "sbt-dynver"      % "4.1.1")
 addSbtPlugin("com.github.sbt"    % "sbt-pgp"         % "2.1.2")
-addSbtPlugin("com.typesafe"      % "sbt-mima-plugin" % "0.8.1")
+addSbtPlugin("com.typesafe"      % "sbt-mima-plugin" % "0.9.0")
