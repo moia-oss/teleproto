@@ -23,7 +23,7 @@ lazy val `teleproto` = project
       library.scalaTest          % Test,
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
-      "org.scala-lang.modules"   %% "scala-collection-compat" % "2.4.3",
+      "org.scala-lang.modules"   %% "scala-collection-compat" % "2.4.4",
       "org.scala-lang"           % "scala-reflect" % (ThisBuild / scalaVersion).value
     )
   )
