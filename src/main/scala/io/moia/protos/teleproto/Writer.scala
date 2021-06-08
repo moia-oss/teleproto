@@ -43,25 +43,25 @@ trait Writer[-M, +P] {
     * Transforms each written result.
     */
   def map[Q](f: P => Q): Writer[M, Q] =
-    model => f(write(model))
+    Writer.instance(model => f(write(model)))
 
   /**
     * Transforms the model before writing.
     */
   final def contramap[N](f: N => M): Writer[N, P] =
-    model => write(f(model))
+    Writer.instance(model => write(f(model)))
 
   /**
     * Transforms written results by stacking another writer on top of the original model.
     */
   final def flatMap[N <: M, Q](f: P => Writer[N, Q]): Writer[N, Q] =
-    model => f(write(model)).write(model)
+    Writer.instance(model => f(write(model)).write(model))
 
   /**
     * Combines two writers with a specified function.
     */
   final def zipWith[N <: M, Q, R](that: Writer[N, Q])(f: (P, Q) => R): Writer[N, R] =
-    model => f(this.write(model), that.write(model))
+    Writer.instance(model => f(this.write(model), that.write(model)))
 
   /**
     * Combines two writers into a writer of a tuple.
@@ -73,7 +73,7 @@ trait Writer[-M, +P] {
     * Chain `that` writer after `this` one.
     */
   final def andThen[Q](that: Writer[P, Q]): Writer[M, Q] =
-    model => that.write(this.write(model))
+    Writer.instance(model => that.write(this.write(model)))
 
   /**
     * Chain `this` writer after `that` one.
@@ -85,6 +85,8 @@ trait Writer[-M, +P] {
 object Writer extends LowPriorityWrites {
 
   def apply[M, P](implicit writer: Writer[M, P]): Writer[M, P] = writer
+
+  def instance[M, P](f: M => P): Writer[M, P] = f(_)
 
   /* Combinators */
 
@@ -172,14 +174,20 @@ object Writer extends LowPriorityWrites {
   /**
     * Transforms a Scala map into a corresponding map with Protobuf types if writers exists between key and value types.
     */
-  implicit def mapWriter[MK, MV, PK, PV](implicit keyWriter: Writer[MK, PK],
-                                         valueWriter: Writer[MV, PV]): Writer[Map[MK, MV], Map[PK, PV]] =
-    (model: Map[MK, MV]) => for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
+  implicit def mapWriter[MK, MV, PK, PV](
+      implicit keyWriter: Writer[MK, PK],
+      valueWriter: Writer[MV, PV]
+  ): Writer[Map[MK, MV], Map[PK, PV]] = instance { model =>
+    for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
+  }
 
-  implicit def treeMapWriter[MK, MV, PK, PV](implicit keyWriter: Writer[MK, PK],
-                                             valueWriter: Writer[MV, PV],
-                                             ordering: Ordering[PK]): Writer[TreeMap[MK, MV], Map[PK, PV]] =
-    (model: TreeMap[MK, MV]) => for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
+  implicit def treeMapWriter[MK, MV, PK, PV](
+      implicit keyWriter: Writer[MK, PK],
+      valueWriter: Writer[MV, PV],
+      ordering: Ordering[PK]
+  ): Writer[TreeMap[MK, MV], Map[PK, PV]] = instance { model =>
+    for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
+  }
 }
 
 trait LowPriorityWrites extends LowestPriorityWrites {
@@ -187,9 +195,8 @@ trait LowPriorityWrites extends LowestPriorityWrites {
   def sequence[MV, PV](models: IterableOnce[MV])(implicit valueWriter: Writer[MV, PV]): Seq[PV] =
     models.iterator.map(valueWriter.write).toSeq
 
-  def collection[MV, PV, Col[_]](models: IterableOnce[MV])(implicit cbf: Factory[PV, Col[PV]], valueWriter: Writer[MV, PV]): Col[PV] = {
+  def collection[MV, PV, Col[_]](models: IterableOnce[MV])(implicit cbf: Factory[PV, Col[PV]], valueWriter: Writer[MV, PV]): Col[PV] =
     models.iterator.map(valueWriter.write).iterator.to(cbf)
-  }
 }
 
 trait LowestPriorityWrites {
@@ -198,5 +205,5 @@ trait LowestPriorityWrites {
     * Keeps a value of same type in protobuf and model.
     */
   implicit def identityWriter[T]: Writer[T, T] =
-    (value: T) => value
+    Writer.instance(identity)
 }
