@@ -17,7 +17,7 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   val modelWriter = VersionedModelWriter[Int, Meal](version -> food.Meal)
 
   val colorGen: Gen[Color] =
-    Gen.oneOf(Color.Red, Color.Orange, Color.Yellow, Color.Pink, Color.Blue)
+    Gen.oneOf(Color.Red, Color.orange, Color.Yellow, Color.pink, Color.Blue)
 
   val fruitGen: Gen[Fruit] = for {
     name  <- Gen.alphaStr
@@ -65,9 +65,9 @@ object ProtocolBuffersRoundTripTest {
   sealed trait Color
   object Color {
     case object Red    extends Color
-    case object Orange extends Color
+    case object orange extends Color
     case object Yellow extends Color
-    case object Pink   extends Color
+    case object pink   extends Color
     case object Blue   extends Color
   }
 

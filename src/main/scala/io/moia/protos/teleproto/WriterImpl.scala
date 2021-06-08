@@ -162,12 +162,8 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       val cons =
         q"""${protobufCompanion.asTerm}.apply(..${for ((name, (arg, _)) <- namedArguments) yield q"$name = $arg"})"""
 
-      // a type cast is needed due to type inferencer limitations
-      val innerCompatibilities =
-        for ((_, (_, innerCompatibility)) <- namedArguments)
-          yield innerCompatibility.asInstanceOf[Compatibility]
-
-      val compatibility = innerCompatibilities.foldRight(ownCompatibility)(_.merge(_))
+      val innerCompatibilities = for ((_, (_, innerCompatibility)) <- namedArguments) yield innerCompatibility
+      val compatibility        = innerCompatibilities.foldRight(ownCompatibility)(_.merge(_))
 
       val result =
         q"""
@@ -329,7 +325,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     val cases = for {
       (optionName, protobufOption) <- protobufOptions.toList
       modelOption                  <- modelOptions.get(optionName)
-    } yield cq"`${objectReferenceTo(modelOption)}` => ${objectReferenceTo(protobufOption)}"
+    } yield cq"_: ${objectReferenceTo(modelOption)}.type => ${objectReferenceTo(protobufOption)}"
 
     val writer = c.freshName(TermName("writer"))
     val result = q"""{
