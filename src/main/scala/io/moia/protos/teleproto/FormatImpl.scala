@@ -37,8 +37,8 @@ trait FormatImpl {
   def error(message: String, pos: Position = c.enclosingPosition): Unit    = c.error(pos, message)
   def abort(message: String, pos: Position = c.enclosingPosition): Nothing = c.abort(pos, message)
 
-  private[teleproto] val mapping =
-    q"io.moia.protos.teleproto"
+  protected def objectRef[T: TypeTag]: Symbol =
+    typeOf[T].termSymbol
 
   /** A `oneof` proto definition is mapped to a `sealed trait` in Scala.
     * Each variant of the `oneof` definition is mapped to a `case class` with exactly one field `value`

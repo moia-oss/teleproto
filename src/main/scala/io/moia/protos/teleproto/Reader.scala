@@ -43,39 +43,40 @@ trait Reader[-P, +M] {
     * Transforms successfully read results.
     */
   def map[N](f: M => N): Reader[P, N] =
-    read(_).map(f)
+    Reader.instance(read(_).map(f))
 
   /**
     * Transforms the protobuf before reading.
     */
   final def contramap[Q](f: Q => P): Reader[Q, M] =
-    protobuf => read(f(protobuf))
+    Reader.instance(protobuf => read(f(protobuf)))
 
   /**
     * Transforms successfully read results with the option to fail.
     */
   final def pbmap[N](f: M => PbResult[N]): Reader[P, N] =
-    read(_).flatMap(f)
+    Reader.instance(read(_).flatMap(f))
 
   @deprecated("Use a function that returns a Reader with flatMap or one that returns a PbResult with emap", "1.8.0")
   protected def flatMap[N](f: M => PbSuccess[N]): Reader[P, N] =
-    read(_).flatMap(f)
+    Reader.instance(read(_).flatMap(f))
 
   /**
     * Transforms successfully read results by stacking another reader on top of the original protobuf.
     */
   final def flatMap[Q <: P, N](f: M => Reader[Q, N])(implicit dummy: DummyImplicit): Reader[Q, N] =
-    protobuf => read(protobuf).flatMap(f(_).read(protobuf))
+    Reader.instance(protobuf => read(protobuf).flatMap(f(_).read(protobuf)))
 
   /**
     * Combines two readers with a specified function.
     */
   final def zipWith[Q <: P, N, O](that: Reader[Q, N])(f: (M, N) => O): Reader[Q, O] =
-    protobuf =>
+    Reader.instance { protobuf =>
       for {
         m <- this.read(protobuf)
         n <- that.read(protobuf)
       } yield f(m, n)
+    }
 
   /**
     * Combines two readers into a reader of a tuple.
@@ -87,7 +88,7 @@ trait Reader[-P, +M] {
     * Chain `that` reader after `this` one.
     */
   final def andThen[N](that: Reader[M, N]): Reader[P, N] =
-    read(_).flatMap(that.read)
+    Reader.instance(read(_).flatMap(that.read))
 
   /**
     * Chain `this` reader after `that` one.
@@ -100,6 +101,8 @@ object Reader extends LowPriorityReads {
 
   def apply[P, M](implicit reader: Reader[P, M]): Reader[P, M] = reader
 
+  def instance[P, M](f: P => PbResult[M]): Reader[P, M] = f(_)
+
   /* Combinators */
 
   def transform[PV, MV](protobuf: PV, path: String)(implicit valueReader: Reader[PV, MV]): PbResult[MV] =
@@ -111,17 +114,17 @@ object Reader extends LowPriorityReads {
   def required[PV, MV](protobuf: Option[PV], path: String)(implicit valueReader: Reader[PV, MV]): PbResult[MV] =
     protobuf.map(valueReader.read).getOrElse(PbFailure("Value is required.")).withPathPrefix(path)
 
-  def sequence[F[_], PV, MV](protobufs: Seq[PV], path: String)(implicit factory: Factory[MV, F[MV]],
-                                                               valueReader: Reader[PV, MV]): PbResult[F[MV]] = {
+  def sequence[F[_], PV, MV](protobufs: Seq[PV], path: String)(
+      implicit factory: Factory[MV, F[MV]],
+      valueReader: Reader[PV, MV]
+  ): PbResult[F[MV]] = {
     val results = protobufs.map(valueReader.read).zipWithIndex
-
-    val errors =
-      results.flatMap {
-        case (PbFailure(innerErrors), index) =>
-          PbFailure(innerErrors).withPathPrefix(s"$path($index)").errors
-        case _ =>
-          Seq.empty
-      }
+    val errors = results.flatMap {
+      case (PbFailure(innerErrors), index) =>
+        PbFailure(innerErrors).withPathPrefix(s"$path($index)").errors
+      case _ =>
+        Seq.empty
+    }
 
     if (errors.nonEmpty)
       PbFailure(errors)
@@ -209,10 +212,13 @@ object Reader extends LowPriorityReads {
     * Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types
     * and an ordering is defined on the Scala key.
     */
-  implicit def treeMapReader[PK, PV, MK, MV](implicit keyReader: Reader[PK, MK],
-                                             valueReader: Reader[PV, MV],
-                                             ordering: Ordering[MK]): Reader[Map[PK, PV], TreeMap[MK, MV]] =
-    (protobuf: Map[PK, PV]) => mapReader(keyReader, valueReader).read(protobuf).map(entries => TreeMap[MK, MV](entries.toSeq: _*))
+  implicit def treeMapReader[PK, PV, MK, MV](
+      implicit keyReader: Reader[PK, MK],
+      valueReader: Reader[PV, MV],
+      ordering: Ordering[MK]
+  ): Reader[Map[PK, PV], TreeMap[MK, MV]] = instance { protobuf =>
+    mapReader(keyReader, valueReader).read(protobuf).map(entries => TreeMap[MK, MV](entries.toSeq: _*))
+  }
 
   /**
     * A reader that gives access to the inner [[PbResult]].
@@ -220,7 +226,7 @@ object Reader extends LowPriorityReads {
     * to always deserialize an event to an `Envelope[PbResult[A]]` even if the actual payload of type `A` fails to parse.
     */
   implicit def pbResultReader[PB <: GeneratedMessage, A](implicit reader: Reader[PB, A]): Reader[PB, PbResult[A]] =
-    pb => PbSuccess(reader.read(pb))
+    instance(pb => PbSuccess(reader.read(pb)))
 }
 
 private[teleproto] trait LowPriorityReads extends LowestPriorityReads {
@@ -229,31 +235,25 @@ private[teleproto] trait LowPriorityReads extends LowestPriorityReads {
     * Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types
     * and an ordering is defined on the Scala key.
     */
-  implicit def mapReader[PK, PV, MK, MV](implicit keyReader: Reader[PK, MK],
-                                         valueReader: Reader[PV, MV]): Reader[Map[PK, PV], Map[MK, MV]] =
-    (protobuf: Map[PK, PV]) => {
-      val modelResults =
-        for ((protoKey, protoValue) <- protobuf.toSeq)
-          yield {
-            for {
-              key   <- keyReader.read(protoKey).withPathPrefix(s"/$protoKey")
-              value <- valueReader.read(protoValue).withPathPrefix(s"/$key")
-            } yield {
-              (key, value)
-            }
-          }
-
-      val errors =
-        modelResults.flatMap {
-          case PbFailure(innerErrors) => innerErrors
-          case _                      => Seq.empty
-        }
-
-      if (errors.nonEmpty)
-        PbFailure(errors)
-      else
-        PbSuccess(Map[MK, MV](modelResults.map(_.get): _*))
+  implicit def mapReader[PK, PV, MK, MV](
+      implicit keyReader: Reader[PK, MK],
+      valueReader: Reader[PV, MV]
+  ): Reader[Map[PK, PV], Map[MK, MV]] = Reader.instance { protobuf =>
+    val modelResults = for ((protoKey, protoValue) <- protobuf.toSeq) yield {
+      for {
+        key   <- keyReader.read(protoKey).withPathPrefix(s"/$protoKey")
+        value <- valueReader.read(protoValue).withPathPrefix(s"/$key")
+      } yield (key, value)
     }
+
+    val errors = modelResults.flatMap {
+      case PbFailure(innerErrors) => innerErrors
+      case _                      => Seq.empty
+    }
+
+    if (errors.nonEmpty) PbFailure(errors)
+    else PbSuccess(Map[MK, MV](modelResults.map(_.get): _*))
+  }
 }
 
 private[teleproto] trait LowestPriorityReads {
@@ -262,5 +262,5 @@ private[teleproto] trait LowestPriorityReads {
     * Keeps a value of same type in protobuf and model.
     */
   implicit def identityReader[T]: Reader[T, T] =
-    (value: T) => PbSuccess(value)
+    Reader.instance(PbSuccess.apply)
 }
