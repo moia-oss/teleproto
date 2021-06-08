@@ -366,7 +366,7 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
 
     val (cases, compatibility) = subTypes.unzip
     val emptyCase = for (protobufClass <- protobufSubClasses.get(EmptyOneOf) if !modelSubclasses.contains(EmptyOneOf))
-      yield cq"""`${objectReferenceTo(protobufClass)}` => $mapping.PbFailure("Oneof field is empty!")"""
+      yield cq"""_: ${objectReferenceTo(protobufClass)}.type => $mapping.PbFailure("Oneof field is empty!")"""
 
     val reader = c.freshName(TermName("reader"))
     val result = q"""{
@@ -419,11 +419,11 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     val cases = for {
       (optionName, modelOption) <- modelOptions.toList
       protobufOption            <- protobufOptions.get(optionName)
-    } yield cq"`${objectReferenceTo(protobufOption)}` => $mapping.PbSuccess(${objectReferenceTo(modelOption)})"
+    } yield cq"_: ${objectReferenceTo(protobufOption)}.type => $mapping.PbSuccess(${objectReferenceTo(modelOption)})"
 
     val invalidCase = for (protobufOption <- protobufOptions.get(InvalidEnum) if !modelOptions.contains(InvalidEnum)) yield {
       val reference = objectReferenceTo(protobufOption)
-      cq"""`$reference` => $mapping.PbFailure(s"Enumeration value $${$reference} is invalid!")"""
+      cq"""_: $reference.type => $mapping.PbFailure(s"Enumeration value $${$reference} is invalid!")"""
     }
 
     val reader = c.freshName(TermName("reader"))
