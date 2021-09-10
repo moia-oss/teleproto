@@ -15,7 +15,7 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name := "teleproto",
-    version := "1.13.0",
+    version := "2.0.0",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
