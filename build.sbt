@@ -34,7 +34,7 @@ lazy val `teleproto` = project
 
 lazy val library = new {
   object Version {
-    val scalaPB            = "0.11.5"
+    val scalaPB            = scalapb.compiler.Version.scalapbVersion
     val scalaPBJson        = "0.11.1"
     val scalaCheck         = "1.15.4"
     val scalaTest          = "3.2.9"
