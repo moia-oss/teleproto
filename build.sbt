@@ -15,7 +15,7 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name := "teleproto",
-    version := "1.13.0",
+    version := "2.0.0",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
@@ -35,7 +35,7 @@ lazy val `teleproto` = project
 lazy val library = new {
   object Version {
     val scalaPB            = scalapb.compiler.Version.scalapbVersion
-    val scalaPBJson        = "0.10.3"
+    val scalaPBJson        = "0.11.1"
     val scalaCheck         = "1.15.4"
     val scalaTest          = "3.2.9"
     val scalaTestPlusCheck = "3.2.2.0"
