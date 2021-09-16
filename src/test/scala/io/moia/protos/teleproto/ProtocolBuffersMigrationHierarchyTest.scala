@@ -49,9 +49,11 @@ class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
         ProtoV2(Some(MatchingSubProtoV2("same")), UnmatchingSubProtoV2("42", ThirdLevelV2("ok")), List(PassengerV2(true)))
 
       protoV1toV2.migrate(ProtoV1(Some(MatchingSubProtoV1("same")), UnmatchingSubProtoV1(42, ThirdLevelV1("ok")), 2)) shouldBe
-        ProtoV2(Some(MatchingSubProtoV2("same")),
-                UnmatchingSubProtoV2("42", ThirdLevelV2("ok")),
-                List(PassengerV2(true), PassengerV2(true)))
+        ProtoV2(
+          Some(MatchingSubProtoV2("same")),
+          UnmatchingSubProtoV2("42", ThirdLevelV2("ok")),
+          List(PassengerV2(true), PassengerV2(true))
+        )
 
       protoV1toV2.migrate(ProtoV1(None, UnmatchingSubProtoV1(42, ThirdLevelV1("ok")), 0)) shouldBe
         ProtoV2(None, UnmatchingSubProtoV2("42", ThirdLevelV2("ok")), Nil)

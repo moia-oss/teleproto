@@ -23,8 +23,10 @@ class DeadlineFormatTest extends UnitTest {
 
           val deadline = timeLeft.fromNow
 
-          assert(timeLeft - reader.read(writer.write(deadline)).get.timeLeft < 250.millis,
-                 "Either your test system is too slow or the reader is wrong!")
+          assert(
+            timeLeft - reader.read(writer.write(deadline)).get.timeLeft < 250.millis,
+            "Either your test system is too slow or the reader is wrong!"
+          )
         }
       }
     }
@@ -37,8 +39,10 @@ class DeadlineFormatTest extends UnitTest {
       val deadline = Deadline.now + 1.second + 1.nanosecond
       val timeLeft = deadline.timeLeft
 
-      assert(timeLeft - reader.read(writer.write(deadline)).get.timeLeft < 250.millis,
-             "Either your test system is too slow or the reader is wrong!")
+      assert(
+        timeLeft - reader.read(writer.write(deadline)).get.timeLeft < 250.millis,
+        "Either your test system is too slow or the reader is wrong!"
+      )
     }
   }
 }

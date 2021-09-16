@@ -16,8 +16,7 @@
 
 package io.moia.protos.teleproto
 
-/**
-  * Models a migration between a Protocol Buffers model in different versions `P` and `Q` that may never fail.
+/** Models a migration between a Protocol Buffers model in different versions `P` and `Q` that may never fail.
   * It's not specified by the definition if `P` is newer/older that `Q`. Both are possible.
   * Just by application of `read` (`P` < `Q`) and `write` (`Q` < `P`) the direction is defined.
   *
@@ -25,8 +24,7 @@ package io.moia.protos.teleproto
   */
 final case class Migration[P, Q](migrate: P => Q) {
 
-  /**
-    * Create a reader directly from older version `P` to `M` if reader for the newer version `Q` exists:
+  /** Create a reader directly from older version `P` to `M` if reader for the newer version `Q` exists:
     *
     * - Use the migration from `P` to `Q`
     * - Apply the result `Q` to the existing reader to `M`
@@ -34,8 +32,7 @@ final case class Migration[P, Q](migrate: P => Q) {
   def reader[M](implicit newReader: Reader[Q, M]): Reader[P, M] =
     (oldProtobuf: P) => newReader.read(migrate(oldProtobuf))
 
-  /**
-    * Create a writer directly from `M` to older version `Q` if writer for the newer version `P` exists:
+  /** Create a writer directly from `M` to older version `Q` if writer for the newer version `P` exists:
     *
     * - Write the `M` to a newer `P`
     * - Use the migration from `P` to `Q`

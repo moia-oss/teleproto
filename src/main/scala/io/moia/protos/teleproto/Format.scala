@@ -18,8 +18,7 @@ package io.moia.protos.teleproto
 
 import scala.annotation.implicitNotFound
 
-/**
-  * Allows bijection from model to proto.
+/** Allows bijection from model to proto.
   *
   * @tparam M the model type
   * @tparam P the proto type
@@ -29,8 +28,7 @@ trait Format[M, P] extends Reader[P, M] with Writer[M, P]
 
 object Format {
 
-  /**
-    * Create a format by passing in functions for reading and writing.
+  /** Create a format by passing in functions for reading and writing.
     */
   def apply[M, P](reader: P => PbResult[M], writer: M => P): Format[M, P] =
     new Format[M, P] {
@@ -38,8 +36,7 @@ object Format {
       override def read(protobuf: P): PbResult[M] = reader(protobuf)
     }
 
-  /**
-    * A format can be combined by using an existing reader and writer.
+  /** A format can be combined by using an existing reader and writer.
     * If both are available in implicit scope, the format can be created implicitly.
     */
   implicit def fromReaderWriter[M, P](implicit reader: Reader[P, M], writer: Writer[M, P]): Format[M, P] =
