@@ -18,7 +18,7 @@ class WriterTest extends UnitTest {
         price = present(model.price),
         time = present(model.time),
         duration = present(model.duration)
-    )
+      )
 
     val writer: Writer[Model, Protobuf] = model =>
       Protobuf(
@@ -29,13 +29,13 @@ class WriterTest extends UnitTest {
         pickupId = transform(model.pickupId),
         prices = sequence(model.prices),
         discounts = transform(model.discounts)
-    )
+      )
 
     val modelLight = ModelLight(
       id = "id",
       price = 1.23,
       time = Instant.ofEpochSecond(12, 34),
-      duration = 45.seconds + 67.nanos,
+      duration = 45.seconds + 67.nanos
     )
 
     val model = modelLight.complete(
@@ -48,7 +48,7 @@ class WriterTest extends UnitTest {
       id = Some("id"),
       price = Some("1.23"),
       time = Some(Timestamp(12, 34)),
-      duration = Some(PBDuration(45, 67)),
+      duration = Some(PBDuration(45, 67))
     )
 
     val proto = protoLight.complete(

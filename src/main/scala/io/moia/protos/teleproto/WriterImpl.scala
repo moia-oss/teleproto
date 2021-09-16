@@ -26,8 +26,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   private[this] val writerObj = objectRef[Writer.type]
   private[this] val seqTpe    = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
 
-  /**
-    * Validates if business model type can be written to the Protocol Buffers type
+  /** Validates if business model type can be written to the Protocol Buffers type
     * (matching case classes or matching sealed trait hierarchy).
     * If just forward compatible then raise a warning.
     */
@@ -58,8 +57,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     }
   }
 
-  /**
-    * Passes a tree to `f` that is of type `Writer[$modelType, $protobufType]`.
+  /** Passes a tree to `f` that is of type `Writer[$modelType, $protobufType]`.
     *
     * If such a type is not implicitly available checks if a writer can be generated, then generates and returns it.
     * If not "asks" for it implicitly and let the compiler explain the problem if it does not exist.
@@ -97,8 +95,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       ask // use the available implicit
   }
 
-  /**
-    * Simple compilation schema for forward compatible writers:
+  /** Simple compilation schema for forward compatible writers:
     *
     * Iterate through the parameters of the business model case class and compile arguments for the Protocol Buffers
     * case class:
@@ -214,8 +211,8 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     val namedMatchedParams = protobufParams.map(_.name).zip(matchingProtobufParams)
 
     val forwardCompatibleModelParamNames =
-      namedMatchedParams.collect {
-        case (name, SkippedDefaultParam) => name
+      namedMatchedParams.collect { case (name, SkippedDefaultParam) =>
+        name
       }
 
     if (surplusModelNames.nonEmpty || forwardCompatibleModelParamNames.nonEmpty) {
@@ -229,8 +226,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     }
   }
 
-  /**
-    * Iterate through the sub-types of the model and check for a corresponding method in the inner value of the protobuf type.
+  /** Iterate through the sub-types of the model and check for a corresponding method in the inner value of the protobuf type.
     * If there are more types on the protobuf side, the mapping is forward compatible.
     * If there are more types on the model side, the mapping is not possible.
     *
@@ -273,8 +269,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
-  /**
-    * The protobuf and model types have to be sealed traits.
+  /** The protobuf and model types have to be sealed traits.
     * Iterate through the known subclasses of the model and match the ScalaPB side.
     *
     * If there are more options on the protobuf side, the mapping is forward compatible.

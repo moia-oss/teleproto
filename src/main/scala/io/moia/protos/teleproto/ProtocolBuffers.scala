@@ -41,8 +41,7 @@ object ProtocolBuffers {
     }
   }
 
-  /**
-    * Compiles a generic reader instance from Protocol Buffers type `P` to business model type `M` if possible.
+  /** Compiles a generic reader instance from Protocol Buffers type `P` to business model type `M` if possible.
     * See User's Guide for details.
     *
     * Example:
@@ -51,14 +50,12 @@ object ProtocolBuffers {
     */
   def reader[P, M]: Reader[P, M] = macro ReaderImpl.reader_impl[P, M]
 
-  /**
-    * Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible.
+  /** Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible.
     * See User's Guide for details.
     */
   def writer[M, P]: Writer[M, P] = macro WriterImpl.writer_impl[M, P]
 
-  /**
-    * Constructs a migration from Protocol Buffer class `P` to PB class `Q`.
+  /** Constructs a migration from Protocol Buffer class `P` to PB class `Q`.
     * The migration tries to copy/convert fields from a `P` to a new `Q` automatically.
     *
     * That is possible for matching names if value types `VP` and `VQ`

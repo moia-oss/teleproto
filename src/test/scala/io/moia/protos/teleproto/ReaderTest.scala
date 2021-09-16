@@ -43,7 +43,7 @@ class ReaderTest extends UnitTest {
       id = "foo",
       price = 1.2,
       time = Instant.ofEpochMilli(0),
-      duration = Duration.Zero,
+      duration = Duration.Zero
     )
 
     val model = modelLight.complete(pickupId = Some("pickup"))

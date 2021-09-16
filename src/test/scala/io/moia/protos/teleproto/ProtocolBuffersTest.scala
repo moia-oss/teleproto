@@ -114,21 +114,26 @@ class ProtocolBuffersTest extends UnitTest {
 
       reader.read(Protobuf(None, Some("1.2"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))) shouldBe PbFailure(
         "/id",
-        "Value is required.")
+        "Value is required."
+      )
 
-      reader.read(Protobuf(Some("foo"), Some("bar"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))) shouldBe PbFailure(
+      reader.read(
+        Protobuf(Some("foo"), Some("bar"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))
+      ) shouldBe PbFailure(
         "/price",
         "Value must be a valid decimal number."
       )
 
       reader.read(
-        Protobuf(Some("foo"),
-                 Some("1.2"),
-                 Some(Timestamp.defaultInstance),
-                 Some("pickup"),
-                 Nil,
-                 Some(SubProtobuf("1", "2")),
-                 ProtobufEnum.FirstCase)
+        Protobuf(
+          Some("foo"),
+          Some("1.2"),
+          Some(Timestamp.defaultInstance),
+          Some("pickup"),
+          Nil,
+          Some(SubProtobuf("1", "2")),
+          ProtobufEnum.FirstCase
+        )
       ) shouldBe
         PbSuccess(Model("foo", 1.2, Instant.ofEpochMilli(0), Some("pickup"), Nil, SubModel(1, 2), ModelEnum.First_Case))
 
@@ -144,13 +149,15 @@ class ProtocolBuffersTest extends UnitTest {
         )
       ) shouldBe
         PbSuccess(
-          Model("foo",
-                1.2,
-                Instant.ofEpochMilli(0),
-                None,
-                List(SubModel(1, 1.2), SubModel(1.2, 1.23)),
-                SubModel(1, 2),
-                ModelEnum.SecondCase)
+          Model(
+            "foo",
+            1.2,
+            Instant.ofEpochMilli(0),
+            None,
+            List(SubModel(1, 1.2), SubModel(1.2, 1.23)),
+            SubModel(1, 2),
+            ModelEnum.SecondCase
+          )
         )
     }
 
@@ -172,13 +179,16 @@ class ProtocolBuffersTest extends UnitTest {
     "generate a reader that collects all errors" in {
 
       reader.read(
-        Protobuf(None,
-                 None,
-                 None,
-                 None,
-                 Seq(SubProtobuf("foo", "bar"), SubProtobuf("baz", "qux")),
-                 Some(SubProtobuf("one", "two")),
-                 ProtobufEnum.Unrecognized(42))) shouldBe
+        Protobuf(
+          None,
+          None,
+          None,
+          None,
+          Seq(SubProtobuf("foo", "bar"), SubProtobuf("baz", "qux")),
+          Some(SubProtobuf("one", "two")),
+          ProtobufEnum.Unrecognized(42)
+        )
+      ) shouldBe
         PbFailure(
           Seq(
             "/id"             -> "Value is required.",
@@ -191,7 +201,8 @@ class ProtocolBuffersTest extends UnitTest {
             "/doubleSub/from" -> "Value must be a valid decimal number.",
             "/doubleSub/to"   -> "Value must be a valid decimal number.",
             "/enum"           -> "Enumeration value 42 is unrecognized!"
-          ))
+          )
+        )
     }
 
     "generate a reader for backward compatible models" in {
@@ -258,13 +269,15 @@ class ProtocolBuffersTest extends UnitTest {
         )
 
       writer.write(Model("id", 1.23, Instant.ofEpochMilli(0), None, Nil, SubModel(1, 2), ModelEnum.SecondCase)) shouldBe
-        Protobuf(Some("id"),
-                 Some("1.23"),
-                 Some(Timestamp.defaultInstance),
-                 None,
-                 Seq.empty,
-                 Some(SubProtobuf("1", "2")),
-                 ProtobufEnum.SECOND_CASE)
+        Protobuf(
+          Some("id"),
+          Some("1.23"),
+          Some(Timestamp.defaultInstance),
+          None,
+          Seq.empty,
+          Some(SubProtobuf("1", "2")),
+          ProtobufEnum.SECOND_CASE
+        )
     }
 
     "generate a writer for backward compatible models" in {
@@ -275,13 +288,15 @@ class ProtocolBuffersTest extends UnitTest {
       writer3.write(
         ModelLarger("id", 1.23, Some("bar"), Instant.ofEpochMilli(0), "baz", None, Some("foo"), Nil, SubModel(1, 2), ModelEnum.THIRD_CASE)
       ) shouldBe
-        Protobuf(Some("id"),
-                 Some("1.23"),
-                 Some(Timestamp.defaultInstance),
-                 None,
-                 Seq.empty,
-                 Some(SubProtobuf("1", "2")),
-                 ProtobufEnum.Third_Case)
+        Protobuf(
+          Some("id"),
+          Some("1.23"),
+          Some(Timestamp.defaultInstance),
+          None,
+          Seq.empty,
+          Some(SubProtobuf("1", "2")),
+          ProtobufEnum.Third_Case
+        )
     }
 
     "generate a reader/writer pair for matching models" in {

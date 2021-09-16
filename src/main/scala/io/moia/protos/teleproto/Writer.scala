@@ -26,57 +26,48 @@ import scala.collection.compat._
 import scala.collection.immutable.TreeMap
 import scala.concurrent.duration.{Deadline, Duration}
 
-/**
-  * Provides writing Protocol Buffers model from a business model.
+/** Provides writing Protocol Buffers model from a business model.
   */
 @implicitNotFound(
   "No mapper from business model type ${M} to Protocol Buffers type ${P} was found. Try to implement an implicit Writer for this type."
 )
 trait Writer[-M, +P] {
 
-  /**
-    * Returns the written Protocol Buffer object.
+  /** Returns the written Protocol Buffer object.
     */
   def write(model: M): P
 
-  /**
-    * Transforms each written result.
+  /** Transforms each written result.
     */
   def map[Q](f: P => Q): Writer[M, Q] =
     Writer.instance(model => f(write(model)))
 
-  /**
-    * Transforms the model before writing.
+  /** Transforms the model before writing.
     */
   final def contramap[N](f: N => M): Writer[N, P] =
     Writer.instance(model => write(f(model)))
 
-  /**
-    * Transforms written results by stacking another writer on top of the original model.
+  /** Transforms written results by stacking another writer on top of the original model.
     */
   final def flatMap[N <: M, Q](f: P => Writer[N, Q]): Writer[N, Q] =
     Writer.instance(model => f(write(model)).write(model))
 
-  /**
-    * Combines two writers with a specified function.
+  /** Combines two writers with a specified function.
     */
   final def zipWith[N <: M, Q, R](that: Writer[N, Q])(f: (P, Q) => R): Writer[N, R] =
     Writer.instance(model => f(this.write(model), that.write(model)))
 
-  /**
-    * Combines two writers into a writer of a tuple.
+  /** Combines two writers into a writer of a tuple.
     */
   final def zip[N <: M, Q](that: Writer[N, Q]): Writer[N, (P, Q)] =
     zipWith(that)((_, _))
 
-  /**
-    * Chain `that` writer after `this` one.
+  /** Chain `that` writer after `this` one.
     */
   final def andThen[Q](that: Writer[P, Q]): Writer[M, Q] =
     Writer.instance(model => that.write(this.write(model)))
 
-  /**
-    * Chain `this` writer after `that` one.
+  /** Chain `this` writer after `that` one.
     */
   final def compose[N](that: Writer[N, M]): Writer[N, P] =
     that.andThen(this)
@@ -102,45 +93,39 @@ object Writer extends LowPriorityWrites {
 
   /* Type Writers */
 
-  /**
-    * Writes a big decimal as string.
+  /** Writes a big decimal as string.
     */
   implicit object BigDecimalWriter extends Writer[BigDecimal, String] {
     def write(model: BigDecimal): String = model.toString
   }
 
-  /**
-    * Writes a local time as ISO string.
+  /** Writes a local time as ISO string.
     */
   implicit object LocalTimeWriter extends Writer[LocalTime, String] {
     def write(model: LocalTime): String = model.toString
   }
 
-  /**
-    * Writes an instant into timestamp.
+  /** Writes an instant into timestamp.
     */
   implicit object InstantWriter extends Writer[Instant, Timestamp] {
     def write(instant: Instant): Timestamp =
       Timestamp(instant.getEpochSecond, instant.getNano)
   }
 
-  /**
-    * Writes a Scala duration into ScalaPB duration.
+  /** Writes a Scala duration into ScalaPB duration.
     */
   implicit object DurationWriter extends Writer[Duration, PBDuration] {
     def write(duration: Duration): PBDuration =
       PBDuration(duration.toSeconds, (duration.toNanos % 1000000000).toInt)
   }
 
-  /**
-    * Writes a UUID as string.
+  /** Writes a UUID as string.
     */
   implicit object UUIDWriter extends Writer[UUID, String] {
     def write(uuid: UUID): String = uuid.toString
   }
 
-  /**
-    * Writes a Scala deadline into a ScalaPB Timestamp as fixed point in time.
+  /** Writes a Scala deadline into a ScalaPB Timestamp as fixed point in time.
     *
     * The decoding of this value is side-effect free but has a problem with divergent system clocks!
     *
@@ -154,8 +139,7 @@ object Writer extends LowPriorityWrites {
     }
   }
 
-  /**
-    * Writes a Scala deadline into a ScalaPB int as time left duration.
+  /** Writes a Scala deadline into a ScalaPB int as time left duration.
     *
     * The decoding of this value is not side-effect free since it depends on the clock! Time between encoding and
     * decoding does not count.
@@ -171,18 +155,17 @@ object Writer extends LowPriorityWrites {
     }
   }
 
-  /**
-    * Transforms a Scala map into a corresponding map with Protobuf types if writers exists between key and value types.
+  /** Transforms a Scala map into a corresponding map with Protobuf types if writers exists between key and value types.
     */
-  implicit def mapWriter[MK, MV, PK, PV](
-      implicit keyWriter: Writer[MK, PK],
+  implicit def mapWriter[MK, MV, PK, PV](implicit
+      keyWriter: Writer[MK, PK],
       valueWriter: Writer[MV, PV]
   ): Writer[Map[MK, MV], Map[PK, PV]] = instance { model =>
     for ((key, value) <- model) yield (keyWriter.write(key), valueWriter.write(value))
   }
 
-  implicit def treeMapWriter[MK, MV, PK, PV](
-      implicit keyWriter: Writer[MK, PK],
+  implicit def treeMapWriter[MK, MV, PK, PV](implicit
+      keyWriter: Writer[MK, PK],
       valueWriter: Writer[MV, PV],
       ordering: Ordering[PK]
   ): Writer[TreeMap[MK, MV], Map[PK, PV]] = instance { model =>
@@ -201,8 +184,7 @@ trait LowPriorityWrites extends LowestPriorityWrites {
 
 trait LowestPriorityWrites {
 
-  /**
-    * Keeps a value of same type in protobuf and model.
+  /** Keeps a value of same type in protobuf and model.
     */
   implicit def identityWriter[T]: Writer[T, T] =
     Writer.instance(identity)

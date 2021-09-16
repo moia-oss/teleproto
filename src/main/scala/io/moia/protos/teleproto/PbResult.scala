@@ -18,8 +18,7 @@ package io.moia.protos.teleproto
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * Models the attempt to read a Protocol Buffers case class into business model type `T`.
+/** Models the attempt to read a Protocol Buffers case class into business model type `T`.
   */
 sealed trait PbResult[+T] {
 
@@ -61,8 +60,7 @@ object PbResult {
     tryA.fold(PbFailure.fromThrowable, PbSuccess.apply)
 }
 
-/**
-  * Models the success to read a Protocol Buffers case class into business model type `T`.
+/** Models the success to read a Protocol Buffers case class into business model type `T`.
   */
 final case class PbSuccess[T](value: T) extends PbResult[T] {
 
@@ -86,8 +84,7 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
   def toOption: Option[T] = Some(get)
 }
 
-/**
-  * Models the failure to read a Protocol Buffers case class into business model type `T`.
+/** Models the failure to read a Protocol Buffers case class into business model type `T`.
   * Provides error messages for one or more paths, e.g.
   * The path messages could be
   * /price Value must be a decimal number.      <- Simple field at top-level
@@ -133,8 +130,7 @@ object PbFailure {
   def fromThrowable(error: Throwable): PbFailure =
     apply(error.getMessage)
 
-  /**
-    * Collects and combines all the errors of all failures in the given results.
+  /** Collects and combines all the errors of all failures in the given results.
     * Please note: This method ignores all successes and collects just error messages from failures. It's intended
     * to create an overall failure when one of the results is a failure. It doesn't make sense if all are successes.
     */
