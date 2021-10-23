@@ -140,7 +140,7 @@ object Reader extends LowPriorityReads {
     */
   implicit object InstantReader extends Reader[Timestamp, Instant] {
     def read(protobuf: Timestamp): PbResult[Instant] =
-      PbSuccess(Instant.ofEpochSecond(protobuf.seconds, protobuf.nanos.toLong))
+      PbResult.fromTry(Try(Instant.ofEpochSecond(protobuf.seconds, protobuf.nanos.toLong)))
   }
 
   /** Transforms a ScalaPB duration into a finite Scala concurrent duration.
