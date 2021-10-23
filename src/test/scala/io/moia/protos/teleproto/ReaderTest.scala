@@ -85,6 +85,10 @@ class ReaderTest extends UnitTest {
       FiniteDurationReader.read(PBDuration(12, 345678912)) shouldBe PbSuccess(FiniteDuration(12345678912L, TimeUnit.NANOSECONDS))
     }
 
+    "fail reading an invalid Timestamp gracefully" in {
+      InstantReader.read(Timestamp(Long.MinValue)) shouldBe PbFailure("", "Instant exceeds minimum or maximum instant")
+    }
+
     "read timestamps on nano level" in {
       reader.read(proto.copy(time = Some(Timestamp(12, 34)))) shouldBe
         PbSuccess(model.copy(time = Instant.ofEpochSecond(12, 34)))
