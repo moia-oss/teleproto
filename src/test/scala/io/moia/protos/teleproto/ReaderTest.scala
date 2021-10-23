@@ -86,7 +86,7 @@ class ReaderTest extends UnitTest {
     }
 
     "fail reading an invalid Timestamp gracefully" in {
-      InstantReader.read(Timestamp(Long.MinValue)) shouldBe PbFailure("", "Instant exceeds minimum or maximum instant")
+      InstantReader.read(Timestamp(Long.MinValue)) shouldBe PbFailure("Instant exceeds minimum or maximum instant")
     }
 
     "read timestamps on nano level" in {
