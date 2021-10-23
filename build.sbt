@@ -15,7 +15,7 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name := "teleproto",
-    version := "1.12.1",
+    version := "2.0.1",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
@@ -23,7 +23,7 @@ lazy val `teleproto` = project
       library.scalaTest          % Test,
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
-      "org.scala-lang.modules"   %% "scala-collection-compat" % "2.4.4",
+      "org.scala-lang.modules"   %% "scala-collection-compat" % "2.5.0",
       "org.scala-lang"           % "scala-reflect" % (ThisBuild / scalaVersion).value
     )
   )
@@ -35,11 +35,11 @@ lazy val `teleproto` = project
 lazy val library = new {
   object Version {
     val scalaPB            = scalapb.compiler.Version.scalapbVersion
-    val scalaPBJson        = "0.10.3"
+    val scalaPBJson        = "0.12.0"
     val scalaCheck         = "1.15.4"
     val scalaTest          = "3.2.9"
     val scalaTestPlusCheck = "3.2.2.0"
-    val scapeGoat          = "1.4.8"
+    val scapeGoat          = "1.4.9"
   }
 
   val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
@@ -66,7 +66,7 @@ lazy val commonSettings = Seq.concat(
 
 lazy val compilerSettings = Seq(
   scalaVersion := crossScalaVersions.value.head,
-  crossScalaVersions := List("2.13.5", "2.12.13"),
+  crossScalaVersions := List("2.13.6", "2.12.14"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, 12)) => scalacOptions_2_12

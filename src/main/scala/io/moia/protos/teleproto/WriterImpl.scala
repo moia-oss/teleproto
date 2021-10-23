@@ -23,8 +23,10 @@ import scala.reflect.macros.blackbox
 class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   import c.universe._
 
-  /**
-    * Validates if business model type can be written to the Protocol Buffers type
+  private[this] val writerObj = objectRef[Writer.type]
+  private[this] val seqTpe    = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
+
+  /** Validates if business model type can be written to the Protocol Buffers type
     * (matching case classes or matching sealed trait hierarchy).
     * If just forward compatible then raise a warning.
     */
@@ -55,8 +57,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     }
   }
 
-  /**
-    * Passes a tree to `f` that is of type `Writer[$modelType, $protobufType]`.
+  /** Passes a tree to `f` that is of type `Writer[$modelType, $protobufType]`.
     *
     * If such a type is not implicitly available checks if a writer can be generated, then generates and returns it.
     * If not "asks" for it implicitly and let the compiler explain the problem if it does not exist.
@@ -94,8 +95,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       ask // use the available implicit
   }
 
-  /**
-    * Simple compilation schema for forward compatible writers:
+  /** Simple compilation schema for forward compatible writers:
     *
     * Iterate through the parameters of the business model case class and compile arguments for the Protocol Buffers
     * case class:
@@ -107,74 +107,57 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
     // at this point all errors are assumed to be due to evolution
     val protobufCompanion = protobufType.typeSymbol.companion
-
-    val protobufCons = protobufType.member(termNames.CONSTRUCTOR).asMethod
-    val modelCons    = modelType.member(termNames.CONSTRUCTOR).asMethod
-
-    val protobufParams = protobufCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
-    val modelParams    = modelCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
-
-    val mapping = q"io.moia.protos.teleproto"
+    val protobufCons      = protobufType.member(termNames.CONSTRUCTOR).asMethod
+    val modelCons         = modelType.member(termNames.CONSTRUCTOR).asMethod
+    val protobufParams    = protobufCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
+    val modelParams       = modelCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
 
     def transformation(parameters: Seq[MatchingParam], ownCompatibility: Compatibility): Compiled = {
+      val model = c.freshName(TermName("model"))
 
-      val namedArguments =
-        protobufParams
-          .zip(parameters)
-          .flatMap(_ match {
-            // unmatched parameters with default values are not passed: they get their defaults
-            case (_, SkippedDefaultParam) => None
-            case (param, TransformParam(from, to)) =>
-              val arg =
-                if (from <:< to) {
-                  (q"""model.${param.name}""", Compatibility.full)
-                } else if (to <:< weakTypeOf[Option[_]] && !(from <:< weakTypeOf[Option[_]])) {
-                  withImplicitWriter(from, innerType(to))(
-                    writerExpr => q"""$mapping.Writer.present[$from, ${innerType(to)}](model.${param.name})($writerExpr)"""
-                  )
-                } else if (to <:< weakTypeOf[Option[_]] && from <:< weakTypeOf[Option[_]]) {
-                  withImplicitWriter(innerType(from), innerType(to))(
-                    writerExpr => q"""$mapping.Writer.optional[${innerType(from)}, ${innerType(to)}](model.${param.name})($writerExpr)"""
-                  )
-                } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[scala.collection.immutable.Seq[_]]) {
-                  val innerFrom = innerType(from)
-                  val innerTo   = innerType(to)
-                  withImplicitWriter(innerFrom, innerTo) { writerExpr =>
-                    // collection also needs an implicit sequence generator which must be looked up since the implicit for the value writer is passed explicitly
-                    val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
-                    q"""$mapping.Writer.collection[$innerFrom, $innerTo, scala.collection.immutable.Seq](model.${param.name})($canBuildFrom, $writerExpr)"""
-                  }
-                } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {
-                  val innerFrom = innerType(from)
-                  val innerTo   = innerType(to)
-                  withImplicitWriter(innerFrom, innerTo)(
-                    writerExpr => q"""$mapping.Writer.sequence[$innerFrom, $innerTo](model.${param.name})($writerExpr)"""
-                  )
-                } else {
-                  withImplicitWriter(from, to)(
-                    writerExpr => q"""$mapping.Writer.transform[$from, $to](model.${param.name})($writerExpr)"""
-                  )
-                }
+      val namedArguments = protobufParams.zip(parameters).flatMap {
+        // unmatched parameters with default values are not passed: they get their defaults
+        case (_, SkippedDefaultParam) => None
+        case (paramSym, TransformParam(from, to)) =>
+          val param = paramSym.name
+          val arg = if (from <:< to) {
+            (q"$model.$param", Compatibility.full)
+          } else if (to <:< weakTypeOf[Option[_]] && !(from <:< weakTypeOf[Option[_]])) {
+            withImplicitWriter(from, innerType(to)) { writer =>
+              q"$writerObj.present[$from, ${innerType(to)}]($model.$param)($writer)"
+            }
+          } else if (to <:< weakTypeOf[Option[_]] && from <:< weakTypeOf[Option[_]]) {
+            withImplicitWriter(innerType(from), innerType(to)) { writer =>
+              q"$writerObj.optional[${innerType(from)}, ${innerType(to)}]($model.$param)($writer)"
+            }
+          } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[scala.collection.immutable.Seq[_]]) {
+            val innerFrom = innerType(from)
+            val innerTo   = innerType(to)
+            withImplicitWriter(innerFrom, innerTo) { writer =>
+              // collection also needs an implicit sequence generator which must be looked up since the implicit for the value writer is passed explicitly
+              val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
+              q"$writerObj.collection[$innerFrom, $innerTo, $seqTpe]($model.$param)($canBuildFrom, $writer)"
+            }
+          } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {
+            val innerFrom = innerType(from)
+            val innerTo   = innerType(to)
+            withImplicitWriter(innerFrom, innerTo) { writer =>
+              q"$writerObj.sequence[$innerFrom, $innerTo]($model.$param)($writer)"
+            }
+          } else {
+            withImplicitWriter(from, to) { writer =>
+              q"$writerObj.transform[$from, $to]($model.$param)($writer)"
+            }
+          }
 
-              Some(param.name -> arg)
-          })
+          Some(param -> arg)
+      }
 
-      val cons =
-        q"""${protobufCompanion.asTerm}.apply(..${for ((name, (arg, _)) <- namedArguments) yield q"$name = $arg"})"""
-
-      // a type cast is needed due to type inferencer limitations
-      val innerCompatibilities =
-        for ((_, (_, innerCompatibility)) <- namedArguments)
-          yield innerCompatibility.asInstanceOf[Compatibility]
-
-      val compatibility = innerCompatibilities.foldRight(ownCompatibility)(_.merge(_))
-
-      val result =
-        q"""
-          new $mapping.Writer[$modelType, $protobufType] {
-            def write(model: $modelType) = $cons
-          }"""
-
+      val args                 = for ((name, (arg, _)) <- namedArguments) yield q"$name = $arg"
+      val cons                 = q"${protobufCompanion.asTerm}.apply(..$args)"
+      val innerCompatibilities = for ((_, (_, innerCompatibility)) <- namedArguments) yield innerCompatibility
+      val compatibility        = innerCompatibilities.foldRight(ownCompatibility)(_.merge(_))
+      val result               = q"$writerObj.instance[$modelType, $protobufType] { case $model => $cons }"
       (result, compatibility)
     }
 
@@ -228,8 +211,8 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     val namedMatchedParams = protobufParams.map(_.name).zip(matchingProtobufParams)
 
     val forwardCompatibleModelParamNames =
-      namedMatchedParams.collect {
-        case (name, SkippedDefaultParam) => name
+      namedMatchedParams.collect { case (name, SkippedDefaultParam) =>
+        name
       }
 
     if (surplusModelNames.nonEmpty || forwardCompatibleModelParamNames.nonEmpty) {
@@ -243,8 +226,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     }
   }
 
-  /**
-    * Iterate through the sub-types of the model and check for a corresponding method in the inner value of the protobuf type.
+  /** Iterate through the sub-types of the model and check for a corresponding method in the inner value of the protobuf type.
     * If there are more types on the protobuf side, the mapping is forward compatible.
     * If there are more types on the model side, the mapping is not possible.
     *
@@ -271,32 +253,23 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     val surplusProtobufClasses = protobufSubclasses.keySet - EmptyOneOf diff modelSubclasses.keySet
     val ownCompatibility       = Compatibility(Nil, Nil, surplusProtobufClasses.map(name => (protobufType, name.toString)))
     val valueMethod            = protobufType.member(ValueMethod).asMethod
+    val model                  = c.freshName(TermName("model"))
 
     val subTypes = for {
       (className, protobufSubclass) <- protobufSubclasses
       modelSubclass                 <- modelSubclasses.get(className)
     } yield {
       withImplicitWriter(classTypeOf(modelSubclass), valueMethod.infoIn(classTypeOf(protobufSubclass))) { writer =>
-        val model = c.freshName(TermName("model"))
         cq"$model: $modelSubclass => new $protobufSubclass($writer.write($model))"
       }
     }
 
     val (cases, compatibility) = subTypes.unzip
-
-    val writer = c.freshName(TermName("writer"))
-    val result = q"""{
-      val $writer: $mapping.Writer[$modelType, $protobufType] = {
-        case ..$cases
-      }
-      $writer
-    }"""
-
+    val result                 = q"$writerObj.instance[$modelType, $protobufType] { case ..$cases }"
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
-  /**
-    * The protobuf and model types have to be sealed traits.
+  /** The protobuf and model types have to be sealed traits.
     * Iterate through the known subclasses of the model and match the ScalaPB side.
     *
     * If there are more options on the protobuf side, the mapping is forward compatible.
@@ -329,16 +302,9 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     val cases = for {
       (optionName, protobufOption) <- protobufOptions.toList
       modelOption                  <- modelOptions.get(optionName)
-    } yield cq"`${objectReferenceTo(modelOption)}` => ${objectReferenceTo(protobufOption)}"
+    } yield cq"_: ${objectReferenceTo(modelOption)}.type => ${objectReferenceTo(protobufOption)}"
 
-    val writer = c.freshName(TermName("writer"))
-    val result = q"""{
-      val $writer: $mapping.Writer[$modelType, $protobufType] = {
-        case ..$cases
-      }
-      $writer
-    }"""
-
+    val result = q"$writerObj.instance[$modelType, $protobufType] { case ..$cases }"
     (result, compatibility)
   }
 

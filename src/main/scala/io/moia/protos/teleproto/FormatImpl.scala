@@ -24,8 +24,7 @@ import scalapb.{GeneratedEnum, GeneratedOneof}
 
 import scala.reflect.macros.blackbox
 
-/**
-  * Compiler functions shared between both, reader and writer macros
+/** Compiler functions shared between both, reader and writer macros
   */
 @SuppressWarnings(Array("all"))
 trait FormatImpl {
@@ -37,8 +36,8 @@ trait FormatImpl {
   def error(message: String, pos: Position = c.enclosingPosition): Unit    = c.error(pos, message)
   def abort(message: String, pos: Position = c.enclosingPosition): Nothing = c.abort(pos, message)
 
-  private[teleproto] val mapping =
-    q"io.moia.protos.teleproto"
+  protected def objectRef[T: TypeTag]: Symbol =
+    typeOf[T].termSymbol
 
   /** A `oneof` proto definition is mapped to a `sealed trait` in Scala.
     * Each variant of the `oneof` definition is mapped to a `case class` with exactly one field `value`
@@ -58,8 +57,7 @@ trait FormatImpl {
   type Compiled    = (Tree, Compatibility)
   type CompatIssue = (Type, String)
 
-  /**
-    * Within a compiled hierarchy collects backward/forward compatibility issues.
+  /** Within a compiled hierarchy collects backward/forward compatibility issues.
     */
   case class Compatibility(
       surplusParameters: Iterable[CompatIssue],
@@ -89,14 +87,12 @@ trait FormatImpl {
     val full: Compatibility = Compatibility(Nil, Nil, Nil)
   }
 
-  /**
-    * From type `S[T]` extracts `T`.
+  /** From type `S[T]` extracts `T`.
     */
   private[teleproto] def innerType(from: Type): Type =
     from.typeArgs.headOption.getOrElse(abort(s"Type $from does not have type arguments"))
 
-  /**
-    * Fails if types are not a Protobuf case class and case class pair.
+  /** Fails if types are not a Protobuf case class and case class pair.
     */
   private[teleproto] def ensureValidTypes(protobufType: Type, modelType: Type): Unit =
     if (!checkClassTypes(protobufType, modelType)) {
@@ -113,8 +109,7 @@ trait FormatImpl {
   private[teleproto] def checkHierarchyTypes(protobufType: Type, modelType: Type): Boolean =
     isSealedTrait(modelType) && isSealedTrait(protobufType) && protobufType <:< typeOf[GeneratedOneof]
 
-  /**
-    * A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa.
+  /** A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa.
     */
   private[teleproto] def checkEnumerationTypes(protobufType: Type, modelType: Type): Boolean =
     isScalaPBEnumeration(protobufType) && isSealedTrait(modelType)
@@ -135,8 +130,7 @@ trait FormatImpl {
   private[teleproto] def hasTraceAnnotation: Boolean =
     c.internal.enclosingOwner.annotations.exists(_.tree.tpe.typeSymbol == symbolOf[trace])
 
-  /**
-    * If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given
+  /** If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given
     * (compiled) tree as info message to the compiler shell.
     */
   private[teleproto] def traceCompiled(tree: Tree): Tree = {
@@ -203,8 +197,7 @@ trait FormatImpl {
     info
   }
 
-  /**
-    * Always renders the same hash for a similar incompatibility.
+  /** Always renders the same hash for a similar incompatibility.
     */
   private[teleproto] def compatibilitySignature(compatibility: Compatibility): String =
     if (compatibility.hasIssues) {
@@ -217,7 +210,7 @@ trait FormatImpl {
       MessageDigest
         .getInstance("MD5")
         .digest(baos.toByteArray)
-        .map(0xFF & _)
+        .map(0xff & _)
         .map { "%02x".format(_) }
         .take(3) // <- 6 characters
         .mkString
@@ -225,8 +218,7 @@ trait FormatImpl {
       ""
     }
 
-  /**
-    * Extracts literal signature value of @backward("signature") or @forward("signature").
+  /** Extracts literal signature value of @backward("signature") or @forward("signature").
     */
   private[teleproto] def compatibilityAnnotation(tpe: Type): Option[String] =
     c.internal.enclosingOwner.annotations.find(_.tree.tpe.typeSymbol == tpe.typeSymbol).flatMap { annotation =>

@@ -22,8 +22,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
-/**
-  * The versioned model writer is a lookup table for the specific version models (ScalaPB classes) for some particular
+/** The versioned model writer is a lookup table for the specific version models (ScalaPB classes) for some particular
   * detached model.
   * The lookup table is a mapping from a (generic) version to a the model in that version.
   * Those are combined with writer from that detached model to expected version models.
@@ -48,39 +47,34 @@ import scala.util.{Failure, Success, Try}
   */
 trait VersionedModelWriter[Version, DetachedModel] {
 
-  /**
-    * Write the detached model as JSON string.
+  /** Write the detached model as JSON string.
     *
     * @return the model written as JSON
     */
   def toJson(model: DetachedModel, version: Version, printer: Printer = VersionedModelWriter.printer): Try[String] =
     toMessage(model, version).map(printer.print)
 
-  /**
-    * Write the detached model as Scala PB message.
+  /** Write the detached model as Scala PB message.
     *
     * @return the written message
     */
   def toMessage(model: DetachedModel, version: Version): Try[GeneratedMessage] =
     lookupOrFail(version).map(_.write(model))
 
-  /**
-    * Write the detached model as Protocol Buffers byte array.
+  /** Write the detached model as Protocol Buffers byte array.
     *
     * @return the written PB
     */
   def toByteArray(model: DetachedModel, version: Version): Try[Array[Byte]] =
     toMessage(model, version).map(_.toByteArray)
 
-  /**
-    * Exposes the supported versions.
+  /** Exposes the supported versions.
     *
     * @return the supported versions
     */
   def supportedWriterVersions: Set[Version] = writerMappings.keySet
 
-  /**
-    * Looks up the version writer for a specific version.
+  /** Looks up the version writer for a specific version.
     *
     * Implementation can override the matching strategy for looked up and provided versions.
     *
@@ -94,21 +88,18 @@ trait VersionedModelWriter[Version, DetachedModel] {
 
   protected type WriterMappings = ListMap[Version, VersionWriter]
 
-  /**
-    * Maps the supported versions to a writer in the particular version.
+  /** Maps the supported versions to a writer in the particular version.
     */
   def writerMappings: WriterMappings
 
-  /**
-    * For a companion of a specific ScalaPB class looks up the corresponding writer from the detached model.
+  /** For a companion of a specific ScalaPB class looks up the corresponding writer from the detached model.
     */
   protected def writerMapping[SpecificModel <: GeneratedMessage](
       companion: GeneratedMessageCompanion[SpecificModel]
   )(implicit writer: Writer[DetachedModel, SpecificModel]): VersionWriter =
     (model: DetachedModel) => writer.write(model)
 
-  /**
-    * Models a writer from the detached business model to a Scala PB instance.
+  /** Models a writer from the detached business model to a Scala PB instance.
     */
   type VersionWriter = Writer[DetachedModel, GeneratedMessage]
 
@@ -134,8 +125,8 @@ object VersionedModelWriter {
   }
 
   object CompanionWriter {
-    implicit def fromCompanion[P <: GeneratedMessage, M](gmc: GeneratedMessageCompanion[P])(
-        implicit wmp: Writer[M, P]
+    implicit def fromCompanion[P <: GeneratedMessage, M](gmc: GeneratedMessageCompanion[P])(implicit
+        wmp: Writer[M, P]
     ): CompanionWriter[M] = {
       val _ = gmc
       new CompanionWriter[M] {

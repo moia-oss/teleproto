@@ -2,8 +2,7 @@ package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
 
-/**
-  * Tests correct behaviour of generated mappings regarding traits.
+/** Tests correct behaviour of generated mappings regarding traits.
   */
 object OneOfProtocolBuffersTest {
 

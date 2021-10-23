@@ -39,8 +39,7 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
         s"Cannot create a migration from `$sourceType` to `$targetType`. Just migrations between a) case classes b) sealed traits from enums are possible."
       )
 
-  /**
-    * Checks if source and target type are compatible in a way that the macro can assume a migration would make sense:
+  /** Checks if source and target type are compatible in a way that the macro can assume a migration would make sense:
     * a) both are case classes (protobuf messages)
     * b) both are sealed traits from ScalaPB enums
     */
@@ -50,8 +49,7 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
     classMigration || enumMigration
   }
 
-  /**
-    * Checks if a migration from source to target type can be compiled without additional code.
+  /** Checks if a migration from source to target type can be compiled without additional code.
     */
   private def isTrivial(sourceType: Type, targetType: Type): Boolean =
     if (isProtobuf(sourceType) && isProtobuf(targetType))
@@ -63,8 +61,7 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
     else
       false
 
-  /**
-    * Returns an expression that is a migration from source to target type.
+  /** Returns an expression that is a migration from source to target type.
     * Should be used for type pairs that fulfill the `isExpected` predicate.
     *
     * Check for an implicit migration from source to target type in the scope.
@@ -99,8 +96,8 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
         s"${requiredMigrations.size} migration functions are required:"
 
     val signatureInfo =
-      (signatureLengthInfo :: requiredMigrations.map(
-        required => s"- ${required.name}: `$sourceType => ${required.typeSignature}` (${required.explanation})"
+      (signatureLengthInfo :: requiredMigrations.map(required =>
+        s"- ${required.name}: `$sourceType => ${required.typeSignature}` (${required.explanation})"
       )).mkString("\n")
 
     // Validate the signature of the function application
@@ -173,8 +170,7 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
   // models a field in Q that requires a migration function
   case class Required(name: String, typeSignature: Type, argIndex: Int, explanation: String) extends ParamMigration
 
-  /**
-    * Compares given source and target Protocol Buffers class types.
+  /** Compares given source and target Protocol Buffers class types.
     * Returns the migration strategies for each param.
     *
     * If all returned parameter migrations are `Automatically` the whole migration is trivial.
@@ -186,8 +182,8 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
 
     // from the fields in P (source) create a map by name to the term symbol to select it in `pb.$field` where `pb` is the source
     val sourceParamsMap: Map[String, TermSymbol] =
-      symbolsByName(sourceCons.paramLists.headOption.getOrElse(Nil)).map {
-        case (name, symbol) => name.toString -> symbol.asTerm
+      symbolsByName(sourceCons.paramLists.headOption.getOrElse(Nil)).map { case (name, symbol) =>
+        name.toString -> symbol.asTerm
       }
 
     // select the fields in Q as terms
@@ -224,8 +220,10 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
             case Some(from) if isExpected(from, to) =>
               val migrationExpr = implicitMigration(from, to)
 
-              Automatically(q"$migrationExpr.migrate(pb.${targetParam.name})",
-                            s"`$targetParam` can be copied with an implicit `Migration[$from, $to]`.") ::
+              Automatically(
+                q"$migrationExpr.migrate(pb.${targetParam.name})",
+                s"`$targetParam` can be copied with an implicit `Migration[$from, $to]`."
+              ) ::
                 compareParams(rest, idx)
 
             // field exists and both are option/collection values for matching collection types and migrations between both inner types are generally possible
@@ -245,8 +243,10 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
               // look for an implicit conversion
               val conversion = c.inferImplicitView(q"pb.${targetParam.name}", from, to)
               if (conversion.nonEmpty)
-                Automatically(q"$conversion(pb.${targetParam.name})",
-                              s"`$targetParam` can be copied with conversion from `$from` to `$to`.") ::
+                Automatically(
+                  q"$conversion(pb.${targetParam.name})",
+                  s"`$targetParam` can be copied with conversion from `$from` to `$to`."
+                ) ::
                   compareParams(rest, idx)
               else
                 Required(name, to, idx, s"For`$targetParam` the type `$from` must be converted to `$to`.") ::
@@ -308,8 +308,7 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
       )
   }
 
-  /**
-    * Checks if both types are collections/options, target collection can be assigned from source collection and if
+  /** Checks if both types are collections/options, target collection can be assigned from source collection and if
     * the inner types are expected to be migrated.
     *
     * If so a migration for the inner types could be expected and source value can be mapped using that migration.
@@ -324,8 +323,7 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
     (bothOptions || (bothCollections && matchingCollections)) && matchingInnerTypes
   }
 
-  /**
-    * Returns the options in the source (enum sealed trait) type that are not matched in the target type.
+  /** Returns the options in the source (enum sealed trait) type that are not matched in the target type.
     */
   private def compareEnumerationOptions(sourceType: Type, targetType: Type): Set[Name] = {
     def optionNames(tpe: Type) = tpe.typeSymbol.asClass.knownDirectSubclasses.filter(_.isModuleClass).map(_.name.decodedName)
