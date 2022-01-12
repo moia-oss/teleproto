@@ -24,6 +24,11 @@ target
 .ensime_lucene
 .ensime_cache
 
+# VSCode
+.vscode
+.metals
+.bloop
+
 # Mac
 .DS_Store
 
