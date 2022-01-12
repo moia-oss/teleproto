@@ -25,16 +25,13 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
-/** The versioned model reader is a lookup table for the specific version models (ScalaPB classes) for some particular
-  * detached model.
-  * The lookup table is a mapping from a (generic) version to a the model in that version.
-  * Those are combined with readers from that version models to the expected detached model.
+/** The versioned model reader is a lookup table for the specific version models (ScalaPB classes) for some particular detached model. The
+  * lookup table is a mapping from a (generic) version to a the model in that version. Those are combined with readers from that version
+  * models to the expected detached model.
   *
-  * The interface allows to parse bytes/json directly into the detached model type for a given version that is in the
-  * lookup table.
+  * The interface allows to parse bytes/json directly into the detached model type for a given version that is in the lookup table.
   *
-  * The generic version type should be independent of the parsing as JSON or bytes.
-  * That is, a Mime Type is not a good version type.
+  * The generic version type should be independent of the parsing as JSON or bytes. That is, a Mime Type is not a good version type.
   *
   * Usage Example:
   *
@@ -52,14 +49,16 @@ trait VersionedModelReader[Version, DetachedModel] {
 
   /** Parse JSON as the versioned model in given version and read the detached model from the result.
     *
-    * @return the parsed model
+    * @return
+    *   the parsed model
     */
   def fromJson(jsonString: String, version: Version): Try[PbResult[DetachedModel]] =
     lookupOrFail(version).flatMap(_.fromJson(jsonString))
 
   /** Parse proto in specific version and read the detached model from the result.
     *
-    * @return the parsed model
+    * @return
+    *   the parsed model
     */
   def fromProto(input: CodedInputStream, version: Version): Try[PbResult[DetachedModel]] =
     lookupOrFail(version).flatMap(_.fromProto(input))
@@ -72,7 +71,8 @@ trait VersionedModelReader[Version, DetachedModel] {
 
   /** Exposes the supported versions.
     *
-    * @return the supported versions
+    * @return
+    *   the supported versions
     */
   def supportedReaderVersions: Set[Version] = readerMappings.keySet
 
@@ -82,8 +82,10 @@ trait VersionedModelReader[Version, DetachedModel] {
     *
     * E.g. a matching check could be performed just on a major version if the `Version` type contains major and minor.
     *
-    * @param version the version that should be read
-    * @return the matching reader or none
+    * @param version
+    *   the version that should be read
+    * @return
+    *   the matching reader or none
     */
   def lookupReader(version: Version): Option[VersionReader] =
     readerMappings.get(version)
@@ -94,8 +96,8 @@ trait VersionedModelReader[Version, DetachedModel] {
     */
   def readerMappings: ReaderMappings
 
-  /** For a companion of a specific ScalaPB class looks up the corresponding reader to the detached model.
-    * If that is available constructs are reader directly from bytes/json to the detached model.
+  /** For a companion of a specific ScalaPB class looks up the corresponding reader to the detached model. If that is available constructs
+    * are reader directly from bytes/json to the detached model.
     */
   protected def readerMapping[SpecificModel <: GeneratedMessage](
       companion: GeneratedMessageCompanion[SpecificModel]
@@ -108,9 +110,8 @@ trait VersionedModelReader[Version, DetachedModel] {
   private def lookupOrFail(version: Version): Try[VersionReader] =
     lookupReader(version).map(Success(_)).getOrElse(Failure(new VersionNotSupportedException(version, supportedReaderVersions)))
 
-  /** Combines a generated message companion (able to read bytes/json in to a specific ScalaPB model)
-    * and a reader from that ScalaPB model to a detached model.
-    * That models a reader from bytes/json directly to the detached business model.
+  /** Combines a generated message companion (able to read bytes/json in to a specific ScalaPB model) and a reader from that ScalaPB model
+    * to a detached model. That models a reader from bytes/json directly to the detached business model.
     */
   private class VersionReaderImpl[SpecificModel <: GeneratedMessage](
       companion: GeneratedMessageCompanion[SpecificModel],
@@ -137,8 +138,8 @@ object VersionedModelReader {
 
     /** Read a `Model` class directly from JSON with a custom `Parser`.
       *
-      * Note: This method has a default implementation that forwards to the other `fromJson` and ignores `parser`.
-      * This is done for binary compatibility but is overridden in the implementation.
+      * Note: This method has a default implementation that forwards to the other `fromJson` and ignores `parser`. This is done for binary
+      * compatibility but is overridden in the implementation.
       */
     def fromJson(jsonString: String, unusedParser: Parser): Try[PbResult[Model]] = fromJson(jsonString)
   }

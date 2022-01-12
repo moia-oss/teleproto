@@ -129,8 +129,7 @@ object Writer extends LowPriorityWrites {
     *
     * The decoding of this value is side-effect free but has a problem with divergent system clocks!
     *
-    * Depending on the use case either this (based on fixed point in time) or the following writer (based on the time
-    * left) makes sense.
+    * Depending on the use case either this (based on fixed point in time) or the following writer (based on the time left) makes sense.
     */
   object FixedPointDeadlineWriter extends Writer[Deadline, Timestamp] {
     def write(deadline: Deadline): Timestamp = {
@@ -141,11 +140,9 @@ object Writer extends LowPriorityWrites {
 
   /** Writes a Scala deadline into a ScalaPB int as time left duration.
     *
-    * The decoding of this value is not side-effect free since it depends on the clock! Time between encoding and
-    * decoding does not count.
+    * The decoding of this value is not side-effect free since it depends on the clock! Time between encoding and decoding does not count.
     *
-    * Depending on the use case either this (based on time left) or the following writer (based on fixed point in time)
-    * makes sense.
+    * Depending on the use case either this (based on time left) or the following writer (based on fixed point in time) makes sense.
     */
   object TimeLeftDeadlineWriter extends Writer[Deadline, PBDuration] {
     def write(deadline: Deadline): PBDuration = {
