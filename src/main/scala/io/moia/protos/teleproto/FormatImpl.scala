@@ -21,11 +21,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import scalapb.{GeneratedEnum, GeneratedOneof}
 
-import scala.deriving.Mirror
-import scala.quoted.*
-
-/** Compiler functions shared between both, reader and writer macros
-  */
+/** Compiler functions shared between both, reader and writer macros */
 @SuppressWarnings(Array("all"))
 trait FormatImpl {
   protected def objectRef[T: TypeTag]: Symbol =
@@ -36,8 +32,7 @@ trait FormatImpl {
     */
   val ValueMethod: TermName = TermName("value")
 
-  /** En enum case with this name can remain unmapped in [[Reader]]. It is assumed that this is the default case.
-    */
+  /** En enum case with this name can remain unmapped in [[Reader]]. It is assumed that this is the default case. */
   val InvalidEnum = "invalid"
 
   /** OneOf variant that encodes an empty field. */
@@ -47,8 +42,7 @@ trait FormatImpl {
   type Compiled    = (Tree, Compatibility)
   type CompatIssue = (Type, String)
 
-  /** Within a compiled hierarchy collects backward/forward compatibility issues.
-    */
+  /** Within a compiled hierarchy collects backward/forward compatibility issues. */
   case class Compatibility(
       surplusParameters: Iterable[CompatIssue],
       defaultParameters: Iterable[CompatIssue],
@@ -77,13 +71,11 @@ trait FormatImpl {
     val full: Compatibility = Compatibility(Nil, Nil, Nil)
   }
 
-  /** From type `S[T]` extracts `T`.
-    */
+  /** From type `S[T]` extracts `T`. */
   private[teleproto] def innerType(from: Type): Type =
     from.typeArgs.headOption.getOrElse(abort(s"Type $from does not have type arguments"))
 
-  /** Fails if types are not a Protobuf case class and case class pair.
-    */
+  /** Fails if types are not a Protobuf case class and case class pair. */
   private[teleproto] def ensureValidTypes(protobufType: Type, modelType: Type): Unit =
     if (!checkClassTypes(protobufType, modelType)) {
       import scala.compiletime.error
@@ -100,8 +92,7 @@ trait FormatImpl {
   private[teleproto] def checkHierarchyTypes(protobufType: Type, modelType: Type): Boolean =
     isSealedTrait(modelType) && isSealedTrait(protobufType) && protobufType <:< typeOf[GeneratedOneof]
 
-  /** A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa.
-    */
+  /** A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa. */
   private[teleproto] def checkEnumerationTypes(protobufType: Type, modelType: Type): Boolean =
     isScalaPBEnumeration(protobufType) && isSealedTrait(modelType)
 
@@ -188,8 +179,7 @@ trait FormatImpl {
     info
   }
 
-  /** Always renders the same hash for a similar incompatibility.
-    */
+  /** Always renders the same hash for a similar incompatibility. */
   private[teleproto] def compatibilitySignature(compatibility: Compatibility): String =
     if (compatibility.hasIssues) {
       val baos         = new ByteArrayOutputStream()
@@ -205,12 +195,9 @@ trait FormatImpl {
         .map { "%02x".format(_) }
         .take(3) // <- 6 characters
         .mkString
-    } else {
-      ""
-    }
+    } else ""
 
-  /** Extracts literal signature value of @backward("signature") or @forward("signature").
-    */
+  /** Extracts literal signature value of @backward("signature") or @forward("signature"). */
   private[teleproto] def compatibilityAnnotation(tpe: Type): Option[String] =
     c.internal.enclosingOwner.annotations.find(_.tree.tpe.typeSymbol == tpe.typeSymbol).flatMap { annotation =>
       annotation.tree match {
