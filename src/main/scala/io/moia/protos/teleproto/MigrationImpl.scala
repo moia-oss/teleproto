@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+ /**
 package io.moia.protos.teleproto
 
 import scala.collection.compat._
@@ -327,3 +328,4 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
     optionNames(sourceType) diff optionNames(targetType)
   }
 }
+*/
