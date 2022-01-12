@@ -21,8 +21,8 @@ lazy val `teleproto` = project
       library.scalaPB            % "protobuf;compile",
       library.scalaPBJson        % Compile,
       library.scalaTest          % Test,
-      library.scalaTestPlusCheck % Test,
-      library.scalaCheck         % Test,
+      //library.scalaTestPlusCheck % Test,
+      //library.scalaCheck         % Test,
       "org.scala-lang.modules"   %% "scala-collection-compat" % "2.5.0",
       "org.scala-lang"           % "scala-reflect" % (ThisBuild / scalaVersion).value
     )
@@ -39,7 +39,6 @@ lazy val library = new {
     val scalaCheck         = "1.15.4"
     val scalaTest          = "3.2.9"
     val scalaTestPlusCheck = "3.2.2.0"
-    val scapeGoat          = "1.4.9"
   }
 
   val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
@@ -60,13 +59,12 @@ lazy val commonSettings = Seq.concat(
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
-  scapegoatSettings,
   mimaSettings
 )
 
 lazy val compilerSettings = Seq(
   scalaVersion := crossScalaVersions.value.head,
-  crossScalaVersions := List("2.13.6", "2.12.14"),
+  crossScalaVersions := List("3.1.0", "2.13.7", "2.12.15"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, 12)) => scalacOptions_2_12
@@ -101,6 +99,7 @@ lazy val scalacOptions_2_13 = Seq(
   "UTF-8",
   "-Xfatal-warnings",
   "-Xlint",
+  "-Xsource:3",
   "-Ywarn-dead-code",
   "-Ymacro-annotations"
 )
@@ -141,12 +140,6 @@ lazy val sbtSettings = Seq(
 
 lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
-)
-
-lazy val scapegoatSettings = Seq(
-  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
-  // do not check generated files
-  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
 )
 
 lazy val mimaSettings = Seq(
