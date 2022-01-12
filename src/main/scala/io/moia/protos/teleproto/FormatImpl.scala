@@ -19,34 +19,24 @@ package io.moia.protos.teleproto
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-
 import scalapb.{GeneratedEnum, GeneratedOneof}
 
-import scala.reflect.macros.blackbox
+import scala.deriving.Mirror
+import scala.quoted.*
 
 /** Compiler functions shared between both, reader and writer macros
   */
 @SuppressWarnings(Array("all"))
 trait FormatImpl {
-  val c: blackbox.Context
-  import c.universe._
-
-  def info(message: String, pos: Position = c.enclosingPosition): Unit     = c.info(pos, message, force = true)
-  def warn(message: String, pos: Position = c.enclosingPosition): Unit     = c.warning(pos, message)
-  def error(message: String, pos: Position = c.enclosingPosition): Unit    = c.error(pos, message)
-  def abort(message: String, pos: Position = c.enclosingPosition): Nothing = c.abort(pos, message)
-
   protected def objectRef[T: TypeTag]: Symbol =
     typeOf[T].termSymbol
 
-  /** A `oneof` proto definition is mapped to a `sealed trait` in Scala.
-    * Each variant of the `oneof` definition is mapped to a `case class` with exactly one field `value`
-    * that contains a reference to the `case class` mapping of the corresponding `message` proto definition.
+  /** A `oneof` proto definition is mapped to a `sealed trait` in Scala. Each variant of the `oneof` definition is mapped to a `case class`
+    * with exactly one field `value` that contains a reference to the `case class` mapping of the corresponding `message` proto definition.
     */
   val ValueMethod: TermName = TermName("value")
 
-  /** En enum case with this name can remain unmapped in [[Reader]].
-    * It is assumed that this is the default case.
+  /** En enum case with this name can remain unmapped in [[Reader]]. It is assumed that this is the default case.
     */
   val InvalidEnum = "invalid"
 
@@ -96,7 +86,8 @@ trait FormatImpl {
     */
   private[teleproto] def ensureValidTypes(protobufType: Type, modelType: Type): Unit =
     if (!checkClassTypes(protobufType, modelType)) {
-      abort(s"`$protobufType` and `$modelType` have to be case classes with a single parameter list!")
+      import scala.compiletime.error
+      error(s"`$protobufType` and `$modelType` have to be case classes with a single parameter list!")
     }
 
   private[teleproto] def checkClassTypes(protobufType: Type, modelType: Type): Boolean =
@@ -130,11 +121,11 @@ trait FormatImpl {
   private[teleproto] def hasTraceAnnotation: Boolean =
     c.internal.enclosingOwner.annotations.exists(_.tree.tpe.typeSymbol == symbolOf[trace])
 
-  /** If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given
-    * (compiled) tree as info message to the compiler shell.
+  /** If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given (compiled) tree as
+    * info message to the compiler shell.
     */
   private[teleproto] def traceCompiled(tree: Tree): Tree = {
-    if (hasTraceAnnotation) info(tree.toString)
+    if (hasTraceAnnotation) println(tree.toString)
     tree
   }
 
@@ -145,8 +136,8 @@ trait FormatImpl {
   private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol]): Map[String, Symbol] =
     for ((name, symbol) <- symbolsByName(symbols)) yield name.toString.toLowerCase.replace("_", "") -> symbol
 
-  /** Uses lower case names without underscores (assuming clashes are already handled by ScalaPB).
-    * Strips the parent name from the the beginning of each symbol name.
+  /** Uses lower case names without underscores (assuming clashes are already handled by ScalaPB). Strips the parent name from the the
+    * beginning of each symbol name.
     */
   private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol], parent: Symbol): Map[String, Symbol] = {
     val prefix = parent.name.decodedName.toString.toLowerCase
