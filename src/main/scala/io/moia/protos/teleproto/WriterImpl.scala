@@ -20,7 +20,6 @@ import scala.collection.compat._
 import scala.reflect.macros.blackbox
 import scala.compiletime.error
 
-@SuppressWarnings(Array("all"))
 class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   import c.universe._
 

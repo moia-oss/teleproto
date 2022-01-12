@@ -19,7 +19,6 @@ package io.moia.protos.teleproto
 import scala.reflect.macros.blackbox
 import scala.compiletime.error
 
-@SuppressWarnings(Array("all"))
 class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
   import c.universe._
 

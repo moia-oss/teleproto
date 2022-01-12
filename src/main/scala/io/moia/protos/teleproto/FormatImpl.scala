@@ -22,7 +22,6 @@ import java.security.MessageDigest
 import scalapb.{GeneratedEnum, GeneratedOneof}
 
 /** Compiler functions shared between both, reader and writer macros */
-@SuppressWarnings(Array("all"))
 trait FormatImpl {
   protected def objectRef[T: TypeTag]: Symbol =
     typeOf[T].termSymbol
