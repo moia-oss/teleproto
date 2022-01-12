@@ -46,7 +46,7 @@ case class Protobuf(
     pickupId: Option[String] = None,
     ranges: Seq[SubProtobuf] = Seq.empty,
     doubleSub: Option[SubProtobuf] = None,
-    enum: ProtobufEnum = ProtobufEnum.FirstCase
+    enumeration: ProtobufEnum = ProtobufEnum.FirstCase
 )
 
 sealed trait ModelEnum
@@ -65,7 +65,7 @@ case class Model(
     pickupId: Option[String],
     ranges: List[SubModel],
     doubleSub: SubModel,
-    enum: ModelEnum
+    enumeration: ModelEnum
 )
 
 case class ModelSmaller(id: String, price: BigDecimal)
@@ -80,7 +80,7 @@ case class ModelLarger(
     baz: Option[String],
     ranges: List[SubModel],
     doubleSub: SubModel,
-    enum: ModelEnum
+    enumeration: ModelEnum
 )
 
 object Protobuf {
@@ -232,7 +232,7 @@ class ProtocolBuffersTest extends UnitTest {
             baz = None,
             ranges = List(SubModel(1, 1.2), SubModel(1.2, 1.23)),
             doubleSub = SubModel(1, 2),
-            enum = ModelEnum.THIRD_CASE
+            enumeration = ModelEnum.THIRD_CASE
           )
         )
     }
