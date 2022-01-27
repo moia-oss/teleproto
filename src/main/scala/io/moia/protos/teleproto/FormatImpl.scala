@@ -20,7 +20,6 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import scalapb.{GeneratedEnum, GeneratedOneof}
-import scala.quoted.*
 
 /** Compiler functions shared between both, reader and writer macros */
 trait FormatImpl {
@@ -72,42 +71,42 @@ trait FormatImpl {
   }
 
   /** From type `S[T]` extracts `T`. */
-  private[teleproto] def innerType[T](from: Type[T]): Type[T] =
+  private[teleproto] def innerType(from: Type): Type =
     from.typeArgs.headOption.getOrElse(abort(s"Type $from does not have type arguments"))
 
   /** Fails if types are not a Protobuf case class and case class pair. */
-  private[teleproto] def ensureValidTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Unit =
+  private[teleproto] def ensureValidTypes(protobufType: Type, modelType: Type): Unit =
     if (!checkClassTypes(protobufType, modelType)) {
       import scala.compiletime.error
       error(s"`$protobufType` and `$modelType` have to be case classes with a single parameter list!")
     }
 
-  private[teleproto] def checkClassTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
+  private[teleproto] def checkClassTypes(protobufType: Type, modelType: Type): Boolean =
     isProtobuf(protobufType) && isSimpleCaseClass(modelType)
 
-  private[teleproto] def checkTraitTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
+  private[teleproto] def checkTraitTypes(protobufType: Type, modelType: Type): Boolean =
     isSealedTrait(protobufType) && isSealedTrait(modelType)
 
   /** A sealed trait with that is a subtype of [[GeneratedOneof]]. */
-  private[teleproto] def checkHierarchyTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
+  private[teleproto] def checkHierarchyTypes(protobufType: Type, modelType: Type): Boolean =
     isSealedTrait(modelType) && isSealedTrait(protobufType) && protobufType <:< typeOf[GeneratedOneof]
 
   /** A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa. */
-  private[teleproto] def checkEnumerationTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
+  private[teleproto] def checkEnumerationTypes(protobufType: Type, modelType: Type): Boolean =
     isScalaPBEnumeration(protobufType) && isSealedTrait(modelType)
 
-  private[teleproto] def isProtobuf[P](tpe: Type[P])(using Quotes): Boolean =
+  private[teleproto] def isProtobuf(tpe: Type): Boolean =
     isSimpleCaseClass(tpe) // && tpe <:< typeOf[GeneratedMessage]
 
-  private[teleproto] def isSimpleCaseClass[T](tpe: Type[T])(using Quotes): Boolean = {
-    import quotes.reflect.*
-
-    val tpeSym = TypeTree.of[T].symbol
-    tpeSym.flags.is(Flags.Case) && {
-      val cons = tpe.member(termNames.CONSTRUCTOR).asMethod
-      cons.paramLists.lengthCompare(1) == 0 // has a single parameter list
+  private[teleproto] def isSimpleCaseClass(tpe: Type): Boolean =
+    tpe.typeSymbol match {
+      case cs: ClassSymbol =>
+        cs.isCaseClass && {
+          val cons = tpe.member(termNames.CONSTRUCTOR).asMethod
+          cons.paramLists.lengthCompare(1) == 0 // has a single parameter list
+        }
+      case _ => false
     }
-  }
 
   private[teleproto] def hasTraceAnnotation: Boolean =
     c.internal.enclosingOwner.annotations.exists(_.tree.tpe.typeSymbol == symbolOf[trace])
@@ -138,22 +137,22 @@ trait FormatImpl {
   private[teleproto] def showNames(symbols: Iterable[Name]): String =
     symbols.iterator.map(name => s"`$name`").mkString(", ")
 
-  private[teleproto] def isSealedTrait[T](tpe: Type[T])(using Quotes): Boolean = {
-    import quotes.reflect.*
+  private[teleproto] def isSealedTrait(tpe: Type): Boolean =
+    tpe.typeSymbol match {
+      case cs: ClassSymbol => cs.isSealed && cs.isAbstract
+      case _               => false
+    }
 
-    TypeTree.of[T].symbol.flags.is(Flags.Trait & Flags.Sealed)
-  }
-
-  private[teleproto] def isScalaPBEnumeration[P](tpe: Type[P])(using Quotes): Boolean =
+  private[teleproto] def isScalaPBEnumeration(tpe: Type): Boolean =
     isSealedTrait(tpe) && tpe <:< typeOf[GeneratedEnum]
 
-  private[teleproto] def classTypeOf[T](classSymbol: Symbol): Type[T] =
+  private[teleproto] def classTypeOf(classSymbol: Symbol): Type =
     classSymbol.asClass.selfType
 
   private[teleproto] def objectReferenceTo(objectClass: Symbol): Symbol =
     classTypeOf(objectClass).termSymbol
 
-  private[teleproto] def implicitAvailable[T, A, B](genericType: Type[T], from: Type[A], to: Type[B]): Boolean = {
+  private[teleproto] def implicitAvailable(genericType: Type, from: Type, to: Type): Boolean = {
     val parametrizedType = appliedType(genericType, List(from, to))
     val implicitValue    = c.inferImplicitValue(parametrizedType)
     implicitValue != EmptyTree

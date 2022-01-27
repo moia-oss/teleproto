@@ -17,17 +17,25 @@
 package io.moia.protos.teleproto
 
 import scala.collection.compat._
+import scala.reflect.macros.blackbox
 import scala.compiletime.error
-import scala.quoted.*
 
-object WriterImpl extends FormatImpl {
+class WriterImpl(val c: blackbox.Context) extends FormatImpl {
+  import c.universe._
+
   private[this] val writerObj = objectRef[Writer.type]
   private[this] val seqTpe    = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
 
   /** Validates if business model type can be written to the Protocol Buffers type (matching case classes or matching sealed trait
     * hierarchy). If just forward compatible then raise a warning.
     */
-  def writer_impl[M, P](using quotes: Quotes, modelType: Type[M], protobufType: Type[P]): Expr[Writer[M, P]] = Expr {
+  def writer_impl[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] =
+    c.Expr(compile[M, P])
+
+  private def compile[M: WeakTypeTag, P: WeakTypeTag]: Tree = {
+    val modelType    = weakTypeTag[M].tpe
+    val protobufType = weakTypeTag[P].tpe
+
     if (checkClassTypes(protobufType, modelType)) {
       ensureValidTypes(protobufType, modelType)
       val (result, compatibility) = compileClassMapping(protobufType, modelType)
@@ -57,11 +65,11 @@ object WriterImpl extends FormatImpl {
     *
     * The result is `f` applied to the writer expression with the (possible) compatibility issues of writer generation (if happened).
     */
-  private def withImplicitWriter[M, P](modelType: Type[M], protobufType: Type[P])(compileInner: Tree => Tree)(using Quotes): Compiled = {
+  private def withImplicitWriter(modelType: Type, protobufType: Type)(compileInner: Tree => Tree): Compiled = {
     // look for an implicit writer
-    val writerType = appliedType(weakTypeTag[Writer[_, _]].tpe, modelType, protobufType)
+    val writerType = appliedType(c.weakTypeTag[Writer[_, _]].tpe, modelType, protobufType)
 
-    val existingWriter = inferImplicitValue(writerType)
+    val existingWriter = c.inferImplicitValue(writerType)
 
     // "ask" for the implicit writer or use the found one
     def ask: Compiled = (compileInner(q"implicitly[$writerType]"), Compatibility.full)
@@ -92,11 +100,9 @@ object WriterImpl extends FormatImpl {
     *   - If name is missing in model but is optional, pass `None` (forward compatible)
     *   - Otherwise convert using `transform`, `optional` or `present`.
     */
-  private def compileClassMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
-    import quotes.reflect.*
-
+  private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
     // at this point all errors are assumed to be due to evolution
-    val protobufCompanion = TypeTree.of[P].symbol.companion
+    val protobufCompanion = protobufType.typeSymbol.companion
     val protobufCons      = protobufType.member(termNames.CONSTRUCTOR).asMethod
     val modelCons         = modelType.member(termNames.CONSTRUCTOR).asMethod
     val protobufParams    = protobufCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
@@ -224,11 +230,9 @@ object WriterImpl extends FormatImpl {
     * protobuf.Foo](value.asInstanceOf[model.Foo]))) else protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(transform[model.Bar,
     * protobuf.Bar](value.asInstanceOf[model.Bar])))
     */
-  private def compileTraitMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
-    import quotes.reflect.*
-
-    val protobufClass      = TypeTree.of[P].symbol.asClass
-    val modelClass         = TypeTree.of[M].symbol.asClass
+  private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
+    val protobufClass      = protobufType.typeSymbol.asClass
+    val modelClass         = modelType.typeSymbol.asClass
     val protobufSubclasses = symbolsByName(protobufClass.knownDirectSubclasses)
     val modelSubclasses    = symbolsByName(modelClass.knownDirectSubclasses)
 
@@ -266,11 +270,9 @@ object WriterImpl extends FormatImpl {
     *
     * (model: ModelEnum) => p match { case ModelEnum.OPTION_1 => ProtoEnum.OPTION_1 ... case ModelEnum.OPTION_N => ProtoEnum.OPTION_N }
     */
-  private def compileEnumerationMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
-    import quotes.reflect.*
-
-    val protobufClass   = TypeTree.of[P].symbol.asClass
-    val modelClass      = TypeTree.of[M].symbol.asClass
+  private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
+    val protobufClass   = protobufType.typeSymbol.asClass
+    val modelClass      = modelType.typeSymbol.asClass
     val protobufOptions = symbolsByTolerantName(protobufClass.knownDirectSubclasses.filter(_.isModuleClass), protobufClass)
     val modelOptions    = symbolsByTolerantName(modelClass.knownDirectSubclasses.filter(_.isModuleClass), modelClass)
 
@@ -295,9 +297,7 @@ object WriterImpl extends FormatImpl {
     (result, compatibility)
   }
 
-  private[teleproto] def warnForwardCompatible[P, M](protobufType: Type[P], modelType: Type[M], compatibility: Compatibility)(using
-      Quotes
-  ): Unit = {
+  private[teleproto] def warnForwardCompatible(protobufType: Type, modelType: Type, compatibility: Compatibility): Unit = {
     def info           = compatibilityInfo(compatibility)
     lazy val signature = compatibilitySignature(compatibility)
 

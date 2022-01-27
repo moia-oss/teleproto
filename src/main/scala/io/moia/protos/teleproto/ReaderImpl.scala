@@ -16,15 +16,23 @@
 
 package io.moia.protos.teleproto
 
+import scala.reflect.macros.blackbox
 import scala.compiletime.error
-import scala.quoted.*
 
-object ReaderImpl extends FormatImpl {
+class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
+  import c.universe._
+
   private[this] val readerObj    = objectRef[Reader.type]
   private[this] val pbSuccessObj = objectRef[PbSuccess.type]
   private[this] val pbFailureObj = objectRef[PbFailure.type]
 
-  def reader_impl[P, M](using quotes: Quotes, protobufType: Type[P], modelType: Type[M]): Expr[Reader[P, M]] = Expr {
+  def reader_impl[P: WeakTypeTag, M: WeakTypeTag]: Expr[Reader[P, M]] =
+    c.Expr(compile[P, M])
+
+  private def compile[P: WeakTypeTag, M: WeakTypeTag]: Tree = {
+    val protobufType = weakTypeTag[P].tpe
+    val modelType    = weakTypeTag[M].tpe
+
     if (checkClassTypes(protobufType, modelType)) {
       val (result, compatibility) = compileClassMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
@@ -53,10 +61,10 @@ object ReaderImpl extends FormatImpl {
     *
     * The result is `f` applied to the reader expression with the (possible) compatibility issues of reader generation (if happened).
     */
-  private def withImplicitReader[P, M](protobufType: Type[P], modelType: Type[M])(compileInner: Tree => Tree)(using Quotes): Compiled = {
+  private def withImplicitReader(protobufType: Type, modelType: Type)(compileInner: Tree => Tree): Compiled = {
     // look for an implicit reader
-    val readerType     = appliedType(weakTypeTag[Reader[_, _]].tpe, protobufType, modelType)
-    val existingReader = inferImplicitValue(readerType)
+    val readerType     = appliedType(c.weakTypeTag[Reader[_, _]].tpe, protobufType, modelType)
+    val existingReader = c.inferImplicitValue(readerType)
 
     // "ask" for the implicit reader or use the found one
     def ask: Compiled = (compileInner(q"implicitly[$readerType]"), Compatibility.full)
@@ -335,7 +343,7 @@ object ReaderImpl extends FormatImpl {
       val name = className.toString
       val path = s"/${name.head.toLower}${name.tail}"
       withImplicitReader(valueMethod.infoIn(classTypeOf(protobufSubclass)), classTypeOf(modelSubclass)) { reader =>
-        val value = freshName(ValueMethod)
+        val value = c.freshName(ValueMethod)
         cq"${protobufSubclass.companion}($value) => $reader.read($value).withPathPrefix($path)"
       }
     }
@@ -400,7 +408,7 @@ object ReaderImpl extends FormatImpl {
       cq"""_: $reference.type => $pbFailureObj(s"Enumeration value $${$reference} is invalid!")"""
     }
 
-    val other = freshName(TermName("other"))
+    val other = c.freshName(TermName("other"))
     val result = q"""$readerObj.instance[$protobufType, $modelType] {
       case ..$cases
       case ..${invalidCase.toList}
