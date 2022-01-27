@@ -143,8 +143,7 @@ lazy val scalaFmtSettings = Seq(
 )
 
 lazy val mimaSettings = Seq(
-  // First 2.13 release of 1.x
-  mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "1.2.0"),
+  mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),
   mimaBinaryIssueFilters ++= Seq(
     // No binary compatibility guarantees for macro implementations (they run at compile time).
     ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.FormatImpl*"),
