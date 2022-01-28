@@ -41,29 +41,29 @@ object ProtocolBuffers {
     }
   }
 
-  /** Compiles a generic reader instance from Protocol Buffers type `P` to business model type `M` if possible. See User's Guide for
-    * details.
+  /** Compiles a generic reader instance from Protocol Buffers type `P` to business model type `M` if possible.
+    * See User's Guide for details.
     *
     * Example:
     *
     * {{{ProtocolBuffers.reader[v1.PriceTrips.PriceTrip, PriceTrip]}}}
     */
-  inline def reader[P, M]: Reader[P, M] = ReaderImpl.reader_impl[P, M]
+  def reader[P, M]: Reader[P, M] = macro ReaderImpl.reader_impl[P, M]
 
-  /** Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible. See User's Guide for
-    * details.
+  /** Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible.
+    * See User's Guide for details.
     */
-  inline def writer[M, P]: Writer[M, P] = WriterImpl.writer_impl[M, P]
+  def writer[M, P]: Writer[M, P] = macro WriterImpl.writer_impl[M, P]
 
-  /** Constructs a migration from Protocol Buffer class `P` to PB class `Q`. The migration tries to copy/convert fields from a `P` to a new
-    * `Q` automatically.
+  /** Constructs a migration from Protocol Buffer class `P` to PB class `Q`.
+    * The migration tries to copy/convert fields from a `P` to a new `Q` automatically.
     *
     * That is possible for matching names if value types `VP` and `VQ`
-    *   - are equal or `VQ` is wider than `VP` (copied)
-    *   - `VQ` is `Option[VP]` (wrapped with `Some(...)`)
-    *   - there is an implicit view from `VP` to `VQ` (wrapped with the conversion)
-    *   - there is an implicit `Migration[VP, VQ]` (wrapped with the migration)
-    *   - `VP` and `VQ` are nested Protocol Buffers and a trivial migration can be generated (not yet implemented!)
+    * - are equal or `VQ` is wider than `VP` (copied)
+    * - `VQ` is `Option[VP]` (wrapped with `Some(...)`)
+    * - there is an implicit view from `VP` to `VQ` (wrapped with the conversion)
+    * - there is an implicit `Migration[VP, VQ]` (wrapped with the migration)
+    * - `VP` and `VQ` are nested Protocol Buffers and a trivial migration can be generated (not yet implemented!)
     *
     * If all values of `Q` can be automatically filled by values from `P` the migration is considered trivial.
     *
@@ -71,5 +71,6 @@ object ProtocolBuffers {
     *
     * To use it, just write `migration[P, Q]()`, compile and let the compiler explain the required migration functions.
     */
-  //inline def migration[P, Q](args: (P => Any)*): Migration[P, Q] = MigrationImpl.migration_impl[P, Q]
+  def migration[P, Q](args: (P => Any)*): Migration[P, Q] =
+    macro MigrationImpl.migration_impl[P, Q]
 }
