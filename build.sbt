@@ -59,6 +59,7 @@ lazy val commonSettings = Seq.concat(
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
+  scapegoatSettings,
   mimaSettings
 )
 
@@ -140,6 +141,12 @@ lazy val sbtSettings = Seq(
 
 lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
+)
+
+lazy val scapegoatSettings = Seq(
+  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
+  // do not check generated files
+  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
 )
 
 lazy val mimaSettings = Seq(
