@@ -30,7 +30,7 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   } yield Drink(name, color)
 
   val fruitBasketGen: Gen[FruitBasket] =
-    Gen.listOf(fruitGen).map(FruitBasket)
+    Gen.listOf(fruitGen).map(FruitBasket.apply)
 
   val lunchBoxGen: Gen[LunchBox] = for {
     fruit <- fruitGen
@@ -38,7 +38,7 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   } yield LunchBox(fruit, drink)
 
   val mealGen: Gen[Meal] =
-    Gen.oneOf(fruitBasketGen, lunchBoxGen).map(Meal)
+    Gen.oneOf(fruitBasketGen, lunchBoxGen).map(Meal.apply)
 
   "ProtocolBuffers" should {
     "generate writer and reader that round trip successfully" in {

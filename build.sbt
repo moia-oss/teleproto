@@ -21,8 +21,8 @@ lazy val `teleproto` = project
       library.scalaPB            % "protobuf;compile",
       library.scalaPBJson        % Compile,
       library.scalaTest          % Test,
-      //library.scalaTestPlusCheck % Test,
-      //library.scalaCheck         % Test,
+      library.scalaTestPlusCheck % Test,
+      library.scalaCheck         % Test,
       "org.scala-lang.modules"   %% "scala-collection-compat" % "2.5.0",
       "org.scala-lang"           % "scala-reflect" % (ThisBuild / scalaVersion).value
     )
@@ -38,14 +38,14 @@ lazy val library = new {
     val scalaPBJson        = "0.12.0"
     val scalaCheck         = "1.15.4"
     val scalaTest          = "3.2.9"
-    val scalaTestPlusCheck = "3.2.2.0"
+    val scalaTestPlusCheck = "3.2.11.0"
   }
 
   val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
   val scalaPBJson        = "com.thesamet.scalapb" %% "scalapb-json4s"  % Version.scalaPBJson
   val scalaCheck         = "org.scalacheck"       %% "scalacheck"      % Version.scalaCheck
   val scalaTest          = "org.scalatest"        %% "scalatest"       % Version.scalaTest
-  val scalaTestPlusCheck = "org.scalatestplus"    %% "scalacheck-1-14" % Version.scalaTestPlusCheck
+  val scalaTestPlusCheck = "org.scalatestplus"    %% "scalacheck-1-15" % Version.scalaTestPlusCheck
 }
 
 // *****************************************************************************
