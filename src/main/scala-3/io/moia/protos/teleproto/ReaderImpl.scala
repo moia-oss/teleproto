@@ -19,4 +19,4 @@ package io.moia.protos.teleproto
 import scala.quoted.{Expr, Quotes}
 
 object ReaderImpl extends FormatImpl:
-  def reader_impl[P, M](using quotes: Quotes): Expr[Reader[P, M]] = ???
+  def reader_impl[P, M](using Quotes): Expr[Reader[P, M]] = ???
