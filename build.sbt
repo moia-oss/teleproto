@@ -38,14 +38,14 @@ lazy val library = new {
     val scalaPBJson        = "0.12.0"
     val scalaCheck         = "1.15.4"
     val scalaTest          = "3.2.9"
-    val scalaTestPlusCheck = "3.2.2.0"
+    val scalaTestPlusCheck = "3.2.11.0"
   }
 
   val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
   val scalaPBJson        = "com.thesamet.scalapb" %% "scalapb-json4s"  % Version.scalaPBJson
   val scalaCheck         = "org.scalacheck"       %% "scalacheck"      % Version.scalaCheck
   val scalaTest          = "org.scalatest"        %% "scalatest"       % Version.scalaTest
-  val scalaTestPlusCheck = "org.scalatestplus"    %% "scalacheck-1-14" % Version.scalaTestPlusCheck
+  val scalaTestPlusCheck = "org.scalatestplus"    %% "scalacheck-1-15" % Version.scalaTestPlusCheck
 }
 
 // *****************************************************************************
@@ -59,6 +59,7 @@ lazy val commonSettings = Seq.concat(
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
+  scapegoatSettings,
   mimaSettings
 )
 
@@ -140,6 +141,12 @@ lazy val sbtSettings = Seq(
 
 lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
+)
+
+lazy val scapegoatSettings = Seq(
+  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
+  // do not check generated files
+  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
 )
 
 lazy val mimaSettings = Seq(
