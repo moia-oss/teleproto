@@ -31,7 +31,7 @@ trait FormatImpl {
     */
   val ValueMethod: TermName = TermName("value")
 
-  /** En enum case with this name can remain unmapped in [[Reader]]. It is assumed that this is the default case. */
+  /** An enum case with this name can remain unmapped in [[Reader]]. It is assumed that this is the default case. */
   val InvalidEnum = "invalid"
 
   /** OneOf variant that encodes an empty field. */
