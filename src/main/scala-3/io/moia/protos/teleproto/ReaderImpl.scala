@@ -26,14 +26,14 @@ object ReaderImpl extends FormatImpl {
 
   def reader_impl[P, M](using quotes: Quotes, protobufType: Type[P], modelType: Type[M]): Expr[Reader[P, M]] = Expr {
     if (checkClassTypes(protobufType, modelType)) {
-      val (result, compatibility) = compileClassMapping(protobufType, modelType)
+      val (result, compatibility) = compileClassMapping[P, M]
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-    } else if (checkEnumerationTypes(protobufType, modelType)) {
+    } else if (checkEnumerationTypes[P, M]) {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-    } else if (checkHierarchyTypes(protobufType, modelType)) {
+    } else if (checkHierarchyTypes[P, M]) {
       val (result, compatibility) = compileTraitMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
@@ -63,14 +63,14 @@ object ReaderImpl extends FormatImpl {
 
     if (existingReader == EmptyTree)
       if (checkClassTypes(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
+        val (implicitValue, compatibility) = compileClassMapping[P, M]
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else if (checkEnumerationTypes(protobufType, modelType)) {
+      } else if (checkEnumerationTypes[P, M]) {
         val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else if (checkHierarchyTypes(protobufType, modelType)) {
+      } else if (checkHierarchyTypes[P, M]) {
         val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
@@ -98,10 +98,12 @@ object ReaderImpl extends FormatImpl {
     *
     * Return the result expression and whether the matching was just backward compatible.
     */
-  private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
-    val modelCompanion = modelType.typeSymbol.companion
-    val protobufCons   = protobufType.member(termNames.CONSTRUCTOR).asMethod
-    val modelCons      = modelType.member(termNames.CONSTRUCTOR).asMethod
+  private def compileClassMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
+    import quotes.reflect.*
+    
+    val modelCompanion = TypeTree.of[M].symbol.companion
+    val protobufCons   = TypeTree.of[P].member(termNames.CONSTRUCTOR).asMethod
+    val modelCons      = TypeTree.of[M].member(termNames.CONSTRUCTOR).asMethod
     val protobufParams = protobufCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
     val modelParams    = modelCons.paramLists.headOption.getOrElse(Nil).map(_.asTerm)
 
@@ -192,8 +194,7 @@ object ReaderImpl extends FormatImpl {
       q"$pbFailureObj.combine(..$convertedValues)"
     }
 
-    def transformation(parameters: Seq[MatchingParam], ownCompatibility: Compatibility): Compiled = {
-
+    def transformation(parameters: Iterable[MatchingParam], ownCompatibility: Compatibility): Compiled = {
       val matchedParameters = modelParams.zip(parameters)
 
       val passedArgumentNames =
@@ -217,7 +218,7 @@ object ReaderImpl extends FormatImpl {
       (result, ownCompatibility.merge(parameterCompatibility))
     }
 
-    compareCaseAccessors(modelType, protobufParams, modelParams) match {
+    compareCaseAccessors[M, P] match {
       case Incompatible(missingParameters) =>
         error(
           s"`$protobufType` and $modelType are not compatible (${missingParameters.map(name => s"`$name`").mkString(", ")} missing in `$protobufType`)!"
@@ -234,13 +235,13 @@ object ReaderImpl extends FormatImpl {
   private sealed trait Matching
 
   /* Same arity */
-  private case class Compatible(parameters: Seq[MatchingParam]) extends Matching
+  private case class Compatible(parameters: Iterable[MatchingParam]) extends Matching
 
   /* Missing names on Model side and no missing names Protobuf side that are not optional or without default on model side */
   private case class BackwardCompatible(
       surplusParameters: Iterable[String],
       defaultParameters: Iterable[String],
-      parameters: Seq[MatchingParam]
+      parameters: Iterable[MatchingParam]
   ) extends Matching
 
   /* All remaining */
@@ -251,23 +252,21 @@ object ReaderImpl extends FormatImpl {
   private case class ExplicitDefaultParam(value: Tree)    extends MatchingParam
   private case object SkippedDefaultParam                 extends MatchingParam
 
-  private def compareCaseAccessors(
-      modelType: Type,
-      protobufParams: List[TermSymbol],
-      modelParams: List[TermSymbol]
-  ): Matching = {
-    val protobufByName       = symbolsByName(protobufParams)
-    val modelByName          = symbolsByName(modelParams)
+  private def compareCaseAccessors[M: Type, P: Type](using Quotes): Matching = {
+    import quotes.reflect.*
+
+    val protobufByName       = TypeTree.of[P].symbol.caseFields.map(symbol => symbol.name -> symbol).toMap
+    val modelByName          = TypeTree.of[M].symbol.caseFields.map(symbol => symbol.name -> symbol).toMap
     val surplusProtobufNames = protobufByName.keySet diff modelByName.keySet
 
     val matchedParams: List[Option[MatchingParam]] =
-      for (modelParam <- modelParams) yield {
+      for (modelParam <- modelByName) yield {
         // resolve type parameters to their actual bindings
-        val targetType = modelParam.typeSignature.asSeenFrom(modelType, modelType.typeSymbol)
-        protobufByName.get(modelParam.name) match {
+        val targetType = modelParam._2.signature.asSeenFrom(modelType, modelType.typeSymbol)
+        protobufByName.get(modelParam._1) match {
           case Some(protobufParam) =>
-            Some(TransformParam(protobufParam.typeSignature, targetType))
-          case None if modelParam.isParamWithDefault =>
+            Some(TransformParam(protobufParam.signature, targetType))
+          case None if modelParam._2.isParamWithDefault =>
             Some(SkippedDefaultParam)
           case None if targetType.typeSymbol == definitions.OptionClass =>
             Some(ExplicitDefaultParam(reify(None).tree))
@@ -276,7 +275,7 @@ object ReaderImpl extends FormatImpl {
         }
       }
 
-    val namedMatchedParams = modelParams.map(_.name).zip(matchedParams)
+    val namedMatchedParams = modelByName.map(_._1).zip(matchedParams)
 
     val missingModelParamNames = namedMatchedParams.collect { case (name, None) =>
       name
@@ -291,17 +290,12 @@ object ReaderImpl extends FormatImpl {
       case (name, ExplicitDefaultParam(_)) => name
     }
 
-    if (missingModelParamNames.nonEmpty) {
-      Incompatible(missingModelParamNames.map(_.decodedName.toString))
-    } else if (surplusProtobufNames.nonEmpty || backwardCompatibleModelParamNames.nonEmpty) {
-      BackwardCompatible(
-        surplusProtobufNames.map(_.decodedName.toString),
-        backwardCompatibleModelParamNames.map(_.decodedName.toString),
-        matchingModelParams.map(_._2)
-      )
-    } else {
+    if (missingModelParamNames.nonEmpty)
+      Incompatible(missingModelParamNames)
+    else if (surplusProtobufNames.nonEmpty || backwardCompatibleModelParamNames.nonEmpty)
+      BackwardCompatible(surplusProtobufNames, backwardCompatibleModelParamNames, matchingModelParams.map(_._2))
+    else
       Compatible(matchingModelParams.map(_._2))
-    }
   }
 
   /** Iterate through the sub-types of the model and check for a corresponding method in the protobuf type. If there are more types on the
@@ -310,11 +304,13 @@ object ReaderImpl extends FormatImpl {
     * (p: protobuf.FooOrBar) => None .orElse(p.value.foo.map(foo => transform[protobuf.Foo, model.Foo](foo, "/foo")))
     * .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar"))) .getOrElse(PbFailure("Value is required."))
     */
-  private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
-    val protobufClass      = protobufType.typeSymbol.asClass
-    val modelClass         = modelType.typeSymbol.asClass
-    val protobufSubClasses = symbolsByName(protobufClass.knownDirectSubclasses)
-    val modelSubclasses    = symbolsByName(modelClass.knownDirectSubclasses)
+  private def compileTraitMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
+    import quotes.reflect.*
+
+    val protobufClass      = TypeTree.of[P].symbol
+    val modelClass         = TypeTree.of[M].symbol
+    val protobufSubClasses = protobufClass.children.map(symbol => symbol.name -> symbol).toMap
+    val modelSubclasses    = modelClass.children.map(symbol => symbol.name -> symbol).toMap
 
     if (protobufSubClasses.isEmpty)
       error(s"No subclasses of sealed trait `${protobufClass.fullName}` found.")
@@ -370,22 +366,24 @@ object ReaderImpl extends FormatImpl {
     * }
     * ```
     */
-  private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
-    val protobufClass     = protobufType.typeSymbol.asClass
+  private def compileEnumerationMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
+    import quotes.reflect.*
+
+    val protobufClass     = TypeTree.of[P].symbol
     val protobufCompanion = protobufClass.companion
-    val modelClass        = modelType.typeSymbol.asClass
-    val protobufOptions   = symbolsByTolerantName(protobufClass.knownDirectSubclasses.filter(_.isModuleClass), protobufClass)
-    val modelOptions      = symbolsByTolerantName(modelClass.knownDirectSubclasses.filter(_.isModuleClass), modelClass)
+    val modelClass        = TypeTree.of[M].symbol
+    val protobufOptions   = symbolsByTolerantName(protobufClass.children.filter(_.isModuleClass), protobufClass)
+    val modelOptions      = symbolsByTolerantName(modelClass.children.filter(_.isModuleClass), modelClass)
 
     val unmatchedProtobufOptions = protobufOptions.toList.collect {
-      case (name, symbol) if !modelOptions.contains(name) && name != InvalidEnum => symbol.name.decodedName
+      case (name, symbol) if !modelOptions.contains(name) && name != InvalidEnum => symbol.name
     }
 
     if (unmatchedProtobufOptions.nonEmpty)
       error(s"The options in `${modelClass.fullName}` do not match ${showNames(unmatchedProtobufOptions)} in `${protobufClass.fullName}`.")
 
     val surplusModelOptions = modelOptions.toList.collect {
-      case (name, symbol) if !protobufOptions.contains(name) => symbol.name.decodedName
+      case (name, symbol) if !protobufOptions.contains(name) => symbol.name
     }
 
     val compatibility = Compatibility(Nil, Nil, surplusModelOptions.map(name => (modelType, name.toString)))
@@ -411,7 +409,7 @@ object ReaderImpl extends FormatImpl {
     (result, compatibility)
   }
 
-  private[teleproto] def warnBackwardCompatible(protobufType: Type, modelType: Type, compatibility: Compatibility): Unit = {
+  private[teleproto] def warnBackwardCompatible[P, M](protobufType: Type[P], modelType: Type[M], compatibility: Compatibility): Unit = {
     def info           = compatibilityInfo(compatibility)
     lazy val signature = compatibilitySignature(compatibility)
 
