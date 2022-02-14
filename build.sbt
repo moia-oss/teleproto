@@ -1,7 +1,8 @@
 import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
 
-addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
+// addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
+addCommandAlias("validate", "all test doc mimaReportBinaryIssues")
 
 // *****************************************************************************
 // Projects
@@ -59,7 +60,7 @@ lazy val commonSettings = Seq.concat(
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
-  scapegoatSettings,
+  // scapegoatSettings,
   mimaSettings
 )
 
@@ -143,11 +144,11 @@ lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
 )
 
-lazy val scapegoatSettings = Seq(
-  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
-  // do not check generated files
-  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
-)
+// lazy val scapegoatSettings = Seq(
+//   ThisBuild / scapegoatVersion := library.Version.scapeGoat,
+//   // do not check generated files
+//   scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
+// )
 
 lazy val mimaSettings = Seq(
   mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),

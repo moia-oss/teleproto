@@ -9,7 +9,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
 
 // Static code analysis.
 // sbt> scapegoat
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.0")
+// addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.0")
 
 // Make sbt build information available to the runtime
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.10.0")
