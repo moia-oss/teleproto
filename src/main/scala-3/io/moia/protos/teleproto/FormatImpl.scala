@@ -24,8 +24,10 @@ import scala.quoted.*
 
 /** Compiler functions shared between both, reader and writer macros */
 trait FormatImpl {
-  protected def objectRef[T: TypeTag]: Symbol =
-    typeOf[T].termSymbol
+  protected def objectRef[T: Type](using Quotes): Symbol =
+    import quotes.reflect.*
+
+    TypeRepr.of[T].termSymbol
 
   /** A `oneof` proto definition is mapped to a `sealed trait` in Scala. Each variant of the `oneof` definition is mapped to a `case class`
     * with exactly one field `value` that contains a reference to the `case class` mapping of the corresponding `message` proto definition.
@@ -85,16 +87,18 @@ trait FormatImpl {
   private[teleproto] def checkClassTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
     isProtobuf(protobufType) && isSimpleCaseClass(modelType)
 
-  private[teleproto] def checkTraitTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
-    isSealedTrait(protobufType) && isSealedTrait(modelType)
+  private[teleproto] def checkTraitTypes[P: Type, M: Type](using Quotes): Boolean =
+    isSealedTrait[P] && isSealedTrait[M]
 
   /** A sealed trait with that is a subtype of [[GeneratedOneof]]. */
-  private[teleproto] def checkHierarchyTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
-    isSealedTrait(modelType) && isSealedTrait(protobufType) && protobufType <:< typeOf[GeneratedOneof]
+  private[teleproto] def checkHierarchyTypes[P: Type, M: Type](using Quotes): Boolean =
+    import quotes.reflect.*
+
+    isSealedTrait[M] && isSealedTrait[P] && TypeRepr.of[P] <:< TypeRepr.of[GeneratedOneof]
 
   /** A ScalaPB enumeration can be mapped to a detached sealed trait with corresponding case objects and vice versa. */
-  private[teleproto] def checkEnumerationTypes[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Boolean =
-    isScalaPBEnumeration(protobufType) && isSealedTrait(modelType)
+  private[teleproto] def checkEnumerationTypes[P: Type, M: Type](using Quotes): Boolean =
+    isScalaPBEnumeration[P] && isSealedTrait[M]
 
   private[teleproto] def isProtobuf[P](tpe: Type[P])(using Quotes): Boolean =
     isSimpleCaseClass(tpe) // && tpe <:< typeOf[GeneratedMessage]
@@ -120,9 +124,6 @@ trait FormatImpl {
     tree
   }
 
-  private[teleproto] def symbolsByName(symbols: Iterable[Symbol]): Map[Name, Symbol] =
-    symbols.iterator.map(symbol => symbol.name.decodedName -> symbol).toMap
-
   /** Uses lower case names without underscores (assuming clashes are already handled by ScalaPB). */
   private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol]): Map[String, Symbol] =
     for ((name, symbol) <- symbolsByName(symbols)) yield name.toString.toLowerCase.replace("_", "") -> symbol
@@ -131,21 +132,24 @@ trait FormatImpl {
     * beginning of each symbol name.
     */
   private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol], parent: Symbol): Map[String, Symbol] = {
-    val prefix = parent.name.decodedName.toString.toLowerCase
+    val prefix = parent.name.toLowerCase
     for ((name, symbol) <- symbolsByTolerantName(symbols)) yield name.stripPrefix(prefix) -> symbol
   }
 
   private[teleproto] def showNames(symbols: Iterable[Name]): String =
     symbols.iterator.map(name => s"`$name`").mkString(", ")
 
-  private[teleproto] def isSealedTrait[T](tpe: Type[T])(using Quotes): Boolean = {
+  private[teleproto] def isSealedTrait[T: Type](using Quotes): Boolean = {
     import quotes.reflect.*
 
     TypeTree.of[T].symbol.flags.is(Flags.Trait & Flags.Sealed)
   }
 
-  private[teleproto] def isScalaPBEnumeration[P](tpe: Type[P])(using Quotes): Boolean =
-    isSealedTrait(tpe) && tpe <:< typeOf[GeneratedEnum]
+  private[teleproto] def isScalaPBEnumeration[P: Type](using Quotes): Boolean = {
+    import quotes.reflect.*
+
+    isSealedTrait[P] && TypeRepr.of[P] <:< TypeRepr.of[GeneratedEnum]
+  }
 
   private[teleproto] def classTypeOf[T](classSymbol: Symbol): Type[T] =
     classSymbol.asClass.selfType
@@ -198,7 +202,7 @@ trait FormatImpl {
     } else ""
 
   /** Extracts literal signature value of @backward("signature") or @forward("signature"). */
-  private[teleproto] def compatibilityAnnotation(tpe: Type): Option[String] =
+  private[teleproto] def compatibilityAnnotation[T](tpe: Type[T]): Option[String] =
     c.internal.enclosingOwner.annotations.find(_.tree.tpe.typeSymbol == tpe.typeSymbol).flatMap { annotation =>
       annotation.tree match {
         case Apply(_, List(Literal(Constant(signature: String)))) => Some(signature)
