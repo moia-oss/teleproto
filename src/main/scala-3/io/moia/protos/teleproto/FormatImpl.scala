@@ -24,11 +24,6 @@ import scala.quoted.*
 
 /** Compiler functions shared between both, reader and writer macros */
 trait FormatImpl {
-  protected def objectRef[T: Type](using Quotes): Symbol =
-    import quotes.reflect.*
-
-    TypeRepr.of[T].termSymbol
-
   /** A `oneof` proto definition is mapped to a `sealed trait` in Scala. Each variant of the `oneof` definition is mapped to a `case class`
     * with exactly one field `value` that contains a reference to the `case class` mapping of the corresponding `message` proto definition.
     */

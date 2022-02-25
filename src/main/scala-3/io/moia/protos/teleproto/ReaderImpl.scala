@@ -20,10 +20,6 @@ import scala.compiletime.error
 import scala.quoted.*
 
 object ReaderImpl extends FormatImpl {
-  private[this] val readerObj    = objectRef[Reader.type]
-  private[this] val pbSuccessObj = objectRef[PbSuccess.type]
-  private[this] val pbFailureObj = objectRef[PbFailure.type]
-
   def reader_impl[P, M](using quotes: Quotes, protobufType: Type[P], modelType: Type[M]): Expr[Reader[P, M]] = Expr {
     if (checkClassTypes(protobufType, modelType)) {
       val (result, compatibility) = compileClassMapping[P, M]
@@ -125,13 +121,13 @@ object ReaderImpl extends FormatImpl {
           case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && !(to <:< weakTypeOf[Option[_]]) =>
             val innerFrom = innerType(from)
             Some(assign(withImplicitReader(innerFrom, to) { reader =>
-              q"$readerObj.required[$innerFrom, $to]($protobuf.$param, $path)($reader)"
+              '{Reader.required[$innerFrom, $to]($protobuf.$param, $path)($reader)}
             }))
           case TransformParam(from, to) if from <:< weakTypeOf[Option[_]] && (to <:< weakTypeOf[Option[_]]) =>
             val innerFrom = innerType(from)
             val innerTo   = innerType(to)
             Some(assign(withImplicitReader(innerFrom, innerTo) { reader =>
-              q"$readerObj.optional[$innerFrom, $innerTo]($protobuf.$param, $path)($reader)"
+              '{Reader.optional[$innerFrom, $innerTo]($protobuf.$param, $path)($reader)}
             }))
 
           case TransformParam(from, to) if from <:< weakTypeOf[Seq[_]] && to <:< weakTypeOf[Iterable[_]] =>
@@ -140,11 +136,11 @@ object ReaderImpl extends FormatImpl {
             Some(assign(withImplicitReader(innerFrom, innerTo) { reader =>
               // sequence also needs an implicit collection generator which must be looked up since the implicit for the value reader is passed explicitly
               val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
-              q"$readerObj.sequence[${to.typeConstructor}, $innerFrom, $innerTo]($protobuf.$param, $path)($canBuildFrom, $reader)"
+              '{Reader.sequence[${to.typeConstructor}, $innerFrom, $innerTo]($protobuf.$param, $path)($canBuildFrom, $reader)}
             }))
           case TransformParam(from, to) =>
             Some(assign(withImplicitReader(from, to) { reader =>
-              q"$readerObj.transform[$from, $to]($protobuf.$param, $path)($reader)"
+              '{Reader.transform[$from, $to]($protobuf.$param, $path)($reader)}
             }))
           case ExplicitDefaultParam(expr) =>
             Some(q"val $param = $expr" -> Compatibility.full)
@@ -191,7 +187,7 @@ object ReaderImpl extends FormatImpl {
             Some(termSymbol.name)
         }
 
-      q"$pbFailureObj.combine(..$convertedValues)"
+      '{PbFailure.combine(..$convertedValues)}
     }
 
     def transformation(parameters: Iterable[MatchingParam], ownCompatibility: Compatibility): Compiled = {
@@ -210,11 +206,11 @@ object ReaderImpl extends FormatImpl {
       val (valDefs, parameterCompatibilities) = valueDefinitions(protobuf, matchedParameters).unzip
 
       // expression that constructs the successful result: `PbSuccess(ModelClass(transformedParameter..))`
-      val cons                   = q"$pbSuccessObj[$modelType](${modelCompanion.asTerm}.apply(..$passedArgumentNames))"
+      val cons                   = '{PbSuccess[M](${modelCompanion.asTerm}.apply(..$passedArgumentNames))}
       val errorsHandled          = q"${forLoop(matchedParameters, cons)}.orElse(${combineErrors(matchedParameters)})"
       val transformed            = valDefs.foldRight(errorsHandled)((t1, t2) => q"$t1; $t2")
       val parameterCompatibility = parameterCompatibilities.fold(Compatibility.full)(_ merge _)
-      val result                 = q"$readerObj.instance[$protobufType, $modelType] { case $protobuf => $transformed }"
+      val result                 = '{Reader.instance[P, M] { case $protobuf => $transformed }}
       (result, ownCompatibility.merge(parameterCompatibility))
     }
 
@@ -339,12 +335,13 @@ object ReaderImpl extends FormatImpl {
     val (cases, compatibility) = subTypes.unzip
     val emptyCase =
       for (protobufClass <- protobufSubClasses.get(EmptyOneOf) if !modelSubclasses.contains(EmptyOneOf))
-        yield cq"""_: ${objectReferenceTo(protobufClass)}.type => $pbFailureObj("Oneof field is empty!")"""
+        yield cq"""_: ${objectReferenceTo(protobufClass)}.type => PbFailure("Oneof field is empty!")"""
 
-    val result = q"""$readerObj.instance[$protobufType, $modelType] {
+    val result = '{
+    Reader.instance[P, M] {
       case ..$cases
       case ..${emptyCase.toList}
-    }"""
+    }}
 
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
@@ -391,20 +388,22 @@ object ReaderImpl extends FormatImpl {
     val cases = for {
       (optionName, modelOption) <- modelOptions.toList
       protobufOption            <- protobufOptions.get(optionName)
-    } yield cq"_: ${objectReferenceTo(protobufOption)}.type => $pbSuccessObj(${objectReferenceTo(modelOption)})"
+    } yield cq"_: ${objectReferenceTo(protobufOption)}.type => PbSuccess(${objectReferenceTo(modelOption)})"
 
     val invalidCase = for (protobufOption <- protobufOptions.get(InvalidEnum) if !modelOptions.contains(InvalidEnum)) yield {
       val reference = objectReferenceTo(protobufOption)
-      cq"""_: $reference.type => $pbFailureObj(s"Enumeration value $${$reference} is invalid!")"""
+      cq"""_: $reference.type => PbFailure(s"Enumeration value $${$reference} is invalid!")"""
     }
 
     val other = freshName(TermName("other"))
-    val result = q"""$readerObj.instance[$protobufType, $modelType] {
-      case ..$cases
-      case ..${invalidCase.toList}
-      case ${protobufCompanion.asTerm}.Unrecognized($other) =>
-        $pbFailureObj(s"Enumeration value $${$other} is unrecognized!")
-    }"""
+    val result = '{
+      Reader.instance[P, M] {
+        case ..$cases
+        case ..${invalidCase.toList}
+        case ${protobufCompanion.asTerm}.Unrecognized($other) =>
+          PbFailure(s"Enumeration value $${$other} is unrecognized!")
+      }
+    }
 
     (result, compatibility)
   }

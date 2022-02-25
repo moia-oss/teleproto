@@ -21,9 +21,6 @@ import scala.compiletime.error
 import scala.quoted.*
 
 object WriterImpl extends FormatImpl {
-  private[this] val writerObj = objectRef[Writer.type]
-  private[this] val seqTpe    = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
-
   /** Validates if business model type can be written to the Protocol Buffers type (matching case classes or matching sealed trait
     * hierarchy). If just forward compatible then raise a warning.
     */
@@ -114,11 +111,11 @@ object WriterImpl extends FormatImpl {
             (q"$model.$param", Compatibility.full)
           } else if (to <:< weakTypeOf[Option[_]] && !(from <:< weakTypeOf[Option[_]])) {
             withImplicitWriter(from, innerType(to)) { writer =>
-              q"$writerObj.present[$from, ${innerType(to)}]($model.$param)($writer)"
+              '{Writer.present[$from, ${innerType(to)}]($model.$param)($writer)}
             }
           } else if (to <:< weakTypeOf[Option[_]] && from <:< weakTypeOf[Option[_]]) {
             withImplicitWriter(innerType(from), innerType(to)) { writer =>
-              q"$writerObj.optional[${innerType(from)}, ${innerType(to)}]($model.$param)($writer)"
+              '{Writer.optional[${innerType(from)}, ${innerType(to)}]($model.$param)($writer)}
             }
           } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[scala.collection.immutable.Seq[_]]) {
             val innerFrom = innerType(from)
@@ -126,17 +123,17 @@ object WriterImpl extends FormatImpl {
             withImplicitWriter(innerFrom, innerTo) { writer =>
               // collection also needs an implicit sequence generator which must be looked up since the implicit for the value writer is passed explicitly
               val canBuildFrom = VersionSpecific.lookupFactory(c)(innerTo, to)
-              q"$writerObj.collection[$innerFrom, $innerTo, $seqTpe]($model.$param)($canBuildFrom, $writer)"
+              '{Writer.collection[$innerFrom, $innerTo, scala.collection.immutable.Seq]($model.$param)($canBuildFrom, $writer)}
             }
           } else if (from <:< weakTypeOf[IterableOnce[_]] && to <:< weakTypeOf[Seq[_]]) {
             val innerFrom = innerType(from)
             val innerTo   = innerType(to)
             withImplicitWriter(innerFrom, innerTo) { writer =>
-              q"$writerObj.sequence[$innerFrom, $innerTo]($model.$param)($writer)"
+              '{Writer.sequence[$innerFrom, $innerTo]($model.$param)($writer)}
             }
           } else {
             withImplicitWriter(from, to) { writer =>
-              q"$writerObj.transform[$from, $to]($model.$param)($writer)"
+              '{Writer.transform[$from, $to]($model.$param)($writer)}
             }
           }
 
@@ -147,7 +144,7 @@ object WriterImpl extends FormatImpl {
       val cons                 = q"${protobufCompanion.asTerm}.apply(..$args)"
       val innerCompatibilities = for ((_, (_, innerCompatibility)) <- namedArguments) yield innerCompatibility
       val compatibility        = innerCompatibilities.foldRight(ownCompatibility)(_.merge(_))
-      val result               = q"$writerObj.instance[$modelType, $protobufType] { case $model => $cons }"
+      val result               = '{Writer.instance[M, P] { case $model => $cons }}
       (result, compatibility)
     }
 
@@ -249,7 +246,7 @@ object WriterImpl extends FormatImpl {
     }
 
     val (cases, compatibility) = subTypes.unzip
-    val result                 = q"$writerObj.instance[$modelType, $protobufType] { case ..$cases }"
+    val result                 = '{Writer.instance[M, P] { case ..$cases }}
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
@@ -285,7 +282,7 @@ object WriterImpl extends FormatImpl {
       modelOption                  <- modelOptions.get(optionName)
     } yield cq"_: ${objectReferenceTo(modelOption)}.type => ${objectReferenceTo(protobufOption)}"
 
-    val result = q"$writerObj.instance[$modelType, $protobufType] { case ..$cases }"
+    val result = '{Writer.instance[M, P] { case ..$cases }}
     (result, compatibility)
   }
 
