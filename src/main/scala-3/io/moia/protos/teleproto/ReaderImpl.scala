@@ -28,15 +28,15 @@ object ReaderImpl extends FormatImpl {
     if (checkClassTypes(protobufType, modelType)) {
       val (result, compatibility) = compileClassMapping[P, M]
       warnBackwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+      result
     } else if (checkEnumerationTypes[P, M]) {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+      result
     } else if (checkHierarchyTypes[P, M]) {
       val (result, compatibility) = compileTraitMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+      result
     } else {
       error(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
@@ -100,7 +100,7 @@ object ReaderImpl extends FormatImpl {
     */
   private def compileClassMapping[P, M](protobufType: Type[P], modelType: Type[M])(using Quotes): Compiled = {
     import quotes.reflect.*
-    
+
     val modelCompanion = TypeTree.of[M].symbol.companion
     val protobufCons   = TypeTree.of[P].member(termNames.CONSTRUCTOR).asMethod
     val modelCons      = TypeTree.of[M].member(termNames.CONSTRUCTOR).asMethod

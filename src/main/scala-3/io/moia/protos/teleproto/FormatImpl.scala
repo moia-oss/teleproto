@@ -116,14 +116,6 @@ trait FormatImpl {
   private[teleproto] def hasTraceAnnotation: Boolean =
     c.internal.enclosingOwner.annotations.exists(_.tree.tpe.typeSymbol == symbolOf[trace])
 
-  /** If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given (compiled) tree as
-    * info message to the compiler shell.
-    */
-  private[teleproto] def traceCompiled(tree: Tree): Tree = {
-    if (hasTraceAnnotation) println(tree.toString)
-    tree
-  }
-
   /** Uses lower case names without underscores (assuming clashes are already handled by ScalaPB). */
   private[teleproto] def symbolsByTolerantName(symbols: Iterable[Symbol]): Map[String, Symbol] =
     for ((name, symbol) <- symbolsByName(symbols)) yield name.toString.toLowerCase.replace("_", "") -> symbol

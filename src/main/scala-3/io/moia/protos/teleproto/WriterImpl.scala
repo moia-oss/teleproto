@@ -32,15 +32,15 @@ object WriterImpl extends FormatImpl {
       ensureValidTypes(protobufType, modelType)
       val (result, compatibility) = compileClassMapping(protobufType, modelType)
       warnForwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+      result
     } else if (checkEnumerationTypes[P, M]) {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnForwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+      result
     } else if (checkHierarchyTypes[P, M]) {
       val (result, compatibility) = compileTraitMapping(protobufType, modelType)
       warnForwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+      result
     } else {
       error(
         s"Cannot create a writer from `$modelType` to `$protobufType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
@@ -268,15 +268,15 @@ object WriterImpl extends FormatImpl {
     val protobufOptions = symbolsByTolerantName(protobufClass.children.filter(_.isModuleClass), protobufClass)
     val modelOptions    = symbolsByTolerantName(modelClass.children.filter(_.isModuleClass), modelClass)
 
-    val unmatchedModelOptions = modelOptions.toList.collect { case (name, symbol) if !protobufOptions.contains(name) =>
-       symbol.name
+    val unmatchedModelOptions = modelOptions.toList.collect {
+      case (name, symbol) if !protobufOptions.contains(name) => symbol.name
     }
 
     if (unmatchedModelOptions.nonEmpty)
       error(s"The options in `${protobufClass.fullName}` do not match ${showNames(unmatchedModelOptions)} in `${modelClass.fullName}`.")
 
-    val surplusProtobufOptions = protobufOptions.toList.collect { case (name, symbol) if !modelOptions.contains(name) && name != InvalidEnum =>
-      symbol.name
+    val surplusProtobufOptions = protobufOptions.toList.collect {
+      case (name, symbol) if !modelOptions.contains(name) && name != InvalidEnum => symbol.name
     }
 
     val compatibility = Compatibility(Nil, Nil, surplusProtobufOptions.map(name => (protobufType, name.toString)))
