@@ -1,0 +1,28 @@
+name: scala-steward
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  scala-steward:
+    runs-on: ubuntu-latest
+    name: Launch Scala Steward
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: 162267
+          private_key: ${{ secrets.SCALA_STEWARD_APP_PRIVATE_KEY }}
+
+      - name: Launch Scala Steward
+        uses: scala-steward-org/scala-steward-action@v2
+        env:
+          GLOBAL_CI_JFROG_USER: ${{ secrets.GLOBAL_CI_JFROG_USER }}
+          GLOBAL_CI_JFROG_PASSWORD: ${{ secrets.GLOBAL_CI_JFROG_PASSWORD }}
+          GLOBAL_CI_JFROG_API_KEY: ${{ secrets.GLOBAL_CI_JFROG_API_KEY }}
+        with:
+          github-token: ${{ steps.generate-token.outputs.token }}
+          author-name: scala-steward
+          author-email: 162267+scala-steward-for-moia[bot]@users.noreply.github.com
