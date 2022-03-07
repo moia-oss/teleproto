@@ -16,6 +16,6 @@ jobs:
         if: ${{ github.event.workflow_run.conclusion == 'success' }}
         uses: ridedott/merge-me-action@v2
         with:
-          GITHUB_LOGIN: moia-pipeline
+          GITHUB_LOGIN: scala-steward-for-moia
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ENABLED_FOR_MANUAL_CHANGES: 'true'
