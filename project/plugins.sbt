@@ -5,7 +5,7 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.3")
 
 // Use git in sbt, show git prompt and use versions from git.
 // sbt> git <your git command>
-addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.0")
+addSbtPlugin("com.typesafe.sbt" % "sbt-git" % "1.0.2")
 
 // Static code analysis.
 // sbt> scapegoat
