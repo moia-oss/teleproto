@@ -3,8 +3,8 @@ package io.moia.protos.teleproto
 import io.moia.migration.migration.{V1, V2, V3}
 
 object ProtocolBuffersEnumMigrationTest {
-  case class MessageV2(enum: V2.Enum)
-  case class MessageV3(enum: V3.Enum)
+  case class MessageV2(`enum`: V2.Enum)
+  case class MessageV3(`enum`: V3.Enum)
 
   implicit val fromV1toV2: Migration[V1.Enum, V2.Enum]            = ProtocolBuffers.migration[V1.Enum, V2.Enum]()
   implicit val fromV2toV3: Migration[V2.Enum, V3.Enum]            = ProtocolBuffers.migration[V2.Enum, V3.Enum]()

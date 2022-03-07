@@ -46,7 +46,7 @@ case class Protobuf(
     pickupId: Option[String] = None,
     ranges: Seq[SubProtobuf] = Seq.empty,
     doubleSub: Option[SubProtobuf] = None,
-    enum: ProtobufEnum = ProtobufEnum.FirstCase
+    `enum`: ProtobufEnum = ProtobufEnum.FirstCase
 )
 
 sealed trait ModelEnum
@@ -65,7 +65,7 @@ case class Model(
     pickupId: Option[String],
     ranges: List[SubModel],
     doubleSub: SubModel,
-    enum: ModelEnum
+    `enum`: ModelEnum
 )
 
 case class ModelSmaller(id: String, price: BigDecimal)
@@ -80,7 +80,7 @@ case class ModelLarger(
     baz: Option[String],
     ranges: List[SubModel],
     doubleSub: SubModel,
-    enum: ModelEnum
+    `enum`: ModelEnum
 )
 
 object Protobuf {
