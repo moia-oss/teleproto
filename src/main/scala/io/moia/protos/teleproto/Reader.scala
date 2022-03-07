@@ -160,8 +160,7 @@ object Reader extends LowPriorityReads {
     *
     * This decoding is side-effect free but has a problem with divergent system clocks!
     *
-    * Depending on the use case either this (based on fixed point in time) or the following reader (based
-    * on the time left) makes sense.
+    * Depending on the use case either this (based on fixed point in time) or the following reader (based on the time left) makes sense.
     */
   object FixedPointDeadlineReader extends Reader[Timestamp, Deadline] {
     def read(protobuf: Timestamp): PbResult[Deadline] = {
@@ -173,11 +172,9 @@ object Reader extends LowPriorityReads {
 
   /** Transforms duration in PB as into a Scala concurrent deadline with the duration from now.
     *
-    * This decoding is not side-effect free since it depends on the clock! Time between encoding and decoding does not
-    * count.
+    * This decoding is not side-effect free since it depends on the clock! Time between encoding and decoding does not count.
     *
-    * Depending on the use case either this (based on fixed point in time) or the following reader (based
-    * on the time left) makes sense.
+    * Depending on the use case either this (based on fixed point in time) or the following reader (based on the time left) makes sense.
     */
   object TimeLeftDeadlineReader extends Reader[PBDuration, Deadline] {
     def read(protobuf: PBDuration): PbResult[Deadline] =
@@ -191,8 +188,8 @@ object Reader extends LowPriorityReads {
       Try(PbSuccess(LocalTime.parse(protobuf))).getOrElse(PbFailure("Value must be a local time in ISO format."))
   }
 
-  /** Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types
-    * and an ordering is defined on the Scala key.
+  /** Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types and an ordering is
+    * defined on the Scala key.
     */
   implicit def treeMapReader[PK, PV, MK, MV](implicit
       keyReader: Reader[PK, MK],
@@ -202,9 +199,9 @@ object Reader extends LowPriorityReads {
     mapReader(keyReader, valueReader).read(protobuf).map(entries => TreeMap[MK, MV](entries.toSeq: _*))
   }
 
-  /** A reader that gives access to the inner [[PbResult]].
-    * Use this if you want to allow failures in nested structures and therefore get back a partial result, for example
-    * to always deserialize an event to an `Envelope[PbResult[A]]` even if the actual payload of type `A` fails to parse.
+  /** A reader that gives access to the inner [[PbResult]]. Use this if you want to allow failures in nested structures and therefore get
+    * back a partial result, for example to always deserialize an event to an `Envelope[PbResult[A]]` even if the actual payload of type `A`
+    * fails to parse.
     */
   implicit def pbResultReader[PB <: GeneratedMessage, A](implicit reader: Reader[PB, A]): Reader[PB, PbResult[A]] =
     instance(pb => PbSuccess(reader.read(pb)))
@@ -212,8 +209,8 @@ object Reader extends LowPriorityReads {
 
 private[teleproto] trait LowPriorityReads extends LowestPriorityReads {
 
-  /** Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types
-    * and an ordering is defined on the Scala key.
+  /** Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types and an ordering is
+    * defined on the Scala key.
     */
   implicit def mapReader[PK, PV, MK, MV](implicit
       keyReader: Reader[PK, MK],
