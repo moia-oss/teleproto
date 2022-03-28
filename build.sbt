@@ -14,8 +14,8 @@ lazy val `teleproto` = project
   .settings(sonatypeSettings: _*)
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
-    name := "teleproto",
-    version := "2.0.1",
+    name          := "teleproto",
+    version       := "2.0.1",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
@@ -23,8 +23,8 @@ lazy val `teleproto` = project
       library.scalaTest          % Test,
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
-      "org.scala-lang.modules"   %% "scala-collection-compat" % "2.6.0",
-      "org.scala-lang"           % "scala-reflect" % (ThisBuild / scalaVersion).value
+      "org.scala-lang.modules"  %% "scala-collection-compat" % "2.7.0",
+      "org.scala-lang"           % "scala-reflect"           % (ThisBuild / scalaVersion).value
     )
   )
 
@@ -65,8 +65,8 @@ lazy val commonSettings = Seq.concat(
 )
 
 lazy val compilerSettings = Seq(
-  scalaVersion := crossScalaVersions.value.head,
-  crossScalaVersions := List("2.13.8", "2.12.15"),
+  scalaVersion                                                                     := crossScalaVersions.value.head,
+  crossScalaVersions                                                               := List("2.13.8", "2.12.15"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, 12)) => scalacOptions_2_12
@@ -110,9 +110,9 @@ lazy val gitSettings = Seq(
 )
 
 lazy val organizationSettings = Seq(
-  organization := "io.moia",
+  organization     := "io.moia",
   organizationName := "MOIA GmbH",
-  startYear := Some(2019),
+  startYear        := Some(2019),
   licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
 )
 
@@ -127,15 +127,15 @@ lazy val scmSettings = Seq(
 )
 
 lazy val sonatypeSettings = Seq(
-  publishTo := sonatypePublishTo.value,
-  sonatypeProfileName := organization.value,
-  publishMavenStyle := true,
+  publishTo              := sonatypePublishTo.value,
+  sonatypeProfileName    := organization.value,
+  publishMavenStyle      := true,
   sonatypeProjectHosting := Some(GitHubHosting("moia-dev", "teleproto", "oss-support@moia.io")),
   credentials += Credentials(Path.userHome / ".sbt" / "sonatype_credential")
 )
 
 lazy val sbtSettings = Seq(
-  Global / cancelable := true,
+  Global / cancelable                                      := true,
   sourceGenerators / logLevel.withRank(KeyRanks.Invisible) := Level.Error
 )
 
@@ -165,5 +165,5 @@ lazy val mimaSettings = Seq(
   )
 )
 
-Test / PB.targets := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value)
+Test / PB.targets      := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value)
 Test / PB.protoSources := Seq(file("src/test/protobuf"))
