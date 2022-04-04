@@ -39,9 +39,8 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
         s"Cannot create a migration from `$sourceType` to `$targetType`. Just migrations between a) case classes b) sealed traits from enums are possible."
       )
 
-  /** Checks if source and target type are compatible in a way that the macro can assume a migration would make sense:
-    * a) both are case classes (protobuf messages)
-    * b) both are sealed traits from ScalaPB enums
+  /** Checks if source and target type are compatible in a way that the macro can assume a migration would make sense: a) both are case
+    * classes (protobuf messages) b) both are sealed traits from ScalaPB enums
     */
   private def isExpected(sourceType: Type, targetType: Type): Boolean = {
     def classMigration = isProtobuf(sourceType) && isProtobuf(targetType)
@@ -61,13 +60,12 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
     else
       false
 
-  /** Returns an expression that is a migration from source to target type.
-    * Should be used for type pairs that fulfill the `isExpected` predicate.
+  /** Returns an expression that is a migration from source to target type. Should be used for type pairs that fulfill the `isExpected`
+    * predicate.
     *
-    * Check for an implicit migration from source to target type in the scope.
-    * If not exists, try to generate a mapping (possible if types fulfill the `isTrivial` predicate)
-    * Otherwise expect it anyway and let the Scala compiler complain about it.
-    * That allows to generate as much as possible from the hierarchy and just complain about the missing parts.
+    * Check for an implicit migration from source to target type in the scope. If not exists, try to generate a mapping (possible if types
+    * fulfill the `isTrivial` predicate) Otherwise expect it anyway and let the Scala compiler complain about it. That allows to generate as
+    * much as possible from the hierarchy and just complain about the missing parts.
     */
   private def implicitMigration(sourceType: Type, targetType: Type): Tree = {
     // look for an implicit migration
@@ -170,11 +168,10 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
   // models a field in Q that requires a migration function
   case class Required(name: String, typeSignature: Type, argIndex: Int, explanation: String) extends ParamMigration
 
-  /** Compares given source and target Protocol Buffers class types.
-    * Returns the migration strategies for each param.
+  /** Compares given source and target Protocol Buffers class types. Returns the migration strategies for each param.
     *
-    * If all returned parameter migrations are `Automatically` the whole migration is trivial.
-    * That might include generating nested trivial migration for nested Protocol Buffers classes.
+    * If all returned parameter migrations are `Automatically` the whole migration is trivial. That might include generating nested trivial
+    * migration for nested Protocol Buffers classes.
     */
   private def compareClassParameters(sourceType: Type, targetType: Type): List[ParamMigration] = {
     val sourceCons = sourceType.member(termNames.CONSTRUCTOR).asMethod
@@ -308,8 +305,8 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
       )
   }
 
-  /** Checks if both types are collections/options, target collection can be assigned from source collection and if
-    * the inner types are expected to be migrated.
+  /** Checks if both types are collections/options, target collection can be assigned from source collection and if the inner types are
+    * expected to be migrated.
     *
     * If so a migration for the inner types could be expected and source value can be mapped using that migration.
     *

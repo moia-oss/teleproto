@@ -54,13 +54,12 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
 
   /** Passes a tree to `f` that is of type `Reader[$protobufType, $modelType]`.
     *
-    * If such a type is not implicitly available checks if a reader can be generated, then generates and returns it.
-    * If not "asks" for it implicitly and let the compiler explain the problem if it does not exist.
+    * If such a type is not implicitly available checks if a reader can be generated, then generates and returns it. If not "asks" for it
+    * implicitly and let the compiler explain the problem if it does not exist.
     *
     * If the reader is generated, that might cause a compatibility issue.
     *
-    * The result is `f` applied to the reader expression with the (possible) compatibility issues of reader generation
-    * (if happened).
+    * The result is `f` applied to the reader expression with the (possible) compatibility issues of reader generation (if happened).
     */
   private def withImplicitReader(protobufType: Type, modelType: Type)(compileInner: Tree => Tree): Compiled = {
     // look for an implicit reader
@@ -91,17 +90,18 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
 
   /** Iterate through the parameters and compile values for them:
     *
-    * - If name is missing in model, ignore (backward compatible)
-    * - If name is missing in protobuf and has default value in model, do not pass to the constructor to set to the default value (backward compatible)
-    * - If name is missing in protobuf and optional in model, set to `None` (backward compatible)
-    * - If name is missing in protobuf and collection in model, set to empty collection (backward compatible)
-    * - If name is missing in protobuf otherwise, fail (not compatible)
-    * - If name with type in protobuf PV matches name with type in model MV
-    *   - If PV and MV are compatible,                 compile `val name = PbSuccess(protobuf.name)`
-    *   - If PV is Option[PV'] and model Option[MV'],  compile `val name = optional[PV', MV'](protobuf.name, "/name")`
-    *   - If PV is Option[PV'] and model MV',          compile `val name = required[PV', MV'](protobuf.name, "/name")`
-    *   - If PV is Seq[PV'] and model Collection[MV'], compile `val name = sequence[Collection, PV', MV'](protobuf.name, "/name")`
-    *   - Otherwise                                    compile `val name = transform[PV, MV](protobuf.name, "/name")` <- requires implicit reader for exact case
+    *   - If name is missing in model, ignore (backward compatible)
+    *   - If name is missing in protobuf and has default value in model, do not pass to the constructor to set to the default value
+    *     (backward compatible)
+    *   - If name is missing in protobuf and optional in model, set to `None` (backward compatible)
+    *   - If name is missing in protobuf and collection in model, set to empty collection (backward compatible)
+    *   - If name is missing in protobuf otherwise, fail (not compatible)
+    *   - If name with type in protobuf PV matches name with type in model MV
+    *     - If PV and MV are compatible, compile `val name = PbSuccess(protobuf.name)`
+    *     - If PV is Option[PV'] and model Option[MV'], compile `val name = optional[PV', MV'](protobuf.name, "/name")`
+    *     - If PV is Option[PV'] and model MV', compile `val name = required[PV', MV'](protobuf.name, "/name")`
+    *     - If PV is Seq[PV'] and model Collection[MV'], compile `val name = sequence[Collection, PV', MV'](protobuf.name, "/name")`
+    *     - Otherwise compile `val name = transform[PV, MV](protobuf.name, "/name")` <- requires implicit reader for exact case
     *
     * Loop (de-sugared using flatMap) over all values and combine the result using the detached model constructor.
     *
@@ -313,15 +313,11 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     }
   }
 
-  /** Iterate through the sub-types of the model and check for a corresponding method in the protobuf type.
-    * If there are more types on the model side, the mapping is backward compatible.
-    * If there are more types on the protobuf side (), the mapping is not possible.
+  /** Iterate through the sub-types of the model and check for a corresponding method in the protobuf type. If there are more types on the
+    * model side, the mapping is backward compatible. If there are more types on the protobuf side (), the mapping is not possible.
     *
-    * (p: protobuf.FooOrBar) =>
-    * None
-    * .orElse(p.value.foo.map(foo => transform[protobuf.Foo, model.Foo](foo, "/foo")))
-    * .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar")))
-    * .getOrElse(PbFailure("Value is required."))
+    * (p: protobuf.FooOrBar) => None .orElse(p.value.foo.map(foo => transform[protobuf.Foo, model.Foo](foo, "/foo")))
+    * .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar"))) .getOrElse(PbFailure("Value is required."))
     */
   private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass      = protobufType.typeSymbol.asClass
@@ -366,20 +362,16 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
-  /** The protobuf and model type have to be sealed traits.
-    * Iterate through the known subclasses of the ScalaPB side and match the model side.
+  /** The protobuf and model type have to be sealed traits. Iterate through the known subclasses of the ScalaPB side and match the model
+    * side.
     *
-    * If there are more options on the model side, the mapping is backward compatible.
-    * If there are more options on the protobuf side, the mapping is not possible.
+    * If there are more options on the model side, the mapping is backward compatible. If there are more options on the protobuf side, the
+    * mapping is not possible.
     *
     * Unrecognized enum values cause a runtime failure.
     *
-    * (protobuf: ProtoEnum) => p match {
-    *   case ProtoEnum.OPTION_1  => PbSuccess(ModelEnum.OPTION_1)
-    *   ...
-    *   case ProtoEnum.OPTION_N  => PbSuccess(ModelEnum.OPTION_N)
-    *   case Unrecognized(other) => PbFailure(s"Enumeration value $other is unrecognized!")
-    * }
+    * (protobuf: ProtoEnum) => p match { case ProtoEnum.OPTION_1 => PbSuccess(ModelEnum.OPTION_1) ... case ProtoEnum.OPTION_N =>
+    * PbSuccess(ModelEnum.OPTION_N) case Unrecognized(other) => PbFailure(s"Enumeration value $other is unrecognized!") }
     */
   private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass     = protobufType.typeSymbol.asClass
@@ -411,7 +403,7 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       cq"""_: $reference.type => $pbFailureObj(s"Enumeration value $${$reference} is invalid!")"""
     }
 
-    val other  = c.freshName(TermName("other"))
+    val other = c.freshName(TermName("other"))
     val result = q"""$readerObj.instance[$protobufType, $modelType] {
       case ..$cases
       case ..${invalidCase.toList}
