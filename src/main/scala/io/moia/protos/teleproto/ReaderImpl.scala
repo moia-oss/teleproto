@@ -316,8 +316,13 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
   /** Iterate through the sub-types of the model and check for a corresponding method in the protobuf type. If there are more types on the
     * model side, the mapping is backward compatible. If there are more types on the protobuf side (), the mapping is not possible.
     *
-    * (p: protobuf.FooOrBar) => None .orElse(p.value.foo.map(foo => transform[protobuf.Foo, model.Foo](foo, "/foo")))
-    * .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar"))) .getOrElse(PbFailure("Value is required."))
+    * {{{
+    * (p: protobuf.FooOrBar) =>
+    * None
+    * .orElse(p.value.foo.map(foo => transform[protobuf.Foo, model.Foo](foo, "/foo")))
+    * .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar")))
+    * .getOrElse(PbFailure("Value is required."))
+    * }}}
     */
   private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass      = protobufType.typeSymbol.asClass
@@ -370,8 +375,14 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     *
     * Unrecognized enum values cause a runtime failure.
     *
-    * (protobuf: ProtoEnum) => p match { case ProtoEnum.OPTION_1 => PbSuccess(ModelEnum.OPTION_1) ... case ProtoEnum.OPTION_N =>
-    * PbSuccess(ModelEnum.OPTION_N) case Unrecognized(other) => PbFailure(s"Enumeration value $other is unrecognized!") }
+    * {{{
+    * (protobuf: ProtoEnum) => p match {
+    *   case ProtoEnum.OPTION_1 => PbSuccess(ModelEnum.OPTION_1)
+    *   ...
+    *   case ProtoEnum.OPTION_N => PbSuccess(ModelEnum.OPTION_N)
+    *   case Unrecognized(other) => PbFailure(s"Enumeration value $other is unrecognized!")
+    * }
+    * }}}
     */
   private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass     = protobufType.typeSymbol.asClass

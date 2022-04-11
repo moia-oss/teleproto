@@ -85,9 +85,11 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
 }
 
 /** Models the failure to read a Protocol Buffers case class into business model type `T`. Provides error messages for one or more paths,
-  * e.g. The path messages could be /price Value must be a decimal number. <- Simple field at top-level /tripRequest/time Value is required.
-  * <- Nested field /prices(1) Value must be a decimal number. <- Simple array /tripRequests(1)/time Value is required. <- Nested field in
-  * second array entry
+  * e.g. the path messages could be:
+  *   - /price Value must be a decimal number. <- Simple field at top-level
+  *   - /tripRequest/time Value is required. <- Nested field
+  *   - /prices(1) Value must be a decimal number. <- Simple array
+  *   - /tripRequests(1)/time Value is required. <- Nested field in second array entry
   */
 @SuppressWarnings(Array("PointlessTypeBounds", "asInstanceOf"))
 final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothing] {

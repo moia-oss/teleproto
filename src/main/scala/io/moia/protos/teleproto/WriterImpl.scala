@@ -227,9 +227,13 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     * more types on the protobuf side, the mapping is forward compatible. If there are more types on the model side, the mapping is not
     * possible.
     *
-    * (p: model.FooOrBar) => if (p.isInstanceOf[model.Foo]) protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(transform[model.Foo,
-    * protobuf.Foo](value.asInstanceOf[model.Foo]))) else protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(transform[model.Bar,
-    * protobuf.Bar](value.asInstanceOf[model.Bar])))
+    * {{{
+    * (p: model.FooOrBar) =>
+    *   if (p.isInstanceOf[model.Foo])
+    *     protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(transform[model.Foo, protobuf.Foo](value.asInstanceOf[model.Foo])))
+    *   else
+    *     protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(transform[model.Bar, protobuf.Bar](value.asInstanceOf[model.Bar])))
+    * }}}
     */
   private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass      = protobufType.typeSymbol.asClass
@@ -269,7 +273,13 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     * If there are more options on the protobuf side, the mapping is forward compatible. If there are more options on the model side, the
     * mapping is not possible.
     *
-    * (model: ModelEnum) => p match { case ModelEnum.OPTION_1 => ProtoEnum.OPTION_1 ... case ModelEnum.OPTION_N => ProtoEnum.OPTION_N }
+    * {{{
+    * (model: ModelEnum) => p match {
+    *   case ModelEnum.OPTION_1 => ProtoEnum.OPTION_1
+    *   ...
+    *   case ModelEnum.OPTION_N => ProtoEnum.OPTION_N
+    * }
+    * }}}
     */
   private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass   = protobufType.typeSymbol.asClass

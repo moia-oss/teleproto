@@ -39,8 +39,9 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
         s"Cannot create a migration from `$sourceType` to `$targetType`. Just migrations between a) case classes b) sealed traits from enums are possible."
       )
 
-  /** Checks if source and target type are compatible in a way that the macro can assume a migration would make sense: a) both are case
-    * classes (protobuf messages) b) both are sealed traits from ScalaPB enums
+  /** Checks if source and target type are compatible in a way that the macro can assume a migration would make sense:
+    *   - both are case classes (protobuf messages)
+    *   - both are sealed traits from ScalaPB enums
     */
   private def isExpected(sourceType: Type, targetType: Type): Boolean = {
     def classMigration = isProtobuf(sourceType) && isProtobuf(targetType)
