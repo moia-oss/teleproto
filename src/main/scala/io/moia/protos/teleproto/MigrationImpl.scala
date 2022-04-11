@@ -64,8 +64,8 @@ class MigrationImpl(val c: blackbox.Context) extends FormatImpl {
   /** Returns an expression that is a migration from source to target type. Should be used for type pairs that fulfill the `isExpected`
     * predicate.
     *
-    * Check for an implicit migration from source to target type in the scope. If not exists, try to generate a mapping (possible if types
-    * fulfill the `isTrivial` predicate) Otherwise expect it anyway and let the Scala compiler complain about it. That allows to generate as
+    * Check for an implicit migration from source to target type in the scope. If it not exists, try to generate a mapping (possible if types
+    * fulfill the `isTrivial` predicate). Otherwise expect it anyway and let the Scala compiler complain about it. That allows to generate as
     * much as possible from the hierarchy and just complain about the missing parts.
     */
   private def implicitMigration(sourceType: Type, targetType: Type): Tree = {
