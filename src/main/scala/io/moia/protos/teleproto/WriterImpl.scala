@@ -26,9 +26,8 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   private[this] val writerObj = objectRef[Writer.type]
   private[this] val seqTpe    = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
 
-  /** Validates if business model type can be written to the Protocol Buffers type
-    * (matching case classes or matching sealed trait hierarchy).
-    * If just forward compatible then raise a warning.
+  /** Validates if business model type can be written to the Protocol Buffers type (matching case classes or matching sealed trait
+    * hierarchy). If just forward compatible then raise a warning.
     */
   def writer_impl[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] =
     c.Expr(compile[M, P])
@@ -59,13 +58,12 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
 
   /** Passes a tree to `f` that is of type `Writer[$modelType, $protobufType]`.
     *
-    * If such a type is not implicitly available checks if a writer can be generated, then generates and returns it.
-    * If not "asks" for it implicitly and let the compiler explain the problem if it does not exist.
+    * If such a type is not implicitly available checks if a writer can be generated, then generates and returns it. If not "asks" for it
+    * implicitly and let the compiler explain the problem if it does not exist.
     *
     * If the writer is generated, that might cause a compatibility issue.
     *
-    * The result is `f` applied to the writer expression with the (possible) compatibility issues of writer generation
-    * (if happened).
+    * The result is `f` applied to the writer expression with the (possible) compatibility issues of writer generation (if happened).
     */
   private def withImplicitWriter(modelType: Type, protobufType: Type)(compileInner: Tree => Tree): Compiled = {
     // look for an implicit writer
@@ -97,12 +95,11 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
 
   /** Simple compilation schema for forward compatible writers:
     *
-    * Iterate through the parameters of the business model case class and compile arguments for the Protocol Buffers
-    * case class:
-    * - If name is missing in protobuf, ignore (forward compatible)
-    * - If name is missing in model but has a default value, do not pass as argument to get default value (forward compatible)
-    * - If name is missing in model but is optional, pass `None` (forward compatible)
-    * - Otherwise convert using `transform`, `optional` or `present`.
+    * Iterate through the parameters of the business model case class and compile arguments for the Protocol Buffers case class:
+    *   - If name is missing in protobuf, ignore (forward compatible)
+    *   - If name is missing in model but has a default value, do not pass as argument to get default value (forward compatible)
+    *   - If name is missing in model but is optional, pass `None` (forward compatible)
+    *   - Otherwise convert using `transform`, `optional` or `present`.
     */
   private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
     // at this point all errors are assumed to be due to evolution
@@ -226,15 +223,13 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     }
   }
 
-  /** Iterate through the sub-types of the model and check for a corresponding method in the inner value of the protobuf type.
-    * If there are more types on the protobuf side, the mapping is forward compatible.
-    * If there are more types on the model side, the mapping is not possible.
+  /** Iterate through the sub-types of the model and check for a corresponding method in the inner value of the protobuf type. If there are
+    * more types on the protobuf side, the mapping is forward compatible. If there are more types on the model side, the mapping is not
+    * possible.
     *
-    * (p: model.FooOrBar) =>
-    *   if (p.isInstanceOf[model.Foo])
-    *     protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(transform[model.Foo, protobuf.Foo](value.asInstanceOf[model.Foo])))
-    *   else
-    *     protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(transform[model.Bar, protobuf.Bar](value.asInstanceOf[model.Bar])))
+    * (p: model.FooOrBar) => if (p.isInstanceOf[model.Foo]) protobuf.FooOrBar(protobuf.FooOrBar.Value.Foo(transform[model.Foo,
+    * protobuf.Foo](value.asInstanceOf[model.Foo]))) else protobuf.FooOrBar(protobuf.FooOrBar.Value.Bar(transform[model.Bar,
+    * protobuf.Bar](value.asInstanceOf[model.Bar])))
     */
   private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass      = protobufType.typeSymbol.asClass
@@ -269,17 +264,12 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
-  /** The protobuf and model types have to be sealed traits.
-    * Iterate through the known subclasses of the model and match the ScalaPB side.
+  /** The protobuf and model types have to be sealed traits. Iterate through the known subclasses of the model and match the ScalaPB side.
     *
-    * If there are more options on the protobuf side, the mapping is forward compatible.
-    * If there are more options on the model side, the mapping is not possible.
+    * If there are more options on the protobuf side, the mapping is forward compatible. If there are more options on the model side, the
+    * mapping is not possible.
     *
-    * (model: ModelEnum) => p match {
-    *   case ModelEnum.OPTION_1 => ProtoEnum.OPTION_1
-    *   ...
-    *   case ModelEnum.OPTION_N => ProtoEnum.OPTION_N
-    * }
+    * (model: ModelEnum) => p match { case ModelEnum.OPTION_1 => ProtoEnum.OPTION_1 ... case ModelEnum.OPTION_N => ProtoEnum.OPTION_N }
     */
   private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
     val protobufClass   = protobufType.typeSymbol.asClass

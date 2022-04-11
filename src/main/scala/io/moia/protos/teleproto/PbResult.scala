@@ -84,13 +84,10 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
   def toOption: Option[T] = Some(get)
 }
 
-/** Models the failure to read a Protocol Buffers case class into business model type `T`.
-  * Provides error messages for one or more paths, e.g.
-  * The path messages could be
-  * /price Value must be a decimal number.      <- Simple field at top-level
-  * /tripRequest/time Value is required.        <- Nested field
-  * /prices(1) Value must be a decimal number.  <- Simple array
-  * /tripRequests(1)/time Value is required.    <- Nested field in second array entry
+/** Models the failure to read a Protocol Buffers case class into business model type `T`. Provides error messages for one or more paths,
+  * e.g. The path messages could be /price Value must be a decimal number. <- Simple field at top-level /tripRequest/time Value is required.
+  * <- Nested field /prices(1) Value must be a decimal number. <- Simple array /tripRequests(1)/time Value is required. <- Nested field in
+  * second array entry
   */
 @SuppressWarnings(Array("PointlessTypeBounds", "asInstanceOf"))
 final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothing] {
@@ -130,9 +127,9 @@ object PbFailure {
   def fromThrowable(error: Throwable): PbFailure =
     apply(error.getMessage)
 
-  /** Collects and combines all the errors of all failures in the given results.
-    * Please note: This method ignores all successes and collects just error messages from failures. It's intended
-    * to create an overall failure when one of the results is a failure. It doesn't make sense if all are successes.
+  /** Collects and combines all the errors of all failures in the given results. Please note: This method ignores all successes and collects
+    * just error messages from failures. It's intended to create an overall failure when one of the results is a failure. It doesn't make
+    * sense if all are successes.
     */
   def combine(results: PbResult[_]*): PbFailure =
     PbFailure(results.flatMap {
