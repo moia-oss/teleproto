@@ -37,7 +37,7 @@ lazy val library = new {
     val scalaPB            = scalapb.compiler.Version.scalapbVersion
     val scalaPBJson        = "0.12.0"
     val scalaCheck         = "1.16.0"
-    val scalaTest          = "3.2.11"
+    val scalaTest          = "3.2.12"
     val scalaTestPlusCheck = "3.2.2.0"
     val scapeGoat          = "1.4.12"
   }
