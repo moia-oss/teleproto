@@ -40,6 +40,8 @@ sealed trait PbResult[+T] {
   def toTry: Try[T]
 
   def toOption: Option[T]
+
+  def toEither: Either[Seq[(String, String)], T]
 }
 
 object PbResult {
@@ -82,6 +84,8 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
   def toTry: Try[T] = Success(get)
 
   def toOption: Option[T] = Some(get)
+
+  override def toEither: Right[Seq[(String, String)], T] = Right(value)
 }
 
 /** Models the failure to read a Protocol Buffers case class into business model type `T`. Provides error messages for one or more paths,
@@ -116,6 +120,8 @@ final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothi
   def toTry: Try[Nothing] = Failure(new Exception(toString))
 
   def toOption: Option[Nothing] = None
+
+  override def toEither: Left[Seq[(String, String)], Nothing] = Left(errors)
 }
 
 object PbFailure {
