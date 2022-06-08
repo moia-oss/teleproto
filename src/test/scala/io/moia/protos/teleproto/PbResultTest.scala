@@ -49,6 +49,10 @@ class PbResultTest extends UnitTest {
     "be converted to Success with toTry" in {
       PbSuccess("success").toTry shouldBe Success("success")
     }
+
+    "be converted to Right with toEither" in {
+      PbSuccess("success").toEither shouldBe Right("success")
+    }
   }
 
   "PbFailure" should {
@@ -63,6 +67,10 @@ class PbResultTest extends UnitTest {
 
     "be converted to Failure with toTry" in {
       PbFailure("error").toTry.failure.exception.getMessage shouldBe "error"
+    }
+
+    "be converted to Left with toEither" in {
+      PbFailure("/path", "error").toEither shouldBe Left(List(("/path", "error")))
     }
   }
 }
