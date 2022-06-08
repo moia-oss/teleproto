@@ -15,7 +15,7 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name          := "teleproto",
-    version       := "2.0.1",
+    version       := "2.1.0",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
@@ -152,16 +152,8 @@ lazy val scapegoatSettings = Seq(
 lazy val mimaSettings = Seq(
   mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),
   mimaBinaryIssueFilters ++= Seq(
-    // No binary compatibility guarantees for macro implementations (they run at compile time).
-    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.FormatImpl*"),
-    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.MigrationImpl*"),
-    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.ReaderImpl*"),
-    ProblemFilters.exclude[Problem]("io.moia.protos.teleproto.WriterImpl*"),
-    // PbResult is a sealed trait so linking from Scala should be fine.
-    // Also, this method was added before introducing MiMa.
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toOption"),
-    // Writer.Mapped was an unused private class.
-    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Writer$Mapped")
+    // Method was added in 2.1.0
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toEither")
   )
 )
 

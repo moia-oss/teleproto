@@ -40,6 +40,8 @@ sealed trait PbResult[+T] {
   def toTry: Try[T]
 
   def toOption: Option[T]
+
+  def toEither: Either[Seq[(String, String)], T]
 }
 
 object PbResult {
@@ -67,21 +69,23 @@ final case class PbSuccess[T](value: T) extends PbResult[T] {
   val isSuccess = true
   val isError   = false
 
-  def get: T = value
+  override def get: T = value
 
-  def getOrElse[U >: T](t: => U): U = value
+  override def getOrElse[U >: T](t: => U): U = value
 
-  def map[B](f: T => B): PbResult[B] = PbSuccess(f(value))
+  override def map[B](f: T => B): PbResult[B] = PbSuccess(f(value))
 
-  def flatMap[B](f: T => PbResult[B]): PbResult[B] = f(value)
+  override def flatMap[B](f: T => PbResult[B]): PbResult[B] = f(value)
 
-  def orElse[U >: T](that: => PbResult[U]): PbResult[U] = this
+  override def orElse[U >: T](that: => PbResult[U]): PbResult[U] = this
 
   override def withPathPrefix(prefix: String): PbSuccess[T] = this
 
-  def toTry: Try[T] = Success(get)
+  override def toTry: Try[T] = Success(get)
 
-  def toOption: Option[T] = Some(get)
+  override def toOption: Option[T] = Some(get)
+
+  override def toEither: Right[Seq[(String, String)], T] = Right(value)
 }
 
 /** Models the failure to read a Protocol Buffers case class into business model type `T`. Provides error messages for one or more paths,
@@ -97,15 +101,15 @@ final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothi
   val isSuccess = false
   val isError   = true
 
-  def get: Nothing = throw new NoSuchElementException(toString)
+  override def get: Nothing = throw new NoSuchElementException(toString)
 
-  def getOrElse[U >: Nothing](t: => U): U = t
+  override def getOrElse[U >: Nothing](t: => U): U = t
 
-  def map[B](f: Nothing => B): PbResult[B] = this.asInstanceOf[PbResult[B]]
+  override def map[B](f: Nothing => B): PbResult[B] = this.asInstanceOf[PbResult[B]]
 
-  def flatMap[B](f: Nothing => PbResult[B]): PbResult[B] = this.asInstanceOf[PbResult[B]]
+  override def flatMap[B](f: Nothing => PbResult[B]): PbResult[B] = this.asInstanceOf[PbResult[B]]
 
-  def orElse[U](that: => PbResult[U]): PbResult[U] = that
+  override def orElse[U](that: => PbResult[U]): PbResult[U] = that
 
   override def withPathPrefix(prefix: String): PbFailure =
     PbFailure(for ((path, message) <- errors) yield (prefix + path, message))
@@ -113,9 +117,11 @@ final case class PbFailure(errors: Seq[(String, String)]) extends PbResult[Nothi
   override def toString: String =
     errors.map(e => s"${e._1} ${e._2}".trim).mkString(" ")
 
-  def toTry: Try[Nothing] = Failure(new Exception(toString))
+  override def toTry: Try[Nothing] = Failure(new Exception(toString))
 
-  def toOption: Option[Nothing] = None
+  override def toOption: Option[Nothing] = None
+
+  override def toEither: Left[Seq[(String, String)], Nothing] = Left(errors)
 }
 
 object PbFailure {
