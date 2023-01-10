@@ -23,7 +23,7 @@ lazy val `teleproto` = project
       library.scalaTest          % Test,
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
-      "org.scala-lang.modules"  %% "scala-collection-compat" % "2.8.1",
+      "org.scala-lang.modules"  %% "scala-collection-compat" % "2.9.0",
       "org.scala-lang"           % "scala-reflect"           % (ThisBuild / scalaVersion).value
     )
   )
@@ -37,7 +37,7 @@ lazy val library = new {
     val scalaPB            = scalapb.compiler.Version.scalapbVersion
     val scalaPBJson        = "0.12.0"
     val scalaCheck         = "1.17.0"
-    val scalaTest          = "3.2.13"
+    val scalaTest          = "3.2.15"
     val scalaTestPlusCheck = "3.2.2.0"
     val scapeGoat          = "1.4.15"
   }
