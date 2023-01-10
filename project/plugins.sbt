@@ -1,7 +1,7 @@
 // Formatting in scala
 // See .scalafmt.conf for configuration details.
 // Formatting takes place before the project is compiled.
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.6")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.0")
 
 // Use git in sbt, show git prompt and use versions from git.
 // sbt> git <your git command>
@@ -21,7 +21,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-license-report" % "1.2.0")
 // Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.6")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.11"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.12"
 
 addSbtPlugin("de.heikoseeberger" % "sbt-header"      % "5.9.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"    % "3.9.15")
