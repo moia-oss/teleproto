@@ -15,16 +15,16 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name          := "teleproto",
-    version       := "2.2.1",
+    version       := "2.3.0",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
-      library.scalaPBJson        % Compile,
+      library.scalaPBJson        % "compile;optional",
       library.scalaTest          % Test,
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
-      "org.scala-lang.modules"  %% "scala-collection-compat" % "2.9.0",
-      "org.scala-lang"           % "scala-reflect"           % (ThisBuild / scalaVersion).value
+      library.scalaCollectionCompat,
+      "org.scala-lang" % "scala-reflect" % (ThisBuild / scalaVersion).value
     )
   )
 
@@ -34,19 +34,21 @@ lazy val `teleproto` = project
 
 lazy val library = new {
   object Version {
-    val scalaPB            = scalapb.compiler.Version.scalapbVersion
-    val scalaPBJson        = "0.12.1"
-    val scalaCheck         = "1.17.0"
-    val scalaTest          = "3.2.15"
-    val scalaTestPlusCheck = "3.2.2.0"
-    val scapeGoat          = "2.1.1"
+    val scalaPB               = scalapb.compiler.Version.scalapbVersion
+    val scalaPBJson           = "0.12.1"
+    val scalaCheck            = "1.17.0"
+    val scalaTest             = "3.2.15"
+    val scalaTestPlusCheck    = "3.2.2.0"
+    val scapeGoat             = "2.1.1"
+    val scalaCollectionCompat = "2.9.0"
   }
 
-  val scalaPB            = "com.thesamet.scalapb" %% "scalapb-runtime" % Version.scalaPB
-  val scalaPBJson        = "com.thesamet.scalapb" %% "scalapb-json4s"  % Version.scalaPBJson
-  val scalaCheck         = "org.scalacheck"       %% "scalacheck"      % Version.scalaCheck
-  val scalaTest          = "org.scalatest"        %% "scalatest"       % Version.scalaTest
-  val scalaTestPlusCheck = "org.scalatestplus"    %% "scalacheck-1-14" % Version.scalaTestPlusCheck
+  val scalaPB               = "com.thesamet.scalapb"   %% "scalapb-runtime"         % Version.scalaPB
+  val scalaPBJson           = "com.thesamet.scalapb"   %% "scalapb-json4s"          % Version.scalaPBJson
+  val scalaCheck            = "org.scalacheck"         %% "scalacheck"              % Version.scalaCheck
+  val scalaTest             = "org.scalatest"          %% "scalatest"               % Version.scalaTest
+  val scalaTestPlusCheck    = "org.scalatestplus"      %% "scalacheck-1-14"         % Version.scalaTestPlusCheck
+  val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % Version.scalaCollectionCompat
 }
 
 // *****************************************************************************
