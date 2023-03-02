@@ -2,28 +2,46 @@
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.moia/teleproto_2.13.svg)](https://search.maven.org/search?q=teleproto_2.13)
 
-The tele**proto** library reduces the boilerplate required to map case classes generated from [Protofiles](https://developers.google.com/protocol-buffers/docs/proto3)
+The tele**proto** library reduces the boilerplate required to map case classes generated
+from [Protofiles](https://developers.google.com/protocol-buffers/docs/proto3)
 using [ScalaPB](https://github.com/scalapb/ScalaPB) to corresponding version-independent business model case classes.
 
 The library is intended for the use case outlined below:
-* An application/service works on an evolving *business model* with some semantics. 
+
+* An application/service works on an evolving *business model* with some semantics.
 * *Protofiles* model the transfer of that business model in the current and previous version.
-* *ScalaPB* is used to generate case classes for the protocol buffers model. 
+* *ScalaPB* is used to generate case classes for the protocol buffers model.
 
 ![Image showing relationships between Messages and Classes](documentation/messages-classes.svg)
 
-Depending on the specific use case it is necessary to define readers and/or writers to convert between the business model
+Depending on the specific use case it is necessary to define readers and/or writers to convert between the business
+model
 and the current or a previous protocol buffers model.
 Reading/writing for the current protocol buffers model should be straightforward.
 Reading/writing a previous model should reflect similar semantics regarding the current business model.
 
+To use the library, add the following to your `build.sbt`:
+
+```sbt
+libraryDependencies += "io.moia" %% "teleproto" % "2.3.0"
+```
+
+If you also want to be able to write to (`VersionedModelWriter.toJson`) and read from (`VersionedModelReader.fromJson`)
+JSON, you have to add the following dependency to your project as well:
+
+```sbt
+libraryDependencies += "com.thesamet.scalapb" %% "scalapb-json4s" % "0.12.1"
+```
+
 **For now** the library supports mapping of matching models and therefore for the parts of models that have not changed
-in an evolution. That reduces the code required to support previous versions (and a lot of code to support the current version, too...). 
+in an evolution. That reduces the code required to support previous versions (and a lot of code to support the current
+version, too...).
 
 ## Mapping DSL
 
 The library defines abstractions for both directions: `Reader[PROTO, MODEL]` and `Writer[MODEL, PROTO]`.
-Readers/writers are converters between the business model and Protocol Buffers model from the business model user's perspective.
+Readers/writers are converters between the business model and Protocol Buffers model from the business model user's
+perspective.
 
 It is assumed that a writer can never fail and if it fails it fails with a **5xx Internal Server Error**.
 But a client cannot be trusted and therefore a `Reader[PROTO, MODEL]` produces either a `PbSuccess(model: MODEL)` or a
@@ -174,6 +192,7 @@ object Result {
 ```
 
 **Please note:**
+
 * The generated code is much larger and the code above is reduced to the important part of the structure.
 * There is no relationship between `Result.Error` and `Result.Success` in PB since they are just plain messages.
   The only connection is defined by the `oneof` which results in the classes of the `trait Calculation`.
@@ -181,12 +200,15 @@ object Result {
 
 The reader/writer macros can map the generated objects/traits/case classes to the business model trait (and its case
 classes). The reader will reject `Empty` with a `PbFailure` and read the content of the other two constructors.  
-Similar to the mapping of case classes the reader/writer requires implicit readers/writers for the inner types (`Error` and `Success`).
+Similar to the mapping of case classes the reader/writer requires implicit readers/writers for the inner types (`Error`
+and `Success`).
 One can either define them or let the macro generate them, too.
 
-**Please note:** This will not work for recursive trait types. case objects would be empty messages and are also not supported.
+**Please note:** This will not work for recursive trait types. case objects would be empty messages and are also not
+supported.
 
 Example usage:
+
 ```
 sealed trait Calculation
 case class Error(message: String) extends Calculation
@@ -205,9 +227,10 @@ implicit val calculationWriter: Writer[Calculation, v1.Calculation] = ProtocolBu
 ## Special Mappings
 
 The `Reader`/`Writer` companions already define some conversions:
-* `BigDecimal` in business model, `String` in PB 
+
+* `BigDecimal` in business model, `String` in PB
 * `Instant` in business model, `Timestamp` in PB
-* ... *(look into the source code)* 
+* ... *(look into the source code)*
 
 If a mapping generation is not possible one has to define reader/writer programmatically.
 Usually, a mapping cannot be generated for generic types in the business model due to the *impedance
@@ -237,9 +260,10 @@ case class SomeModel(                    case class SomeModel(
 }
 ```
 
-* `taxRate` is surplus in the input, ignored in the mapping and declares the mapping to be *backward compatible*. 
-* `lastUpdate` is missing in the input but is optional, will be set to `None` and declares the mapping to be *backward compatible*. 
-* `comment` is missing in the input but has a default value and declares the mapping to be *backward compatible*. 
+* `taxRate` is surplus in the input, ignored in the mapping and declares the mapping to be *backward compatible*.
+* `lastUpdate` is missing in the input but is optional, will be set to `None` and declares the mapping to be *backward
+  compatible*.
+* `comment` is missing in the input but has a default value and declares the mapping to be *backward compatible*.
 * `correlationId` is missing in the input, is not optional, has no default value and causes the whole reader to be
   considered *incompatible*.
 
@@ -254,7 +278,7 @@ cause a writer to be incompatible.
 
 Generating a backward/forward compatible reader/writer using the macro will raise a **warning**.
 Annotations `@backward("signature")` and `@forward("signature")` (signatures are explained in the warning) will remove
-the warning. 
+the warning.
 
 The support of migrations is currently limited to implicit readers/writers of old Protocol Buffers types to the new
 business model wherever possible.
@@ -263,7 +287,8 @@ the model that actually changed.
 
 ## License
 
-This code is open source software licensed under the [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html).
+This code is open source software licensed under
+the [Apache 2.0 License](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 ## Publishing (for maintainers)
 
@@ -274,7 +299,8 @@ To publish a release to Maven Central follow these steps:
    ```
    sbt +publishSigned
    ```  
-   Note that your Sonatype credentials need to be configured on your machine and you need to have access writes to publish artifacts to the group id `io.moia`.
+   Note that your Sonatype credentials need to be configured on your machine and you need to have access writes to
+   publish artifacts to the group id `io.moia`.
 3. Release artifact to Maven Central with:
    ```
    sbt +sonatypeRelease
