@@ -16,7 +16,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
 
 // This plugin is able to generate a license report from all used licenses.
 // sbt> dumpLicenseReport
-addSbtPlugin("com.github.sbt" % "sbt-license-report" % "1.3.0")
+addSbtPlugin("com.github.sbt" % "sbt-license-report" % "1.4.0")
 
 // Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.6")
