@@ -188,6 +188,11 @@ object Reader extends LowPriorityReads {
       Try(PbSuccess(LocalTime.parse(protobuf))).getOrElse(PbFailure("Value must be a local time in ISO format."))
   }
 
+  /* Given a Reader from P to M, it provides an automatic derivation for a Reader from Seq[P] to Seq[M].
+   */
+  implicit def sequenceReader[P, M](implicit reader: Reader[P, M]): Reader[Seq[P], Seq[M]] =
+    instance { protobuf => sequence[Seq, P, M](protobuf, "") }
+
   /** Tries to read a map of Protobuf key/values to a sorted map of Scala key/values if reader exists between both types and an ordering is
     * defined on the Scala key.
     */

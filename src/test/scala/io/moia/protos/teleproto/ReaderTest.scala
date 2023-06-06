@@ -151,5 +151,22 @@ class ReaderTest extends UnitTest {
       discountedReader.read(proto) shouldBe PbSuccess(false)
       discountedReader.read(proto.copy(discounts = Map("2" -> "0.5", "3" -> "0.8"))) shouldBe PbSuccess(true)
     }
+
+    "succeed with a derived sequenceReader" in {
+      implicit val r     = reader
+      val sequenceReader = implicitly[Reader[Seq[Protobuf], Seq[Model]]]
+      val result         = sequenceReader.read(Seq(proto, proto.copy(id = Some("bar"))))
+      result.isSuccess shouldBe true
+      result.get should contain theSameElementsAs Seq(model, model.copy(id = "bar"))
+    }
+
+    "fail with a derived sequenceReader" in {
+      implicit val r     = reader
+      val sequenceReader = implicitly[Reader[Seq[Protobuf], Seq[Model]]]
+      val result         = sequenceReader.read(Seq(proto.copy(id = None), proto.copy(id = None)))
+      result.isError shouldBe true
+      val errors = result.toEither.left.getOrElse(Seq.empty)
+      errors should contain theSameElementsAs Seq("(0)/id" -> "Value is required.", "(1)/id" -> "Value is required.")
+    }
   }
 }
