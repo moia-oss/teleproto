@@ -9,7 +9,7 @@ addSbtPlugin("com.github.sbt" % "sbt-git" % "2.0.1")
 
 // Static code analysis.
 // sbt> scapegoat
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.1")
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.1")
 
 // Make sbt build information available to the runtime
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.11.0")
@@ -23,7 +23,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.6")
 
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.13"
 
-addSbtPlugin("de.heikoseeberger" % "sbt-header"      % "5.9.0")
+addSbtPlugin("de.heikoseeberger" % "sbt-header"      % "5.10.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"    % "3.9.21")
 addSbtPlugin("com.dwijnand"      % "sbt-dynver"      % "4.1.1")
 addSbtPlugin("com.github.sbt"    % "sbt-pgp"         % "2.2.1")
