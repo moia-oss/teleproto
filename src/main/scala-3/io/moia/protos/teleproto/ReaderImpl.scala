@@ -19,8 +19,28 @@ package io.moia.protos.teleproto
 import scala.quoted._
 
 object ReaderImpl {
-  def reader_impl[P: Type, M: Type](using Quotes): Expr[Reader[P, M]] = ???
-  // new ReaderImpl(quotes).compile[P, M]()
+  def reader_impl[P: Type, M: Type](using Quotes): Expr[Reader[P, M]] =
+    new ReaderImpl().compile[P, M]
+}
+class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
+
+  def compile[P: Type, M: Type]: Expr[Reader[P, M]] = {
+    import topLevelQuotes.reflect._
+    val protobufType = TypeRepr.of[P].show
+    val modelType    = TypeRepr.of[M].show
+
+    if (checkClassTypes[P, M]) {
+      report.errorAndAbort("correct")
+      // val (result, compatibility) = compileClassMapping(protobufType, modelType)
+      // warnBackwardCompatible(protobufType, modelType, compatibility)
+      // traceCompiled(result)
+    } else {
+      report.errorAndAbort(
+        s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
+      )
+    }
+  }
+
 }
 
 // @SuppressWarnings(Array("all"))
