@@ -30,14 +30,107 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     val modelType    = TypeRepr.of[M].show
 
     if (checkClassTypes[P, M]) {
-      report.errorAndAbort("correct")
-      // val (result, compatibility) = compileClassMapping(protobufType, modelType)
+      val (result, compatibility) = compileClassMapping[P, M]
       // warnBackwardCompatible(protobufType, modelType, compatibility)
       // traceCompiled(result)
+      '{ ??? }
     } else {
       report.errorAndAbort(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
       )
+    }
+  }
+
+  private def compileClassMapping[ProtobufType: Type, ModelType: Type]: Compiled = {
+    import topLevelQuotes.reflect._
+    val protobufCons   = TypeRepr.of[ProtobufType].typeSymbol.primaryConstructor
+    val modelCons      = TypeRepr.of[ModelType].typeSymbol.primaryConstructor
+    val protobufParams = protobufCons.paramSymss.headOption.getOrElse(Nil) // TODO HW may return type parameter list
+    val modelParams    = modelCons.paramSymss.headOption.getOrElse(Nil)    // TODO HW may return type parameter list
+
+    val protobufType = TypeRepr.of[ProtobufType]
+    val modelType    = TypeRepr.of[ModelType]
+
+    compareCaseAccessors(modelType, protobufType, protobufParams, modelParams) match {
+      case Incompatible(missingParameters) =>
+        report.errorAndAbort(
+          s"`${protobufType.show}` and ${modelType.show} are not compatible (${missingParameters.map(name => s"`$name`").mkString(", ")} missing in `$protobufType`)!"
+        )
+      case _ =>
+        report.errorAndAbort("compatible")
+
+      // case Compatible(parameters) =>
+      //   transformation(parameters, Compatibility.full)
+
+      // case BackwardCompatible(surplusParameters, defaultParameters, parameters) =>
+      //   transformation(parameters, Compatibility(surplusParameters.map(protobufType -> _), defaultParameters.map(modelType -> _), Nil))
+    }
+  }
+
+  private sealed trait Matching
+
+  /* Same arity */
+  private case class Compatible(parameters: Seq[MatchingParam]) extends Matching
+
+  /* Missing names on Model side and no missing names Protobuf side that are not optional or without default on model side */
+  private case class BackwardCompatible(
+      surplusParameters: Iterable[String],
+      defaultParameters: Iterable[String],
+      parameters: Seq[MatchingParam]
+  ) extends Matching
+
+  /* All remaining */
+  private case class Incompatible(missingParameters: Iterable[String]) extends Matching
+
+  private sealed trait MatchingParam
+  private case class TransformParam(from: topLevelQuotes.reflect.TypeRepr, to: topLevelQuotes.reflect.TypeRepr) extends MatchingParam
+  // private case class ExplicitDefaultParam(value: Expr[Any])                                                     extends MatchingParam
+  // private case class SkippedDefaultParam(ord: Int) extends MatchingParam
+
+  private def compareCaseAccessors(
+      modelType: topLevelQuotes.reflect.TypeRepr,
+      protobufType: topLevelQuotes.reflect.TypeRepr,
+      protobufParams: List[topLevelQuotes.reflect.Symbol],
+      modelParams: List[topLevelQuotes.reflect.Symbol]
+  ): Matching = {
+    import topLevelQuotes.reflect._
+    given Quotes             = topLevelQuotes
+    val protobufByName       = symbolsByName(protobufParams)
+    val modelByName          = symbolsByName(modelParams)
+    val surplusProtobufNames = protobufByName.keySet diff modelByName.keySet
+
+    val matchedParams: List[Option[MatchingParam]] =
+      for ((modelParam, idx) <- modelParams.zipWithIndex) yield {
+        // resolve type parameters to their actual bindings
+        val targetType = modelType.memberType(modelParam)
+        protobufByName.get(modelParam.name) match {
+          case Some(protobufParam) =>
+            Some(TransformParam(protobufType.memberType(protobufParam), targetType))
+          case None =>
+            None
+        }
+      }
+
+    val namedMatchedParams = modelParams.map(_.name).zip(matchedParams)
+
+    val missingModelParamNames = namedMatchedParams.collect { case (name, None) =>
+      name
+    }
+
+    val matchingModelParams = namedMatchedParams.collect { case (name, Some(matchingParam)) =>
+      (name, matchingParam)
+    }
+
+    if (missingModelParamNames.nonEmpty) {
+      Incompatible(missingModelParamNames.map(_.toString))
+    } else if (surplusProtobufNames.nonEmpty) {
+      BackwardCompatible(
+        surplusProtobufNames.map(_.toString),
+        Nil,
+        matchingModelParams.map(_._2)
+      )
+    } else {
+      Compatible(matchingModelParams.map(_._2))
     }
   }
 

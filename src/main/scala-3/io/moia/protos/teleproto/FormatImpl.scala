@@ -23,6 +23,42 @@ import java.security.MessageDigest
 import scala.quoted._
 
 trait FormatImpl {
+  val topLevelQuotes: Quotes
+  import topLevelQuotes.reflect._
+
+  // name, transform, isReader -> Compat
+  type Compiled    = ((String, Expr[Any]), Compatibility)
+  type CompatIssue = (TypeRepr, String)
+
+  /** Within a compiled hierarchy collects backward/forward compatibility issues.
+    */
+  case class Compatibility(
+      surplusParameters: Iterable[CompatIssue],
+      defaultParameters: Iterable[CompatIssue],
+      surplusClasses: Iterable[CompatIssue]
+  ) {
+
+    // scalaPB 0.10 introduces a field called unknownFields for every proto by default.
+    // See: https://github.com/scalapb/ScalaPB/issues/778 for alternatives.
+    // The application can either choose to map or ignore this property.
+    // A simple workaround for the moment is to ignore this property completely.
+    private def unknownField(issue: CompatIssue): Boolean             = issue._2 == "unknownFields"
+    private def unknownFields(issues: Iterable[CompatIssue]): Boolean = issues.forall(unknownField)
+
+    def hasIssues: Boolean =
+      !(unknownFields(surplusParameters) && unknownFields(defaultParameters) && unknownFields(surplusClasses))
+
+    def merge(that: Compatibility): Compatibility =
+      Compatibility(
+        this.surplusParameters ++ that.surplusParameters,
+        this.defaultParameters ++ that.defaultParameters,
+        this.surplusClasses ++ that.surplusClasses
+      )
+  }
+
+  object Compatibility {
+    val full: Compatibility = Compatibility(Nil, Nil, Nil)
+  }
 
   private[teleproto] def checkClassTypes[ProtobufType: Type, ModelType: Type](using Quotes): Boolean =
     isProtobuf[ProtobufType] && isSimpleCaseClass[ModelType]
@@ -35,6 +71,9 @@ trait FormatImpl {
     import quotes.reflect._
     val sym = TypeRepr.of[T].typeSymbol
     sym.isClassDef && sym.flags.is(quotes.reflect.Flags.Case)
+
+  private[teleproto] def symbolsByName(symbols: Iterable[Symbol]): Map[String, Symbol] =
+    symbols.iterator.map(symbol => symbol.name -> symbol).toMap
 }
 
 /** Compiler functions shared between both, reader and writer macros
