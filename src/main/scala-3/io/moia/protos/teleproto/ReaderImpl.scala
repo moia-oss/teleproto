@@ -32,8 +32,7 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     if (checkClassTypes[P, M]) {
       val (result, compatibility) = compileClassMapping[P, M]
       // warnBackwardCompatible(protobufType, modelType, compatibility)
-      // traceCompiled(result)
-      '{ ??? }
+      traceCompiled(result._2).asExprOf[io.moia.protos.teleproto.Reader[P, M]]
     } else {
       report.errorAndAbort(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
@@ -64,10 +63,35 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
           case TransformParam(from, to) if from <:< to =>
             Some((param, '{ (protobuf: ProtobufType) => ${ unsafeSelect('protobuf, param) } }) -> Compatibility.full)
           case TransformParam(from, to) =>
-            report.errorAndAbort(s"Unimplemented reader from ${from.show}` to ${to.show}")
+            report.errorAndAbort("TODO")
         }
       }
     }
+
+    def makeCons(using Quotes)(argsAcc: Seq[(String, Expr[_])]): Expr[PbResult[ModelType]] =
+      import quotes.reflect._
+      def appliedModelCompanion(using Quotes) =
+        import quotes.reflect._
+        val argList = argsAcc.map((name, qexpr) => NamedArg(name, qexpr.asTerm)).toList
+        Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList)
+          .asExprOf[ModelType]
+      '{ PbSuccess[ModelType]($appliedModelCompanion) }
+
+    def forLoop(using Quotes)(
+        protobuf: Expr[ProtobufType],
+        parameters: List[(Expr[ProtobufType => _], MatchingParam, String)],
+        argsAcc: Seq[(String, Expr[Any])]
+    ): Expr[PbResult[ModelType]] =
+      parameters match {
+        case Nil =>
+          makeCons(argsAcc)
+        case (pbResultExpr, matchingParam, name) :: rest =>
+          matchingParam match {
+            case TransformParam(from, to) if from <:< to =>
+              val transformedValue = Expr.betaReduce('{ $pbResultExpr($protobuf) })
+              forLoop(protobuf, rest, argsAcc :+ (name, transformedValue))
+          }
+      }
 
     def transformation(parameters: Seq[MatchingParam], ownCompatibility: Compatibility): Compiled = {
       import topLevelQuotes.reflect._
@@ -84,7 +108,8 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
       }
       val result = '{
         Reader.instance[ProtobufType, ModelType] { protobuf =>
-          ???
+          ${ forLoop('protobuf, newParams, Seq.empty) }
+            .orElse(???) // TODO HW PbErrors not implemented
         }
       }
       (("", result), ownCompatibility.merge(parameterCompatibility))

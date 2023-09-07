@@ -74,6 +74,18 @@ trait FormatImpl {
 
   private[teleproto] def symbolsByName(symbols: Iterable[Symbol]): Map[String, Symbol] =
     symbols.iterator.map(symbol => symbol.name -> symbol).toMap
+
+  private[teleproto] def hasTraceAnnotation(using Quotes): Boolean =
+    import quotes.reflect._
+    Symbol.spliceOwner.owner.annotations.exists(_.tpe.typeSymbol == TypeTree.of[trace](using Type.of[trace]).symbol)
+
+  /** If the enclosing owner (the `def` or `val` that invokes the macro) got the annotation `@trace` then send the given (compiled) tree as
+    * info message to the compiler shell.
+    */
+  private[teleproto] def traceCompiled(using Quotes)(expr: Expr[Any]): Expr[Any] = {
+    if (hasTraceAnnotation) report.info(expr.asTerm.show(using Printer.TreeAnsiCode))
+    expr
+  }
 }
 
 /** Compiler functions shared between both, reader and writer macros

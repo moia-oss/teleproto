@@ -47,6 +47,8 @@ object ExampleProtobuf {
 class ExampleTest extends UnitTest {
 
   "ProtocolBuffers" should {
-    "generate a reader" in {}
+    "generate a reader" in {
+      println(ExampleProtobuf.added.read(ModelA(0, TestA(A(1)), "A")))
+    }
   }
 }
