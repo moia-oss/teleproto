@@ -51,19 +51,56 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     val protobufType = TypeRepr.of[ProtobufType]
     val modelType    = TypeRepr.of[ModelType]
 
+    def valueDefinitions(parameters: List[(topLevelQuotes.reflect.Symbol, MatchingParam)]): List[Compiled] = {
+      parameters.flatMap { case (paramSym, matchingParam) =>
+        val param = paramSym.name
+        val path  = Expr("/" + param)
+
+        def unsafeSelect(using Quotes)(parent: Expr[ProtobufType], name: String) =
+          import quotes.reflect._
+          Select.unique(parent.asTerm, name).asExpr
+
+        matchingParam match {
+          case TransformParam(from, to) if from <:< to =>
+            Some((param, '{ (protobuf: ProtobufType) => ${ unsafeSelect('protobuf, param) } }) -> Compatibility.full)
+          case TransformParam(from, to) =>
+            report.errorAndAbort(s"Unimplemented reader from ${from.show}` to ${to.show}")
+        }
+      }
+    }
+
+    def transformation(parameters: Seq[MatchingParam], ownCompatibility: Compatibility): Compiled = {
+      import topLevelQuotes.reflect._
+
+      val matchedParameters = modelParams.zip(parameters)
+
+      val (valDefs, parameterCompatibilities) = valueDefinitions(matchedParameters).unzip
+
+      val parameterCompatibility = parameterCompatibilities.fold(Compatibility.full)(_ merge _)
+
+      val transformedMap = valDefs.toMap
+      val newParams = matchedParameters.map { case (sym, matchingParam) =>
+        (transformedMap(sym.name).asExprOf[ProtobufType => Any], matchingParam, sym.name)
+      }
+      val result = '{
+        Reader.instance[ProtobufType, ModelType] { protobuf =>
+          ???
+        }
+      }
+      (("", result), ownCompatibility.merge(parameterCompatibility))
+    }
+
     compareCaseAccessors(modelType, protobufType, protobufParams, modelParams) match {
       case Incompatible(missingParameters) =>
         report.errorAndAbort(
           s"`${protobufType.show}` and ${modelType.show} are not compatible (${missingParameters.map(name => s"`$name`").mkString(", ")} missing in `$protobufType`)!"
         )
-      case _ =>
-        report.errorAndAbort("compatible")
 
-      // case Compatible(parameters) =>
-      //   transformation(parameters, Compatibility.full)
+      case Compatible(parameters) =>
+        transformation(parameters, Compatibility.full)
 
-      // case BackwardCompatible(surplusParameters, defaultParameters, parameters) =>
-      //   transformation(parameters, Compatibility(surplusParameters.map(protobufType -> _), defaultParameters.map(modelType -> _), Nil))
+      case BackwardCompatible(surplusParameters, defaultParameters, parameters) =>
+        ???
     }
   }
 
