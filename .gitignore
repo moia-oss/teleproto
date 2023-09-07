@@ -29,3 +29,9 @@ target
 
 # Log files
 *.log
+
+# Metals
+.metals
+.vscode
+.bloop
+metals.sbt

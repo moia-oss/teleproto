@@ -62,17 +62,18 @@ lazy val commonSettings = Seq.concat(
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
-  scapegoatSettings,
+  // scapegoatSettings,
   mimaSettings
 )
 
 lazy val compilerSettings = Seq(
   scalaVersion                                                                     := crossScalaVersions.value.head,
-  crossScalaVersions                                                               := List("2.13.11", "2.12.18"),
+  crossScalaVersions                                                               := List("3.3.0", "2.13.11", "2.12.18"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, 12)) => scalacOptions_2_12
     case Some((2, 13)) => scalacOptions_2_13
+    case Some((3, _))  => scalacOptions_3
     case _             => Nil
   })
 )
@@ -107,6 +108,14 @@ lazy val scalacOptions_2_13 = Seq(
   "-Xlint",
   "-Ywarn-dead-code",
   "-Ymacro-annotations"
+)
+
+lazy val scalacOptions_3 = Seq(
+  "-release",
+  "8",
+  "-encoding",
+  "UTF-8",
+  "-Xcheck-macros",
 )
 
 lazy val gitSettings = Seq(
@@ -147,11 +156,11 @@ lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
 )
 
-lazy val scapegoatSettings = Seq(
-  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
-  // do not check generated files
-  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
-)
+// lazy val scapegoatSettings = Seq(
+//   ThisBuild / scapegoatVersion := library.Version.scapeGoat,
+//   // do not check generated files
+//   scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
+// )
 
 lazy val mimaSettings = Seq(
   mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),
