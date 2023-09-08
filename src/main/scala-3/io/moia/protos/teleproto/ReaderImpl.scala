@@ -40,6 +40,28 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     }
   }
 
+  private def withImplicitReader[P: Type, M: Type](name: String)(compileInner: Expr[Reader[P, M]] => Expr[_]): Compiled = {
+    import topLevelQuotes.reflect._
+    val protobufTypeRepr = TypeRepr.of[P]
+    val modelTypeRepr    = TypeRepr.of[M]
+    // look for an implicit reader
+    val existingReader = Expr.summon[Reader[P, M]]
+
+    // "ask" for the implicit reader or use the found one
+    def ask: Compiled =
+      (name, compileInner('{ scala.compiletime.summonInline[Reader[P, M]] }.asExprOf[Reader[P, M]])) -> Compatibility.full
+
+    if (existingReader.isEmpty)
+      if (checkClassTypes[P, M]) {
+        val ((_, implicitValue), compatibility) = compileClassMapping[P, M]
+        val result                              = compileInner(implicitValue.asExprOf[Reader[P, M]])
+        (name, result) -> compatibility
+      } else
+        ask // let the compiler explain the problem
+    else
+      ask // use the available implicit
+  }
+
   private def compileClassMapping[ProtobufType: Type, ModelType: Type]: Compiled = {
     import topLevelQuotes.reflect._
     val protobufCons   = TypeRepr.of[ProtobufType].typeSymbol.primaryConstructor
@@ -63,7 +85,13 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
           case TransformParam(from, to) if from <:< to =>
             Some((param, '{ (protobuf: ProtobufType) => ${ unsafeSelect('protobuf, param) } }) -> Compatibility.full)
           case TransformParam(from, to) =>
-            report.errorAndAbort("TODO")
+            (from.asType, to.asType) match
+              case ('[f], '[t]) =>
+                Some(withImplicitReader[f, t](param) { reader =>
+                  '{ (protobuf: ProtobufType) =>
+                    Reader.transform[f, t](${ unsafeSelect('protobuf, param).asExprOf[f] }, $path)(${ reader })
+                  }
+                })
         }
       }
     }
@@ -90,6 +118,18 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
             case TransformParam(from, to) if from <:< to =>
               val transformedValue = Expr.betaReduce('{ $pbResultExpr($protobuf) })
               forLoop(protobuf, rest, argsAcc :+ (name, transformedValue))
+            case _ =>
+              import quotes.reflect._
+              val transformedValue = Expr.betaReduce('{ $pbResultExpr($protobuf) })
+              transformedValue match
+                case '{ $result: PbResult[t] } =>
+                  val flatMapExpr: Expr[PbResult[ModelType]] = '{
+                    ${ result }.flatMap { (arg: t) =>
+                      ${ forLoop(protobuf, rest, argsAcc :+ (name, 'arg)).asExprOf[PbResult[ModelType]] }
+                    }
+                  }
+                  val changedOwner = flatMapExpr.asTerm.changeOwner(Symbol.spliceOwner).asExprOf[PbResult[ModelType]]
+                  changedOwner
           }
       }
 
