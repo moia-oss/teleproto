@@ -57,7 +57,6 @@ lazy val library = new {
 
 lazy val commonSettings = Seq.concat(
   compilerSettings,
-  gitSettings,
   organizationSettings,
   scmSettings,
   sbtSettings,
@@ -67,8 +66,8 @@ lazy val commonSettings = Seq.concat(
 )
 
 lazy val compilerSettings = Seq(
-  scalaVersion                                                                     := crossScalaVersions.value.head,
-  crossScalaVersions                                                               := List("3.3.0", "2.13.11", "2.12.18"),
+  scalaVersion                                                                     := "3.3.1",
+  crossScalaVersions                                                               := List("3.3.1", "2.13.11", "2.12.18"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, 12)) => scalacOptions_2_12
@@ -115,11 +114,7 @@ lazy val scalacOptions_3 = Seq(
   "8",
   "-encoding",
   "UTF-8",
-  "-Xcheck-macros",
-)
-
-lazy val gitSettings = Seq(
-  git.useGitDescribe.withRank(KeyRanks.Invisible) := false
+  "-Xcheck-macros"
 )
 
 lazy val organizationSettings = Seq(
@@ -171,4 +166,4 @@ lazy val mimaSettings = Seq(
 )
 
 Test / PB.targets      := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value)
-Test / PB.protoSources := Seq(file("src/test/protobuf"))
+Test / PB.protoSources := Seq(baseDirectory.value / "src" / "test" / "protobuf")

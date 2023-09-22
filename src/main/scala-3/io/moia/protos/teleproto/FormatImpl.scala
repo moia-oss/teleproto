@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
 import scala.quoted._
+import scalapb.GeneratedOneof
 
 trait FormatImpl {
   val topLevelQuotes: Quotes
@@ -63,6 +64,9 @@ trait FormatImpl {
   private[teleproto] def checkClassTypes[ProtobufType: Type, ModelType: Type](using Quotes): Boolean =
     isProtobuf[ProtobufType] && isSimpleCaseClass[ModelType]
 
+  private[teleproto] def checkHierarchyTypes[ProtobufType: Type, ModelType: Type](using Quotes): Boolean =
+    isSealedTrait[ProtobufType] && isSealedTrait[ModelType] && TypeRepr.of[ProtobufType] <:< TypeRepr.of[GeneratedOneof]
+
   private[teleproto] def isProtobuf[T: Type](using Quotes): Boolean =
     isSimpleCaseClass[T] // && tpe <:< typeOf[GeneratedMessage]
 
@@ -74,6 +78,11 @@ trait FormatImpl {
 
   private[teleproto] def symbolsByName(symbols: Iterable[Symbol]): Map[String, Symbol] =
     symbols.iterator.map(symbol => symbol.name -> symbol).toMap
+
+  private[teleproto] def isSealedTrait[T: Type](using Quotes): Boolean =
+    import quotes.reflect._
+    val sym = TypeRepr.of[T].typeSymbol
+    sym.isClassDef && sym.flags.is(quotes.reflect.Flags.Sealed)
 
   private[teleproto] def hasTraceAnnotation(using Quotes): Boolean =
     import quotes.reflect._

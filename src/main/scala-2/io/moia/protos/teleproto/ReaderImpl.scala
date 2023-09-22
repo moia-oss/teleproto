@@ -41,10 +41,12 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
+      abort("enumeration")
     } else if (checkHierarchyTypes(protobufType, modelType)) {
       val (result, compatibility) = compileTraitMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
+      abort("hierarchy")
     } else {
       abort(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
@@ -78,10 +80,12 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
         val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
+        abort("enumeration")
       } else if (checkHierarchyTypes(protobufType, modelType)) {
         val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
+        abort("hierarchy")
       } else
         ask // let the compiler explain the problem
     else

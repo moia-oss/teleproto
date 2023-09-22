@@ -17,6 +17,7 @@
 package io.moia.protos.teleproto
 
 import scala.quoted._
+import io.moia.protos.teleproto.Reader.BigDecimalReader.read
 
 object ReaderImpl {
   def reader_impl[P: Type, M: Type](using Quotes): Expr[Reader[P, M]] =
@@ -56,11 +57,20 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
         val ((_, implicitValue), compatibility) = compileClassMapping[P, M]
         val result                              = compileInner(implicitValue.asExprOf[Reader[P, M]])
         (name, result) -> compatibility
+      } else if (checkHierarchyTypes[P, M]) {
+        val ((_, implicitValue), compatibility) = compileTraitMapping[P, M]
+        report.errorAndAbort(implicitValue.show)
+        // val result                              = compileInner(implicitValue)
+        // (name, result) -> compatibility
       } else
         ask // let the compiler explain the problem
     else
       ask // use the available implicit
   }
+
+  def unsafeSelect[T: Type](using Quotes)(parent: Expr[T], name: String) =
+    import quotes.reflect._
+    Select.unique(parent.asTerm, name).asExpr
 
   private def compileClassMapping[ProtobufType: Type, ModelType: Type]: Compiled = {
     import topLevelQuotes.reflect._
@@ -76,10 +86,6 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
       parameters.flatMap { case (paramSym, matchingParam) =>
         val param = paramSym.name
         val path  = Expr("/" + param)
-
-        def unsafeSelect(using Quotes)(parent: Expr[ProtobufType], name: String) =
-          import quotes.reflect._
-          Select.unique(parent.asTerm, name).asExpr
 
         matchingParam match {
           case TransformParam(from, to) if from <:< to =>
@@ -101,8 +107,7 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
       def appliedModelCompanion(using Quotes) =
         import quotes.reflect._
         val argList = argsAcc.map((name, qexpr) => NamedArg(name, qexpr.asTerm)).toList
-        Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList)
-          .asExprOf[ModelType]
+        Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList).asExprOf[ModelType]
       '{ PbSuccess[ModelType]($appliedModelCompanion) }
 
     def forLoop(using Quotes)(
@@ -148,8 +153,7 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
       }
       val result = '{
         Reader.instance[ProtobufType, ModelType] { protobuf =>
-          ${ forLoop('protobuf, newParams, Seq.empty) }
-            .orElse(???) // TODO HW PbErrors not implemented
+          ${ forLoop('protobuf, newParams, Seq.empty) }.orElse(???) // TODO HW PbErrors not implemented
         }
       }
       (("", result), ownCompatibility.merge(parameterCompatibility))
@@ -236,6 +240,77 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     }
   }
 
+  private def compileTraitMapping[ProtobufType: Type, ModelType: Type](using Quotes): Compiled = {
+    import topLevelQuotes.reflect._
+    val protobufCons = TypeRepr.of[ProtobufType].typeSymbol.primaryConstructor
+    val modelCons    = TypeRepr.of[ModelType].typeSymbol.primaryConstructor
+
+    val protobufType = TypeRepr.of[ProtobufType]
+    val modelType    = TypeRepr.of[ModelType]
+
+    val protobufChildren = symbolsByName(protobufType.typeSymbol.children)
+    val modelChildren    = symbolsByName(modelType.typeSymbol.children)
+
+    if (protobufChildren.isEmpty)
+      report.error(s"No subclasses of sealed trait `${protobufCons.fullName}` found.")
+
+    val emptyOneOfChildren: "Empty" = "Empty"
+    val unmatchedProtobufChildren   = protobufChildren.keySet - emptyOneOfChildren diff modelChildren.keySet
+
+    if (unmatchedProtobufChildren.nonEmpty)
+      report.error(s"`${modelCons.name}` does not match $unmatchedProtobufChildren children of `${protobufCons.name}`.")
+
+    val surplusModelChildren = modelChildren.keySet diff protobufChildren.keySet
+    val ownCompatibility     = Compatibility(Nil, Nil, surplusModelChildren.map(name => (modelType, name.toString)))
+
+    // report.errorAndAbort(ownCompatibility.toString)
+
+    val subTypes: Seq[Compiled] = for {
+      (className, protobufChild) <- protobufChildren.toSeq
+      modelChild                 <- modelChildren.get(className)
+    } yield {
+      val path              = Expr("/" + className)
+      val protobufChildType = protobufChild.typeRef//.asType
+      val modelChildType    = modelType.memberType(modelChild).asType
+      report.error(protobufType.toString)
+
+      (protobufChildType.asType, modelChildType) match {
+        case ('[p], '[m]) =>
+          report.error("match")
+          withImplicitReader[p, m](className) { reader =>
+            '{ (protobuf: p) =>
+              $reader.read(${ unsafeSelect('protobuf, className).asExprOf[p] }).withPathPrefix($path)
+            }
+          }
+        case e => report.errorAndAbort(e.toString)
+      }
+    }
+
+    report.errorAndAbort(subTypes.toString)
+
+    // report.errorAndAbort(subTypes.toString)
+
+    // val (cases, compatibility) = subTypes.unzip
+    // // // val emptyCase =
+    // // // for (protobufClass <- protobufChildren.get(emptyOneOfChildren) if !modelChildren.contains(emptyOneOfChildren))
+    // // //  yield cq"""_: ${objectReferenceTo(protobufClass)}.type => $pbFailureObj("OneOf field is empty!")"""
+
+    // def makeCons(using Quotes)(argsAcc: Seq[(String, Expr[_])]): Expr[PbResult[ModelType]] =
+    //   import quotes.reflect._
+    //   def appliedModelCompanion(using Quotes) =
+    //     import quotes.reflect._
+    //     val argList = argsAcc.map((name, qexpr) => NamedArg(name, qexpr.asTerm)).toList
+    //     Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList).asExprOf[ModelType]
+    //   '{ PbSuccess[ModelType]($appliedModelCompanion) }
+
+    // val result = '{
+    //   Reader.instance[ProtobufType, ModelType] { protobuf =>
+    //     ${ makeCons(cases) }.orElse(???)
+    //   }
+    // }
+
+    // (("", result), compatibility.fold(ownCompatibility)(_ merge _))
+  }
 }
 
 // @SuppressWarnings(Array("all"))

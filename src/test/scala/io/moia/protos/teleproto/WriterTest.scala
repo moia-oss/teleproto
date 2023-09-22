@@ -1,10 +1,9 @@
 package io.moia.protos.teleproto
 
-import java.time.Instant
-
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
+import java.time.Instant
 import scala.concurrent.duration.DurationLong
 
 class WriterTest extends UnitTest {

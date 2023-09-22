@@ -1,11 +1,10 @@
 package io.moia.protos.teleproto
 
-import java.time.Instant
-import java.util.concurrent.TimeUnit
-
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
 
+import java.time.Instant
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration, DurationLong, FiniteDuration}
 
 class ReaderTest extends UnitTest {

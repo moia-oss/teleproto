@@ -17,6 +17,7 @@
 package io.moia.protos.teleproto
 
 import scala.concurrent.Future
+import scala.annotation.experimental
 
 @SuppressWarnings(Array("all"))
 object ProtocolBuffers {
@@ -48,6 +49,7 @@ object ProtocolBuffers {
     *
     * {{{ProtocolBuffers.reader[v1.PriceTrips.PriceTrip, PriceTrip]}}}
     */
+  @experimental
   inline def reader[P, M]: Reader[P, M] = ${ ReaderImpl.reader_impl[P, M] }
 
   /** Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible. See User's Guide for

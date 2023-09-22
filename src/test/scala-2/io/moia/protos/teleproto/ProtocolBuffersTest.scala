@@ -1,11 +1,11 @@
 package io.moia.protos.teleproto
 
-import java.time.Instant
-
 import com.google.protobuf.Descriptors
 import com.google.protobuf.timestamp.Timestamp
 import scalapb.descriptors.EnumDescriptor
 import scalapb.{GeneratedEnum, GeneratedEnumCompanion, UnrecognizedEnum}
+
+import java.time.Instant
 
 sealed abstract class ProtobufEnum(val value: Int) extends GeneratedEnum {
   type EnumType = ProtobufEnum
@@ -232,7 +232,7 @@ class ProtocolBuffersTest extends UnitTest {
             baz = None,
             ranges = List(SubModel(1, 1.2), SubModel(1.2, 1.23)),
             doubleSub = SubModel(1, 2),
-            enum = ModelEnum.THIRD_CASE
+            `enum` = ModelEnum.THIRD_CASE
           )
         )
     }
