@@ -39,7 +39,7 @@ lazy val library = new {
     val scalaCheck            = "1.17.0"
     val scalaTest             = "3.2.17"
     val scalaTestPlusCheck    = "3.2.14.0"
-    val scapeGoat             = "2.1.2"
+    val scapeGoat             = "2.1.3"
     val scalaCollectionCompat = "2.11.0"
   }
 
