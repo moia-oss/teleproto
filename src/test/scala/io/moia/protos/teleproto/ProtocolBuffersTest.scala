@@ -20,21 +20,26 @@ object ProtobufEnum extends GeneratedEnumCompanion[ProtobufEnum] {
   override def scalaDescriptor: EnumDescriptor            = ???
 
   case object FirstCase extends ProtobufEnum(0) {
-    override def index: Int   = value
-    override def name: String = "FirstCase"
+    override def index: Int                                     = value
+    override def name: String                                   = "FirstCase"
+    override def asRecognized: Option[FirstCase.RecognizedType] = None
   }
 
   case object SECOND_CASE extends ProtobufEnum(1) {
-    override def index: Int   = value
-    override def name: String = "SECOND_CASE"
+    override def index: Int                                       = value
+    override def name: String                                     = "SECOND_CASE"
+    override def asRecognized: Option[SECOND_CASE.RecognizedType] = None
   }
 
   case object Third_Case extends ProtobufEnum(2) {
-    override def index: Int   = value
-    override def name: String = "Third_Case"
+    override def index: Int                                      = value
+    override def name: String                                    = "Third_Case"
+    override def asRecognized: Option[Third_Case.RecognizedType] = None
   }
 
-  final case class Unrecognized(other: Int) extends ProtobufEnum(other) with UnrecognizedEnum
+  final case class Unrecognized(other: Int) extends ProtobufEnum(other) with UnrecognizedEnum {
+    override def asRecognized: Option[Unrecognized.this.RecognizedType] = None
+  }
 }
 
 case class SubProtobuf(from: String, to: String)

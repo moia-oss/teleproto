@@ -162,4 +162,4 @@ lazy val mimaSettings = Seq(
 )
 
 Test / PB.targets      := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value)
-Test / PB.protoSources := Seq(file("src/test/protobuf"))
+Test / PB.protoSources := Seq(baseDirectory.value / "src" / "test" / "protobuf")
