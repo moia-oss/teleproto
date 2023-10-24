@@ -41,12 +41,10 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-      abort("enumeration")
     } else if (checkHierarchyTypes(protobufType, modelType)) {
       val (result, compatibility) = compileTraitMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-      abort("hierarchy")
     } else {
       abort(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
@@ -80,12 +78,10 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
         val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-        abort("enumeration")
       } else if (checkHierarchyTypes(protobufType, modelType)) {
         val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-        abort("hierarchy")
       } else
         ask // let the compiler explain the problem
     else
@@ -354,7 +350,9 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       val path = s"/${name.head.toLower}${name.tail}"
       withImplicitReader(valueMethod.infoIn(classTypeOf(protobufSubclass)), classTypeOf(modelSubclass)) { reader =>
         val value = c.freshName(ValueMethod)
-        cq"${protobufSubclass.companion}($value) => $reader.read($value).withPathPrefix($path)"
+        val x     = cq"${protobufSubclass.companion}($value) => $reader.read($value).withPathPrefix($path)"
+        println(x)
+        x
       }
     }
 
@@ -368,6 +366,10 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       case ..${emptyCase.toList}
     }"""
 
+    println(result)
+    // Reader.instance[io.moia.protos.teleproto.HierarchicalProtocolBuffersTest.protobuf.BarOrBaz, io.moia.protos.teleproto.HierarchicalProtocolBuffersTest.model.BarOrBaz](<empty> match {
+    //   case (_: Empty.type) => PbFailure("Oneof field is empty!")
+    // })
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 

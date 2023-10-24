@@ -18,6 +18,8 @@ package io.moia.protos.teleproto
 
 import scala.quoted._
 import io.moia.protos.teleproto.Reader.BigDecimalReader.read
+import com.fasterxml.jackson.annotation.JacksonInject.Value
+import scala.quoted.ToExpr.SeqToExpr
 
 object ReaderImpl {
   def reader_impl[P: Type, M: Type](using Quotes): Expr[Reader[P, M]] =
@@ -30,15 +32,18 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     val protobufType = TypeRepr.of[P].show
     val modelType    = TypeRepr.of[M].show
 
-    if (checkClassTypes[P, M]) {
+    if (checkClassTypes[P, M])
       val (result, compatibility) = compileClassMapping[P, M]
       // warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result._2).asExprOf[io.moia.protos.teleproto.Reader[P, M]]
-    } else {
+    else if (checkHierarchyTypes[P, M])
+      val (result, compatibility) = compileTraitMapping[P, M]
+      // warnBackwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result._2).asExprOf[io.moia.protos.teleproto.Reader[P, M]]
+    else
       report.errorAndAbort(
         s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
       )
-    }
   }
 
   private def withImplicitReader[P: Type, M: Type](name: String)(compileInner: Expr[Reader[P, M]] => Expr[_]): Compiled = {
@@ -52,18 +57,20 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     def ask: Compiled =
       (name, compileInner('{ scala.compiletime.summonInline[Reader[P, M]] }.asExprOf[Reader[P, M]])) -> Compatibility.full
 
+    println(s"with implicit reader for ${protobufTypeRepr.show} + ${modelTypeRepr.show}")
+
     if (existingReader.isEmpty)
-      if (checkClassTypes[P, M]) {
+      if (checkClassTypes[P, M])
         val ((_, implicitValue), compatibility) = compileClassMapping[P, M]
         val result                              = compileInner(implicitValue.asExprOf[Reader[P, M]])
-        (name, result) -> compatibility
-      } else if (checkHierarchyTypes[P, M]) {
+        val x                                   = (name, result) -> compatibility
+        println(result.show)
+        x
+      else if (checkHierarchyTypes[P, M])
         val ((_, implicitValue), compatibility) = compileTraitMapping[P, M]
-        report.errorAndAbort(implicitValue.show)
-        // val result                              = compileInner(implicitValue)
-        // (name, result) -> compatibility
-      } else
-        ask // let the compiler explain the problem
+        val result                              = compileInner(implicitValue.asExprOf[Reader[P, M]])
+        (name, result) -> compatibility
+      else ask // let the compiler explain the problem
     else
       ask // use the available implicit
   }
@@ -74,22 +81,31 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
 
   private def compileClassMapping[ProtobufType: Type, ModelType: Type]: Compiled = {
     import topLevelQuotes.reflect._
-    val protobufCons   = TypeRepr.of[ProtobufType].typeSymbol.primaryConstructor
-    val modelCons      = TypeRepr.of[ModelType].typeSymbol.primaryConstructor
+    val protobufType   = TypeRepr.of[ProtobufType]
+    val modelType      = TypeRepr.of[ModelType]
+    val protobufCons   = protobufType.typeSymbol.primaryConstructor
+    val modelCons      = modelType.typeSymbol.primaryConstructor
     val protobufParams = protobufCons.paramSymss.headOption.getOrElse(Nil) // TODO HW may return type parameter list
     val modelParams    = modelCons.paramSymss.headOption.getOrElse(Nil)    // TODO HW may return type parameter list
-
-    val protobufType = TypeRepr.of[ProtobufType]
-    val modelType    = TypeRepr.of[ModelType]
 
     def valueDefinitions(parameters: List[(topLevelQuotes.reflect.Symbol, MatchingParam)]): List[Compiled] = {
       parameters.flatMap { case (paramSym, matchingParam) =>
         val param = paramSym.name
         val path  = Expr("/" + param)
 
+        println(s"value defintions ${protobufType.show} + ${modelType.show}")
         matchingParam match {
           case TransformParam(from, to) if from <:< to =>
             Some((param, '{ (protobuf: ProtobufType) => ${ unsafeSelect('protobuf, param) } }) -> Compatibility.full)
+          case TransformParam(from, to) if from <:< TypeRepr.of[Option[?]] =>
+            val innerFrom = innerType(from)
+            (innerFrom.asType, to.asType) match
+              case ('[f], '[t]) =>
+                Some(withImplicitReader[f, t](param) { reader =>
+                  '{ (protobuf: ProtobufType) =>
+                    Reader.required[f, t](${ unsafeSelect('protobuf, param).asExprOf[Option[f]] }, $path)(${ reader })
+                  }
+                })
           case TransformParam(from, to) =>
             (from.asType, to.asType) match
               case ('[f], '[t]) =>
@@ -98,17 +114,11 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
                     Reader.transform[f, t](${ unsafeSelect('protobuf, param).asExprOf[f] }, $path)(${ reader })
                   }
                 })
+          case SkippedDefaultParam =>
+            Option.empty[Compiled]
         }
       }
     }
-
-    def makeCons(using Quotes)(argsAcc: Seq[(String, Expr[_])]): Expr[PbResult[ModelType]] =
-      import quotes.reflect._
-      def appliedModelCompanion(using Quotes) =
-        import quotes.reflect._
-        val argList = argsAcc.map((name, qexpr) => NamedArg(name, qexpr.asTerm)).toList
-        Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList).asExprOf[ModelType]
-      '{ PbSuccess[ModelType]($appliedModelCompanion) }
 
     def forLoop(using Quotes)(
         protobuf: Expr[ProtobufType],
@@ -121,6 +131,9 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
         case (pbResultExpr, matchingParam, name) :: rest =>
           matchingParam match {
             case TransformParam(from, to) if from <:< to =>
+              val transformedValue = Expr.betaReduce('{ $pbResultExpr($protobuf) })
+              forLoop(protobuf, rest, argsAcc :+ (name, transformedValue))
+            case SkippedDefaultParam =>
               val transformedValue = Expr.betaReduce('{ $pbResultExpr($protobuf) })
               forLoop(protobuf, rest, argsAcc :+ (name, transformedValue))
             case _ =>
@@ -159,6 +172,7 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
       (("", result), ownCompatibility.merge(parameterCompatibility))
     }
 
+    println(s"compare cases for ${protobufType.show} + ${modelType.show}")
     compareCaseAccessors(modelType, protobufType, protobufParams, modelParams) match {
       case Incompatible(missingParameters) =>
         report.errorAndAbort(
@@ -172,6 +186,14 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
         ???
     }
   }
+
+  def makeCons[ModelType: Type](using Quotes)(argsAcc: Seq[(String, Expr[_])]): Expr[PbResult[ModelType]] =
+    import quotes.reflect._
+    def appliedModelCompanion(using Quotes) =
+      import quotes.reflect._
+      val argList = argsAcc.map((name, qexpr) => NamedArg(name, qexpr.asTerm)).toList
+      Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList).asExprOf[ModelType]
+    '{ PbSuccess[ModelType]($appliedModelCompanion) }
 
   private sealed trait Matching
 
@@ -191,7 +213,7 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
   private sealed trait MatchingParam
   private case class TransformParam(from: topLevelQuotes.reflect.TypeRepr, to: topLevelQuotes.reflect.TypeRepr) extends MatchingParam
   // private case class ExplicitDefaultParam(value: Expr[Any])                                                     extends MatchingParam
-  // private case class SkippedDefaultParam(ord: Int) extends MatchingParam
+  private case object SkippedDefaultParam extends MatchingParam
 
   private def compareCaseAccessors(
       modelType: topLevelQuotes.reflect.TypeRepr,
@@ -203,7 +225,7 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     given Quotes             = topLevelQuotes
     val protobufByName       = symbolsByName(protobufParams)
     val modelByName          = symbolsByName(modelParams)
-    val surplusProtobufNames = protobufByName.keySet diff modelByName.keySet
+    val surplusProtobufNames = protobufByName.keySet diff modelByName.keySet diff Set("value")
 
     val matchedParams: List[Option[MatchingParam]] =
       for ((modelParam, idx) <- modelParams.zipWithIndex) yield {
@@ -212,6 +234,8 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
         protobufByName.get(modelParam.name) match {
           case Some(protobufParam) =>
             Some(TransformParam(protobufType.memberType(protobufParam), targetType))
+          case None if modelParam.flags.is(Flags.HasDefault) =>
+            Some(SkippedDefaultParam)
           case None =>
             None
         }
@@ -228,8 +252,10 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     }
 
     if (missingModelParamNames.nonEmpty) {
+      println(s"missing model param names ${missingModelParamNames}")
       Incompatible(missingModelParamNames.map(_.toString))
     } else if (surplusProtobufNames.nonEmpty) {
+      println(s"surplus model param names $surplusProtobufNames")
       BackwardCompatible(
         surplusProtobufNames.map(_.toString),
         Nil,
@@ -242,11 +268,10 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
 
   private def compileTraitMapping[ProtobufType: Type, ModelType: Type](using Quotes): Compiled = {
     import topLevelQuotes.reflect._
-    val protobufCons = TypeRepr.of[ProtobufType].typeSymbol.primaryConstructor
-    val modelCons    = TypeRepr.of[ModelType].typeSymbol.primaryConstructor
-
     val protobufType = TypeRepr.of[ProtobufType]
     val modelType    = TypeRepr.of[ModelType]
+    val protobufCons = protobufType.typeSymbol.primaryConstructor
+    val modelCons    = modelType.typeSymbol.primaryConstructor
 
     val protobufChildren = symbolsByName(protobufType.typeSymbol.children)
     val modelChildren    = symbolsByName(modelType.typeSymbol.children)
@@ -254,62 +279,64 @@ class ReaderImpl(using val topLevelQuotes: Quotes) extends FormatImpl {
     if (protobufChildren.isEmpty)
       report.error(s"No subclasses of sealed trait `${protobufCons.fullName}` found.")
 
-    val emptyOneOfChildren: "Empty" = "Empty"
-    val unmatchedProtobufChildren   = protobufChildren.keySet - emptyOneOfChildren diff modelChildren.keySet
+    val EmptyOneOfChild: "Empty"  = "Empty"
+    val unmatchedProtobufChildren = protobufChildren.keySet - EmptyOneOfChild diff modelChildren.keySet
 
     if (unmatchedProtobufChildren.nonEmpty)
       report.error(s"`${modelCons.name}` does not match $unmatchedProtobufChildren children of `${protobufCons.name}`.")
 
+    println(s"compile trait mapping for ${protobufType.show} + ${modelType.show}")
+
     val surplusModelChildren = modelChildren.keySet diff protobufChildren.keySet
     val ownCompatibility     = Compatibility(Nil, Nil, surplusModelChildren.map(name => (modelType, name.toString)))
+    val ValueMethod: "value" = "value"
 
-    // report.errorAndAbort(ownCompatibility.toString)
+    val subTypes: Seq[Compiled] = Seq.empty
+    // val subTypes: Seq[Compiled] = for {
+    //   (className, protobufChild) <- protobufChildren.toSeq
+    //   modelChild                 <- modelChildren.get(className)
+    // } yield {
+    //   val path = Expr("/" + className.head.toLower + className.tail)
 
-    val subTypes: Seq[Compiled] = for {
-      (className, protobufChild) <- protobufChildren.toSeq
-      modelChild                 <- modelChildren.get(className)
-    } yield {
-      val path              = Expr("/" + className)
-      val protobufChildType = protobufChild.typeRef//.asType
-      val modelChildType    = modelType.memberType(modelChild).asType
-      report.error(protobufType.toString)
+    //   println(s"Reader: ${protobufChild.typeRef.show}, ${modelChild.typeRef.show}, $className")
 
-      (protobufChildType.asType, modelChildType) match {
-        case ('[p], '[m]) =>
-          report.error("match")
-          withImplicitReader[p, m](className) { reader =>
-            '{ (protobuf: p) =>
-              $reader.read(${ unsafeSelect('protobuf, className).asExprOf[p] }).withPathPrefix($path)
-            }
-          }
-        case e => report.errorAndAbort(e.toString)
-      }
-    }
+    //   val valueMethod = protobufChild.declaredField(ValueMethod)
+    //   val innerType   = protobufChild.typeRef.memberType(valueMethod)
 
-    report.errorAndAbort(subTypes.toString)
-
-    // report.errorAndAbort(subTypes.toString)
-
-    // val (cases, compatibility) = subTypes.unzip
-    // // // val emptyCase =
-    // // // for (protobufClass <- protobufChildren.get(emptyOneOfChildren) if !modelChildren.contains(emptyOneOfChildren))
-    // // //  yield cq"""_: ${objectReferenceTo(protobufClass)}.type => $pbFailureObj("OneOf field is empty!")"""
-
-    // def makeCons(using Quotes)(argsAcc: Seq[(String, Expr[_])]): Expr[PbResult[ModelType]] =
-    //   import quotes.reflect._
-    //   def appliedModelCompanion(using Quotes) =
-    //     import quotes.reflect._
-    //     val argList = argsAcc.map((name, qexpr) => NamedArg(name, qexpr.asTerm)).toList
-    //     Apply(Select.unique(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), "apply"), argList).asExprOf[ModelType]
-    //   '{ PbSuccess[ModelType]($appliedModelCompanion) }
-
-    // val result = '{
-    //   Reader.instance[ProtobufType, ModelType] { protobuf =>
-    //     ${ makeCons(cases) }.orElse(???)
+    //   (innerType.asType, modelChild.typeRef.asType) match {
+    //     case ('[p], '[m]) =>
+    //       val x = withImplicitReader[p, m](className) { reader =>
+    //         '{ (protobuf: p) =>
+    //           $reader.read(${ unsafeSelect('protobuf, className).asExprOf[p] }).withPathPrefix($path)
+    //         }
+    //       }
+    //       println(x)
+    //       x
     //   }
     // }
 
-    // (("", result), compatibility.fold(ownCompatibility)(_ merge _))
+    val (cases, compatibility) = subTypes.unzip
+    val emptyCase: Option[Expr[ProtobufType => PbFailure]] =
+      for (protobufClass <- protobufChildren.get(EmptyOneOfChild) if !modelChildren.contains(EmptyOneOfChild))
+        yield protobufClass.companionModule.typeRef.asType match
+          case '[companion] =>
+            CaseDef(Ref(TypeRepr.of[companion].typeSymbol.companionModule), guard = None, '{ PbFailure("OneOf field is empty!") }.asTerm)
+              .asExprOf[ProtobufType => PbFailure]
+//            '{ case (_: companion) => PbFailure("OneOf field is empty!") }.asExprOf[ProtobufType => PbFailure]
+
+    val x = cases.map { c =>
+      CaseDef(Ref(TypeRepr.of[ModelType].typeSymbol.companionModule), guard = None, c._2.asTerm)
+    }
+    val y = Match(???, x.toList).asExprOf[ProtobufType => PbResult[ModelType]]
+    println(emptyCase)
+    val result = '{
+      Reader.instance[ProtobufType, ModelType] {
+        ${ emptyCase.get }
+      }
+    }
+
+    println("result" + result)
+    (("", result), compatibility.fold(ownCompatibility)(_ merge _))
   }
 }
 

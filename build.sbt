@@ -114,6 +114,17 @@ lazy val scalacOptions_3 = Seq(
   "8",
   "-encoding",
   "UTF-8",
+  "-deprecation",
+  "-explain",
+  "-feature",
+  "-language:implicitConversions",
+  "-Werror",
+  // "-Wnonunit-statement",
+  // "-Wvalue-discard",
+  // "-Ycheck-all-patmat",
+  "-Ycheck-mods",
+  // "-Yexplicit-nulls",
+  // "-Ysafe-init",
   "-Xcheck-macros"
 )
 

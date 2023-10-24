@@ -61,6 +61,9 @@ trait FormatImpl {
     val full: Compatibility = Compatibility(Nil, Nil, Nil)
   }
 
+  private[teleproto] def innerType(from: TypeRepr): TypeRepr =
+    from.typeArgs.headOption.getOrElse(report.errorAndAbort(s"Type $from does not have type arguments"))
+
   private[teleproto] def checkClassTypes[ProtobufType: Type, ModelType: Type](using Quotes): Boolean =
     isProtobuf[ProtobufType] && isSimpleCaseClass[ModelType]
 

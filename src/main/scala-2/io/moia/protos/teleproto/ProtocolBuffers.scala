@@ -71,6 +71,5 @@ object ProtocolBuffers {
     *
     * To use it, just write `migration[P, Q]()`, compile and let the compiler explain the required migration functions.
     */
-  def migration[P, Q](args: (P => Any)*): Migration[P, Q] =
-    macro MigrationImpl.migration_impl[P, Q]
+  def migration[P, Q](args: (P => Any)*): Migration[P, Q] = macro MigrationImpl.migration_impl[P, Q]
 }

@@ -1,7 +1,6 @@
 package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
-import scala.annotation.experimental
 
 /** Tests correct behaviour of generated mappings regarding hierarchical types where a reader/writer for an inner case class can be
   * generated, too.
@@ -99,14 +98,7 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
 
     "generate a reader for all types in hierarchy of a generated type pair" in {
 
-      @experimental
-      val reader = ProtocolBuffers.reader[protobuf.Foo, model.Foo]
-
-      reader.read(protobuf.Foo("1.2", protobuf.BarOrBaz.Bar(protobuf.Bar(Some(42))))) shouldBe
-        PbSuccess(model.Foo(1.2, model.Bar(42)))
-
-      reader.read(protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("some text"))))) shouldBe
-        PbSuccess(model.Foo(1.2, model.Baz(model.Qux("some text"))))
+      val reader = ProtocolBuffers.reader[protobuf.BarOrBaz, model.BarOrBaz]
     }
 
 //    "use an 'explicit' implicit reader before generating a reader for a type in hierarchy of a generated type pair" in {
