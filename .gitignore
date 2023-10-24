@@ -1,8 +1,11 @@
 # sbt
 lib_managed
 project/project
+project/.bloop
 target
-/.bsp/sbt.json
+.bsp/sbt.json
+.bloop
+.metals
 
 # Worksheets (Eclipse or IntelliJ)
 *.sc
@@ -18,6 +21,9 @@ target
 
 # IntelliJ
 .idea
+
+# VSCode
+.vscode
 
 # ENSIME
 .ensime
