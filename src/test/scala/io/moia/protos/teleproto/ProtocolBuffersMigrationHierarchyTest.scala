@@ -34,7 +34,7 @@ object ProtocolBuffersMigrationHierarchyTest {
     ProtocolBuffers.migration[UnmatchingSubProtoV1, UnmatchingSubProtoV2](_.foo.toString)
 
   implicit val protoV1toV2: Migration[ProtoV1, ProtoV2] =
-    ProtocolBuffers.migration[ProtoV1, ProtoV2](pb => List.fill(pb.passengers)(PassengerV2(true)))
+    ProtocolBuffers.migration[ProtoV1, ProtoV2](pb => List.fill(pb.passengers)(PassengerV2(adult = true)))
 }
 
 class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
@@ -46,13 +46,13 @@ class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
     "construct a migration from generated and manual nested migrations" in {
 
       protoV1toV2.migrate(ProtoV1(Some(MatchingSubProtoV1("same")), UnmatchingSubProtoV1(42, ThirdLevelV1("ok")), 1)) shouldBe
-        ProtoV2(Some(MatchingSubProtoV2("same")), UnmatchingSubProtoV2("42", ThirdLevelV2("ok")), List(PassengerV2(true)))
+        ProtoV2(Some(MatchingSubProtoV2("same")), UnmatchingSubProtoV2("42", ThirdLevelV2("ok")), List(PassengerV2(adult = true)))
 
       protoV1toV2.migrate(ProtoV1(Some(MatchingSubProtoV1("same")), UnmatchingSubProtoV1(42, ThirdLevelV1("ok")), 2)) shouldBe
         ProtoV2(
           Some(MatchingSubProtoV2("same")),
           UnmatchingSubProtoV2("42", ThirdLevelV2("ok")),
-          List(PassengerV2(true), PassengerV2(true))
+          List(PassengerV2(adult = true), PassengerV2(adult = true))
         )
 
       protoV1toV2.migrate(ProtoV1(None, UnmatchingSubProtoV1(42, ThirdLevelV1("ok")), 0)) shouldBe
@@ -66,7 +66,7 @@ class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
         Migration[MatchingSubProtoV1, MatchingSubProtoV2](src => MatchingSubProtoV2(src.same.toUpperCase))
 
       val customProtoV1toV2: Migration[ProtoV1, ProtoV2] =
-        ProtocolBuffers.migration[ProtoV1, ProtoV2](pb => List.fill(pb.passengers)(PassengerV2(true)))
+        ProtocolBuffers.migration[ProtoV1, ProtoV2](pb => List.fill(pb.passengers)(PassengerV2(adult = true)))
 
       customProtoV1toV2.migrate(ProtoV1(Some(MatchingSubProtoV1("same")), UnmatchingSubProtoV1(42, ThirdLevelV1("ok")), 0)) shouldBe
         ProtoV2(Some(MatchingSubProtoV2("SAME")), UnmatchingSubProtoV2("42", ThirdLevelV2("ok")), Nil)
