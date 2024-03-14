@@ -1,5 +1,7 @@
 package io.moia.protos.teleproto
 
+import io.scalaland.chimney.{Transformer, PartialTransformer}
+
 case class GenericProtobuf1(foo: String, bar: Int)
 
 case class GenericProtobuf2(foo: Int, bar: String)
@@ -7,18 +9,15 @@ case class GenericProtobuf2(foo: Int, bar: String)
 case class GenericModel[S, T](foo: S, bar: T)
 
 object GenericProtobuf {
+  val reader1: PartialTransformer[GenericProtobuf1, GenericModel[String, Int]] =
+    PartialTransformer.derive[GenericProtobuf1, GenericModel[String, Int]]
 
-  type BoundModel1 = GenericModel[String, Int]
+  val reader2: PartialTransformer[GenericProtobuf2, GenericModel[Int, String]] =
+    PartialTransformer.derive[GenericProtobuf2, GenericModel[Int, String]]
 
-  type BoundModel2 = GenericModel[Int, String]
+  val writer1: Transformer[GenericModel[String, Int], GenericProtobuf1] = Transformer.derive[GenericModel[String, Int], GenericProtobuf1]
 
-  val reader1: Reader[GenericProtobuf1, BoundModel1] = ProtocolBuffers.reader[GenericProtobuf1, BoundModel1]
-
-  val reader2: Reader[GenericProtobuf2, BoundModel2] = ProtocolBuffers.reader[GenericProtobuf2, BoundModel2]
-
-  val writer1: Writer[BoundModel1, GenericProtobuf1] = ProtocolBuffers.writer[BoundModel1, GenericProtobuf1]
-
-  val writer2: Writer[BoundModel2, GenericProtobuf2] = ProtocolBuffers.writer[BoundModel2, GenericProtobuf2]
+  val writer2: Transformer[GenericModel[Int, String], GenericProtobuf2] = Transformer.derive[GenericModel[Int, String], GenericProtobuf2]
 }
 
 class TypedProtocolBuffersTest extends UnitTest {
@@ -29,16 +28,16 @@ class TypedProtocolBuffersTest extends UnitTest {
 
     "generate a reader for protobuf matching a typed model" in {
 
-      reader1.read(GenericProtobuf1("foo", 42)) shouldBe PbSuccess(GenericModel("foo", 42))
+      reader1.transform(GenericProtobuf1("foo", 42)).asEitherErrorPathMessageStrings shouldBe Right(GenericModel("foo", 42))
 
-      reader2.read(GenericProtobuf2(42, "foo")) shouldBe PbSuccess(GenericModel(42, "foo"))
+      reader2.transform(GenericProtobuf2(42, "foo")).asEitherErrorPathMessageStrings shouldBe Right(GenericModel(42, "foo"))
     }
 
     "generate a writer for a typed model matching a protobuf" in {
 
-      writer1.write(GenericModel("foo", 42)) shouldBe GenericProtobuf1("foo", 42)
+      writer1.transform(GenericModel("foo", 42)) shouldBe GenericProtobuf1("foo", 42)
 
-      writer2.write(GenericModel(42, "foo")) shouldBe GenericProtobuf2(42, "foo")
+      writer2.transform(GenericModel(42, "foo")) shouldBe GenericProtobuf2(42, "foo")
     }
   }
 }

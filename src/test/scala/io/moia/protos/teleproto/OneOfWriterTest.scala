@@ -21,8 +21,7 @@ class OneOfWriterTest extends UnitTest {
         def foo: scala.Option[protobuf.Foo] = None
         def bar: scala.Option[protobuf.Bar] = None
       }
-      object Value extends {
-
+      object Value {
         case object Empty extends Value {
           override def isEmpty: Boolean   = true
           override def isDefined: Boolean = false

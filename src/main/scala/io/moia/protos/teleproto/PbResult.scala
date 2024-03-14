@@ -139,7 +139,7 @@ object PbFailure {
     * just error messages from failures. It's intended to create an overall failure when one of the results is a failure. It doesn't make
     * sense if all are successes.
     */
-  def combine(results: PbResult[_]*): PbFailure =
+  def combine(results: PbResult[?]*): PbFailure =
     PbFailure(results.flatMap {
       case PbSuccess(_)      => Seq.empty
       case PbFailure(errors) => errors

@@ -1,18 +1,22 @@
-import com.typesafe.tools.mima.core._
-import xerial.sbt.Sonatype._
+import com.typesafe.tools.mima.core.*
+import xerial.sbt.Sonatype.*
 
-addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
+addCommandAlias("validate", "all test doc mimaReportBinaryIssues")
 
 // *****************************************************************************
 // Projects
 // *****************************************************************************
 
+// TODO: how to rename coproductInstances?
+// TODO: extract required givens into library
+// TODO: try PbResult.fromEither
+
 lazy val `teleproto` = project
   .in(file("."))
   .enablePlugins(GitVersioning, GitBranchPrompt)
-  .settings(commonSettings: _*)
-  .settings(sonatypeSettings: _*)
-  .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
+  .settings(commonSettings*)
+  .settings(sonatypeSettings*)
+  .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings)*)
   .settings(
     name          := "teleproto",
     version       := "2.3.0",
@@ -24,7 +28,8 @@ lazy val `teleproto` = project
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
       library.scalaCollectionCompat,
-      "org.scala-lang" % "scala-reflect" % (ThisBuild / scalaVersion).value
+      "io.scalaland" %% "chimney"           % "1.0.0-M1",
+      "io.scalaland" %% "chimney-protobufs" % "1.0.0-M1"
     )
   )
 
@@ -34,12 +39,11 @@ lazy val `teleproto` = project
 
 lazy val library = new {
   object Version {
-    val scalaPB               = scalapb.compiler.Version.scalapbVersion
+    val scalaPB               = "0.11.15"
     val scalaPBJson           = "0.12.1"
     val scalaCheck            = "1.17.0"
     val scalaTest             = "3.2.18"
     val scalaTestPlusCheck    = "3.2.14.0"
-    val scapeGoat             = "2.1.5"
     val scalaCollectionCompat = "2.11.0"
   }
 
@@ -57,60 +61,35 @@ lazy val library = new {
 
 lazy val commonSettings = Seq.concat(
   compilerSettings,
-  gitSettings,
   organizationSettings,
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
-  scapegoatSettings,
   mimaSettings
 )
 
 lazy val compilerSettings = Seq(
   scalaVersion                                                                     := crossScalaVersions.value.head,
-  crossScalaVersions                                                               := List("2.13.13", "2.12.19"),
+  crossScalaVersions                                                               := List("3.3.3"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
-  scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, 12)) => scalacOptions_2_12
-    case Some((2, 13)) => scalacOptions_2_13
-    case _             => Nil
-  })
+  scalacOptions ++= scalacOptions3
 )
 
-lazy val scalacOptions_2_12 = Seq(
-  "-unchecked",
+lazy val scalacOptions3 = Seq(
   "-deprecation",
+  "-encoding",
+  "UTF-8",
+  "-explain",
+  "-explain-types",
+  "-feature",
   "-language:_",
   "-release",
   "8",
-  "-encoding",
-  "UTF-8",
-  "-Xfatal-warnings",
-  "-Ywarn-unused-import",
-  "-Yno-adapted-args",
-  "-Ywarn-dead-code",
-  "-Ywarn-inaccessible",
-  "-Ywarn-infer-any",
-  "-Ywarn-nullary-override",
-  "-Ywarn-nullary-unit"
-)
-
-lazy val scalacOptions_2_13 = Seq(
+  "-rewrite",
+//  "-source",
+//  "3.4-migration",
   "-unchecked",
-  "-deprecation",
-  "-language:_",
-  "-release",
-  "8",
-  "-encoding",
-  "UTF-8",
-  "-Xfatal-warnings",
-  "-Xlint",
-  "-Ywarn-dead-code",
-  "-Ymacro-annotations"
-)
-
-lazy val gitSettings = Seq(
-  git.useGitDescribe.withRank(KeyRanks.Invisible) := false
+  "-Xfatal-warnings"
 )
 
 lazy val organizationSettings = Seq(
@@ -147,12 +126,6 @@ lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
 )
 
-lazy val scapegoatSettings = Seq(
-  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
-  // do not check generated files
-  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
-)
-
 lazy val mimaSettings = Seq(
   mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),
   mimaBinaryIssueFilters ++= Seq(
@@ -161,5 +134,6 @@ lazy val mimaSettings = Seq(
   )
 )
 
-Test / PB.targets      := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value)
+Compile / PB.targets   := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "scalapb")
+Test / PB.targets      := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value / "scalapb")
 Test / PB.protoSources := Seq(baseDirectory.value / "src" / "test" / "protobuf")

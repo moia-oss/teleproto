@@ -1,13 +1,14 @@
 package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
+import io.scalaland.chimney.dsl._
+import io.scalaland.chimney.protobufs._
+import io.scalaland.chimney.{Transformer, PartialTransformer}
 
 /** Tests correct behaviour of generated mappings regarding traits.
   */
 object OneOfProtocolBuffersTest {
-
   object protobuf {
-
     final case class Foo(price: String) // extends AnyRef!!
     final case class Bar(number: Int)   // extends AnyRef!!
 
@@ -48,7 +49,6 @@ object OneOfProtocolBuffersTest {
   }
 
   object model {
-
     sealed trait FooOrBar
     case class Foo(price: BigDecimal) extends FooOrBar
     case class Bar(number: Int)       extends FooOrBar
@@ -56,62 +56,64 @@ object OneOfProtocolBuffersTest {
     case class Model(fooOrBar: FooOrBar)
   }
 
-  implicit val fooReader: Reader[protobuf.Foo, model.Foo] =
-    ProtocolBuffers.reader[protobuf.Foo, model.Foo]
+  given PartialTransformer[protobuf.Foo, model.Foo] =
+    PartialTransformer.derive[protobuf.Foo, model.Foo]
 
-  implicit val barReader: Reader[protobuf.Bar, model.Bar] =
-    ProtocolBuffers.reader[protobuf.Bar, model.Bar]
+  given PartialTransformer[protobuf.Bar, model.Bar] =
+    PartialTransformer.derive[protobuf.Bar, model.Bar]
 
-  implicit val fooOrBarReader: Reader[protobuf.FooOrBar, model.FooOrBar] =
-    ProtocolBuffers.reader[protobuf.FooOrBar, model.FooOrBar]
+  given PartialTransformer[protobuf.FooOrBar, model.FooOrBar] =
+    PartialTransformer.derive[protobuf.FooOrBar, model.FooOrBar]
 
-  val reader: Reader[protobuf.Protobuf, model.Model] =
-    ProtocolBuffers.reader[protobuf.Protobuf, model.Model]
+  val reader: PartialTransformer[protobuf.Protobuf, model.Model] =
+    PartialTransformer.derive[protobuf.Protobuf, model.Model]
 
-  implicit val fooWriter: Writer[model.Foo, protobuf.Foo] =
-    ProtocolBuffers.writer[model.Foo, protobuf.Foo]
+  given Transformer[model.Foo, protobuf.Foo] =
+    Transformer.derive[model.Foo, protobuf.Foo]
 
-  implicit val barWriter: Writer[model.Bar, protobuf.Bar] =
-    ProtocolBuffers.writer[model.Bar, protobuf.Bar]
+  given Transformer[model.Bar, protobuf.Bar] =
+    Transformer.derive[model.Bar, protobuf.Bar]
 
-  implicit val fooOrBarWriter: Writer[model.FooOrBar, protobuf.FooOrBar] =
-    ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]
+  given Transformer[model.FooOrBar, protobuf.FooOrBar] =
+    Transformer.derive[model.FooOrBar, protobuf.FooOrBar]
 
-  val writer: Writer[model.Model, protobuf.Protobuf] =
-    ProtocolBuffers.writer[model.Model, protobuf.Protobuf]
+  val writer: Transformer[model.Model, protobuf.Protobuf] =
+    Transformer.derive[model.Model, protobuf.Protobuf]
 }
 
 class OneOfProtocolBuffersTest extends UnitTest {
 
-  import OneOfProtocolBuffersTest._
+  import OneOfProtocolBuffersTest.{_, given}
 
   "ProtocolBuffers for one-of" should {
 
     "generate a reader for matching sealed traits" in {
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Empty)) shouldBe PbFailure("/fooOrBar", "Oneof field is empty!")
+      reader.transform(protobuf.Protobuf(protobuf.FooOrBar.Empty)).asEitherErrorPathMessageStrings shouldBe
+        Left(List(("fooOrBar", "empty value")))
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Foo(protobuf.Foo("five-hundred")))) shouldBe PbFailure(
-        "/fooOrBar/foo/price",
-        "Value must be a valid decimal number."
+      reader
+        .transform(protobuf.Protobuf(protobuf.FooOrBar.Foo(protobuf.Foo("five-hundred"))))
+        .asEitherErrorPathMessageStrings shouldBe Left(
+        List(("fooOrBar.price", "Character f is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark."))
       )
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Foo(protobuf.Foo("500.0")))) shouldBe PbSuccess(
+      reader.transform(protobuf.Protobuf(protobuf.FooOrBar.Foo(protobuf.Foo("500.0")))).asEitherErrorPathMessageStrings shouldBe Right(
         model.Model(model.Foo(500.0))
       )
 
-      reader.read(protobuf.Protobuf(protobuf.FooOrBar.Bar(protobuf.Bar(42)))) shouldBe PbSuccess(
+      reader.transform(protobuf.Protobuf(protobuf.FooOrBar.Bar(protobuf.Bar(42)))).asEitherErrorPathMessageStrings shouldBe Right(
         model.Model(model.Bar(42))
       )
     }
 
     "generate a writer for matching sealed traits" in {
 
-      writer.write(model.Model(model.Foo(500.0))) shouldBe protobuf.Protobuf(
+      writer.transform(model.Model(model.Foo(500.0))) shouldBe protobuf.Protobuf(
         protobuf.FooOrBar.Foo(protobuf.Foo("500.0"))
       )
 
-      writer.write(model.Model(model.Bar(42))) shouldBe protobuf.Protobuf(protobuf.FooOrBar.Bar(protobuf.Bar(42)))
+      writer.transform(model.Model(model.Bar(42))) shouldBe protobuf.Protobuf(protobuf.FooOrBar.Bar(protobuf.Bar(42)))
     }
   }
 }

@@ -16,6 +16,7 @@
 
 package io.moia.protos.teleproto
 
+import scala.language.implicitConversions
 import java.io.InputStream
 
 import com.google.protobuf.CodedInputStream
@@ -118,7 +119,7 @@ trait VersionedModelReader[Version, DetachedModel] {
       reader: Reader[SpecificModel, DetachedModel]
   ) extends VersionReader {
     override final def fromJson(jsonString: String, parser: Parser): Try[PbResult[DetachedModel]] =
-      Try(parser.fromJsonString(jsonString)(companion)).map(reader.read)
+      Try(parser.fromJsonString(jsonString)(using companion)).map(reader.read)
 
     def fromJson(jsonString: String): Try[PbResult[DetachedModel]] =
       fromJson(jsonString, VersionedModelReader.parser)
@@ -147,7 +148,7 @@ object VersionedModelReader {
   def apply[Version, DetachedModel](
       readers: (Version, CompanionReader[DetachedModel])*
   ): VersionedModelReader[Version, DetachedModel] = new VersionedModelReader[Version, DetachedModel] {
-    val readerMappings: ReaderMappings = ListMap(readers.map { case (v, r) => r.versioned(v)(this) }: _*)
+    val readerMappings: ReaderMappings = ListMap(readers.map { case (v, r) => r.versioned(v)(this) }*)
   }
 
   sealed trait CompanionReader[DetachedModel] {

@@ -16,6 +16,7 @@
 
 package io.moia.protos.teleproto
 
+import scala.language.implicitConversions
 import scalapb.json4s.Printer
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -117,7 +118,7 @@ object VersionedModelWriter {
   def apply[Version, DetachedModel](
       writers: (Version, CompanionWriter[DetachedModel])*
   ): VersionedModelWriter[Version, DetachedModel] = new VersionedModelWriter[Version, DetachedModel] {
-    val writerMappings: WriterMappings = ListMap(writers.map { case (v, w) => w.versioned(v) }: _*)
+    val writerMappings: WriterMappings = ListMap(writers.map { case (v, w) => w.versioned(v) }*)
   }
 
   sealed trait CompanionWriter[DetachedModel] {

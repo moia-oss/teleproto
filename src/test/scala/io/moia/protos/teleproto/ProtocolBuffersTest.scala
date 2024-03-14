@@ -1,9 +1,11 @@
 package io.moia.protos.teleproto
 
 import java.time.Instant
-
 import com.google.protobuf.Descriptors
 import com.google.protobuf.timestamp.Timestamp
+import io.scalaland.chimney.{Transformer, partial, PartialTransformer}
+import io.scalaland.chimney.protobufs.*
+import io.scalaland.chimney.dsl.*
 import scalapb.descriptors.EnumDescriptor
 import scalapb.{GeneratedEnum, GeneratedEnumCompanion, UnrecognizedEnum}
 
@@ -90,23 +92,37 @@ case class ModelLarger(
 
 object Protobuf {
 
-  implicit val subReader: Reader[SubProtobuf, SubModel] = ProtocolBuffers.reader[SubProtobuf, SubModel]
+  given PartialTransformer[ProtobufEnum, ModelEnum] = PartialTransformer
+    .define[ProtobufEnum, ModelEnum]
+    .withCoproductInstance[ProtobufEnum.FirstCase.type](_ => ModelEnum.First_Case)
+    .withCoproductInstance[ProtobufEnum.SECOND_CASE.type](_ => ModelEnum.SecondCase)
+    .withCoproductInstance[ProtobufEnum.Third_Case.type](_ => ModelEnum.THIRD_CASE)
+    .withCoproductInstancePartial[ProtobufEnum.Unrecognized](unrecognizedEnum =>
+      partial.Result.fromErrorString(s"Enumeration value ${unrecognizedEnum.value} is unrecognized!")
+    )
+    .buildTransformer
 
-  val reader: Reader[Protobuf, Model] = ProtocolBuffers.reader[Protobuf, Model]
+  given PartialTransformer[SubProtobuf, SubModel] = PartialTransformer.derive[SubProtobuf, SubModel]
 
-  @backward("2e0e9b")
-  val reader2: Reader[Protobuf, ModelSmaller] = ProtocolBuffers.reader[Protobuf, ModelSmaller]
+  val reader: PartialTransformer[Protobuf, Model] = PartialTransformer.derive[Protobuf, Model]
 
-  @backward("84be06")
-  val reader3: Reader[Protobuf, ModelLarger] = ProtocolBuffers.reader[Protobuf, ModelLarger]
+  val reader2: PartialTransformer[Protobuf, ModelSmaller] = PartialTransformer.derive[Protobuf, ModelSmaller]
 
-  val writer: Writer[Model, Protobuf] = ProtocolBuffers.writer[Model, Protobuf]
+  val reader3: PartialTransformer[Protobuf, ModelLarger] =
+    PartialTransformer.define[Protobuf, ModelLarger].enableDefaultValues.enableOptionDefaultsToNone.buildTransformer
 
-  @forward("2e0e9b")
-  val writer2: Writer[ModelSmaller, Protobuf] = ProtocolBuffers.writer[ModelSmaller, Protobuf]
+  given Transformer[ModelEnum, ProtobufEnum] = Transformer
+    .define[ModelEnum, ProtobufEnum]
+    .withCoproductInstance[ModelEnum.First_Case.type](_ => ProtobufEnum.FirstCase)
+    .withCoproductInstance[ModelEnum.SecondCase.type](_ => ProtobufEnum.SECOND_CASE)
+    .withCoproductInstance[ModelEnum.THIRD_CASE.type](_ => ProtobufEnum.Third_Case)
+    .buildTransformer
 
-  @forward("84be06")
-  val writer3: Writer[ModelLarger, Protobuf] = ProtocolBuffers.writer[ModelLarger, Protobuf]
+  val writer: Transformer[Model, Protobuf] = Transformer.derive[Model, Protobuf]
+
+  val writer2: Transformer[ModelSmaller, Protobuf] = Transformer.define[ModelSmaller, Protobuf].enableDefaultValues.buildTransformer
+
+  val writer3: Transformer[ModelLarger, Protobuf] = Transformer.derive[ModelLarger, Protobuf]
 }
 
 class ProtocolBuffersTest extends UnitTest {
@@ -117,43 +133,45 @@ class ProtocolBuffersTest extends UnitTest {
 
     "generate a reader for matching models" in {
 
-      reader.read(Protobuf(None, Some("1.2"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))) shouldBe PbFailure(
-        "/id",
-        "Value is required."
+      reader
+        .transform(Protobuf(None, Some("1.2"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2"))))
+        .asEitherErrorPathMessageStrings shouldBe Left(List("id" -> "empty value"))
+
+      reader
+        .transform(Protobuf(Some("foo"), Some("bar"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2"))))
+        .asEitherErrorPathMessageStrings shouldBe Left(
+        List("price" -> "Character b is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.")
       )
 
-      reader.read(
-        Protobuf(Some("foo"), Some("bar"), Some(Timestamp.defaultInstance), None, Nil, Some(SubProtobuf("1", "2")))
-      ) shouldBe PbFailure(
-        "/price",
-        "Value must be a valid decimal number."
-      )
-
-      reader.read(
-        Protobuf(
-          Some("foo"),
-          Some("1.2"),
-          Some(Timestamp.defaultInstance),
-          Some("pickup"),
-          Nil,
-          Some(SubProtobuf("1", "2")),
-          ProtobufEnum.FirstCase
+      reader
+        .transform(
+          Protobuf(
+            Some("foo"),
+            Some("1.2"),
+            Some(Timestamp.defaultInstance),
+            Some("pickup"),
+            Nil,
+            Some(SubProtobuf("1", "2")),
+            ProtobufEnum.FirstCase
+          )
         )
-      ) shouldBe
-        PbSuccess(Model("foo", 1.2, Instant.ofEpochMilli(0), Some("pickup"), Nil, SubModel(1, 2), ModelEnum.First_Case))
+        .asEitherErrorPathMessageStrings shouldBe
+        Right(Model("foo", 1.2, Instant.ofEpochMilli(0), Some("pickup"), Nil, SubModel(1, 2), ModelEnum.First_Case))
 
-      reader.read(
-        Protobuf(
-          Some("foo"),
-          Some("1.2"),
-          Some(Timestamp.defaultInstance),
-          None,
-          Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")),
-          Some(SubProtobuf("1", "2")),
-          ProtobufEnum.SECOND_CASE
+      reader
+        .transform(
+          Protobuf(
+            Some("foo"),
+            Some("1.2"),
+            Some(Timestamp.defaultInstance),
+            None,
+            Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")),
+            Some(SubProtobuf("1", "2")),
+            ProtobufEnum.SECOND_CASE
+          )
         )
-      ) shouldBe
-        PbSuccess(
+        .asEitherErrorPathMessageStrings shouldBe
+        Right(
           Model(
             "foo",
             1.2,
@@ -168,67 +186,81 @@ class ProtocolBuffersTest extends UnitTest {
 
     "generate a reader that provides nested paths in error messages" in {
 
-      reader.read(
-        Protobuf(
-          Some("foo"),
-          Some("1.2"),
-          Some(Timestamp.defaultInstance),
-          None,
-          Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "Milestein One")),
-          Some(SubProtobuf("1", "2"))
+      reader
+        .transform(
+          Protobuf(
+            Some("foo"),
+            Some("1.2"),
+            Some(Timestamp.defaultInstance),
+            None,
+            Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "Milestein One")),
+            Some(SubProtobuf("1", "2"))
+          )
         )
-      ) shouldBe
-        PbFailure("/ranges(1)/to", "Value must be a valid decimal number.")
+        .asEitherErrorPathMessageStrings shouldBe
+        Left(List("ranges(1).to" -> "Character M is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark."))
     }
 
     "generate a reader that collects all errors" in {
 
-      reader.read(
-        Protobuf(
-          None,
-          None,
-          None,
-          None,
-          Seq(SubProtobuf("foo", "bar"), SubProtobuf("baz", "qux")),
-          Some(SubProtobuf("one", "two")),
-          ProtobufEnum.Unrecognized(42)
+      reader
+        .transform(
+          Protobuf(
+            None,
+            None,
+            None,
+            None,
+            Seq(SubProtobuf("foo", "bar"), SubProtobuf("baz", "qux")),
+            Some(SubProtobuf("one", "two")),
+            ProtobufEnum.Unrecognized(42)
+          )
         )
-      ) shouldBe
-        PbFailure(
-          Seq(
-            "/id"             -> "Value is required.",
-            "/price"          -> "Value is required.",
-            "/time"           -> "Value is required.",
-            "/ranges(0)/from" -> "Value must be a valid decimal number.",
-            "/ranges(0)/to"   -> "Value must be a valid decimal number.",
-            "/ranges(1)/from" -> "Value must be a valid decimal number.",
-            "/ranges(1)/to"   -> "Value must be a valid decimal number.",
-            "/doubleSub/from" -> "Value must be a valid decimal number.",
-            "/doubleSub/to"   -> "Value must be a valid decimal number.",
-            "/enum"           -> "Enumeration value 42 is unrecognized!"
+        .asEitherErrorPathMessageStrings shouldBe
+        Left(
+          List(
+            "id"             -> "empty value",
+            "price"          -> "empty value",
+            "time"           -> "empty value",
+            "ranges(0).from" -> "Character f is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.",
+            "ranges(0).to"   -> "Character b is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.",
+            "ranges(1).from" -> "Character b is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.",
+            "ranges(1).to"   -> "Character q is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.",
+            "doubleSub.from" -> "Character o is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.",
+            "doubleSub.to"   -> "Character t is neither a decimal digit number, decimal point, nor \"e\" notation exponential mark.",
+            "enum"           -> "Enumeration value 42 is unrecognized!"
           )
         )
     }
 
     "generate a reader for backward compatible models" in {
 
-      reader2.read(
-        Protobuf(Some("foo"), Some("1.2"), Some(Timestamp.defaultInstance), None, Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")))
-      ) shouldBe
-        PbSuccess(ModelSmaller("foo", 1.2))
-
-      reader3.read(
-        Protobuf(
-          Some("foo"),
-          Some("1.2"),
-          Some(Timestamp.defaultInstance),
-          None,
-          Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")),
-          Some(SubProtobuf("1", "2")),
-          ProtobufEnum.Third_Case
+      reader2
+        .transform(
+          Protobuf(
+            Some("foo"),
+            Some("1.2"),
+            Some(Timestamp.defaultInstance),
+            None,
+            Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23"))
+          )
         )
-      ) shouldBe
-        PbSuccess(
+        .asEitherErrorPathMessageStrings shouldBe
+        Right(ModelSmaller("foo", 1.2))
+
+      reader3
+        .transform(
+          Protobuf(
+            Some("foo"),
+            Some("1.2"),
+            Some(Timestamp.defaultInstance),
+            None,
+            Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")),
+            Some(SubProtobuf("1", "2")),
+            ProtobufEnum.Third_Case
+          )
+        )
+        .asEitherErrorPathMessageStrings shouldBe
+        Right(
           ModelLarger(
             id = "foo",
             price = 1.2,
@@ -237,30 +269,31 @@ class ProtocolBuffersTest extends UnitTest {
             baz = None,
             ranges = List(SubModel(1, 1.2), SubModel(1.2, 1.23)),
             doubleSub = SubModel(1, 2),
-            enum = ModelEnum.THIRD_CASE
+            `enum` = ModelEnum.THIRD_CASE
           )
         )
     }
 
     "generate a reader for ScalaPB enums that handles Unrecognized as a failure" in {
-
-      reader.read(
-        Protobuf(
-          Some("foo"),
-          Some("1.2"),
-          Some(Timestamp.defaultInstance),
-          None,
-          Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")),
-          Some(SubProtobuf("1", "2")),
-          ProtobufEnum.Unrecognized(42)
+      reader
+        .transform(
+          Protobuf(
+            Some("foo"),
+            Some("1.2"),
+            Some(Timestamp.defaultInstance),
+            None,
+            Seq(SubProtobuf("1", "1.2"), SubProtobuf("1.2", "1.23")),
+            Some(SubProtobuf("1", "2")),
+            ProtobufEnum.Unrecognized(42)
+          )
         )
-      ) shouldBe
-        PbFailure("/enum", "Enumeration value 42 is unrecognized!")
+        .asEitherErrorPathMessageStrings shouldBe
+        Left(List("enum" -> "Enumeration value 42 is unrecognized!"))
     }
 
     "generate a writer for matching models" in {
 
-      writer.write(
+      writer.transform(
         Model("id", 1.23, Instant.ofEpochMilli(0), Some("pickup-id"), List(SubModel(1.2, 3.45)), SubModel(1, 2), ModelEnum.First_Case)
       ) shouldBe
         Protobuf(
@@ -273,7 +306,7 @@ class ProtocolBuffersTest extends UnitTest {
           ProtobufEnum.FirstCase
         )
 
-      writer.write(Model("id", 1.23, Instant.ofEpochMilli(0), None, Nil, SubModel(1, 2), ModelEnum.SecondCase)) shouldBe
+      writer.transform(Model("id", 1.23, Instant.ofEpochMilli(0), None, Nil, SubModel(1, 2), ModelEnum.SecondCase)) shouldBe
         Protobuf(
           Some("id"),
           Some("1.23"),
@@ -287,10 +320,10 @@ class ProtocolBuffersTest extends UnitTest {
 
     "generate a writer for backward compatible models" in {
 
-      writer2.write(ModelSmaller("id", 1.23)) shouldBe
+      writer2.transform(ModelSmaller("id", 1.23)) shouldBe
         Protobuf(Some("id"), Some("1.23"))
 
-      writer3.write(
+      writer3.transform(
         ModelLarger("id", 1.23, Some("bar"), Instant.ofEpochMilli(0), "baz", None, Some("foo"), Nil, SubModel(1, 2), ModelEnum.THIRD_CASE)
       ) shouldBe
         Protobuf(
@@ -309,18 +342,18 @@ class ProtocolBuffersTest extends UnitTest {
       val modelA =
         Model("id", 1.23, Instant.ofEpochMilli(0), Some("pickup-id"), List(SubModel(1.2, 3.45)), SubModel(1, 2), ModelEnum.THIRD_CASE)
 
-      reader.read(writer.write(modelA)) shouldBe PbSuccess(modelA)
+      reader.transform(writer.transform(modelA)).asEitherErrorPathMessageStrings shouldBe Right(modelA)
 
       val modelB = Model("id", 1.23, Instant.ofEpochMilli(0), None, Nil, SubModel(1, 2), ModelEnum.SecondCase)
 
-      reader.read(writer.write(modelB)) shouldBe PbSuccess(modelB)
+      reader.transform(writer.transform(modelB)).asEitherErrorPathMessageStrings shouldBe Right(modelB)
     }
 
     "generate a reader/writer pair for reduced backward compatible models" in {
 
       val model2 = ModelSmaller("id", 1.23)
 
-      reader2.read(writer2.write(model2)) shouldBe PbSuccess(model2)
+      reader2.transform(writer2.transform(model2)).asEitherErrorPathMessageStrings shouldBe Right(model2)
     }
   }
 }

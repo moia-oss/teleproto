@@ -1,5 +1,7 @@
 package io.moia.protos.teleproto
 
+import io.scalaland.chimney.{partial, PartialTransformer, Transformer}
+
 object ProtocolBuffersMigrationChainTest {
 
   // V3 is the latest version, the "business model" matches the latest version
@@ -27,40 +29,49 @@ object ProtocolBuffersMigrationChainTest {
 
   // case class ModelAtV1(foo: String, bar: Int, baz: Option[BigDecimal])
 
-  implicit val readerForV3: Reader[ProtoV3, ModelForV3] = ProtocolBuffers.reader[ProtoV3, ModelForV3]
+  val fromV2toV3: Transformer[ProtoV2, ProtoV3] =
+    Transformer
+      .define[ProtoV2, ProtoV3]
+      .withFieldComputed(_.qux, _.baz.getOrElse("default qux"))
+      .buildTransformer
 
-  implicit val fromV2toV3: Migration[ProtoV2, ProtoV3] = ProtocolBuffers.migration[ProtoV2, ProtoV3](_.baz.getOrElse("default qux"))
+  val fromProto3toModel3: PartialTransformer[ProtoV3, ModelForV3] = PartialTransformer.derive[ProtoV3, ModelForV3]
 
-  implicit val readerForV2: Reader[ProtoV2, ModelForV3] = fromV2toV3.reader[ModelForV3]
+  val readerForV2: PartialTransformer[ProtoV2, ModelForV3] = PartialTransformer { v2 =>
+    fromProto3toModel3.transform(fromV2toV3.transform(v2))
+  }
 
-  implicit val fromV1toV2: Migration[ProtoV1, ProtoV2] = ProtocolBuffers.migration[ProtoV1, ProtoV2](_.foo)
+  val fromV1toV2: Transformer[ProtoV1, ProtoV2] =
+    Transformer.define[ProtoV1, ProtoV2].withFieldRenamed(_.foo, _.renamedFoo).buildTransformer
 
-  implicit val readerForV1: Reader[ProtoV1, ModelForV3] = fromV1toV2.reader[ModelForV3]
+  val readerForV1: PartialTransformer[ProtoV1, ModelForV3] = PartialTransformer { v1 =>
+    fromProto3toModel3.transform(fromV2toV3.transform(fromV1toV2.transform(v1)))
+  }
 }
 
 class ProtocolBuffersMigrationChainTest extends UnitTest {
 
-  import ProtocolBuffersMigrationChainTest._
+  import ProtocolBuffersMigrationChainTest.{*, given}
 
   "ProtocolBuffers (migration chain)" should {
 
     "prepare a valid migration for simple case classes" in {
 
-      fromV1toV2.migrate(ProtoV1(foo = "foo-value", 42, "baz-value")) shouldBe ProtoV2(renamedFoo = "foo-value", 42, Some("baz-value"))
+      fromV1toV2.transform(ProtoV1(foo = "foo-value", 42, "baz-value")) shouldBe ProtoV2(renamedFoo = "foo-value", 42, Some("baz-value"))
 
-      fromV2toV3.migrate(ProtoV2("foo-value", 42, Some("baz-value"))) shouldBe ProtoV3("foo-value", 42L, "baz-value")
-      fromV2toV3.migrate(ProtoV2("foo-value", 42, None)) shouldBe ProtoV3("foo-value", 42L, "default qux")
+      fromV2toV3.transform(ProtoV2("foo-value", 42, Some("baz-value"))) shouldBe ProtoV3("foo-value", 42L, "baz-value")
+      fromV2toV3.transform(ProtoV2("foo-value", 42, None)) shouldBe ProtoV3("foo-value", 42L, "default qux")
     }
 
     "create a reader from prepared migration for simple case classes" in {
 
-      fromV1toV2.reader[ModelForV3].read(ProtoV1(foo = "foo-value", 42, "baz-value")) shouldBe
-        PbSuccess(ModelForV3("foo-value", 42L, "baz-value"))
+      readerForV1.transform(ProtoV1(foo = "foo-value", 42, "baz-value")).asEitherErrorPathMessageStrings shouldBe
+        Right(ModelForV3("foo-value", 42L, "baz-value"))
 
-      fromV2toV3.reader[ModelForV3].read(ProtoV2(renamedFoo = "foo-value", 42, Some("baz-value"))) shouldBe
-        PbSuccess(ModelForV3("foo-value", 42L, "baz-value"))
-      fromV2toV3.reader[ModelForV3].read(ProtoV2(renamedFoo = "foo-value", 42, None)) shouldBe
-        PbSuccess(ModelForV3("foo-value", 42L, "default qux"))
+      readerForV2.transform(ProtoV2(renamedFoo = "foo-value", 42, Some("baz-value"))).asEitherErrorPathMessageStrings shouldBe
+        Right(ModelForV3("foo-value", 42L, "baz-value"))
+      readerForV2.transform(ProtoV2(renamedFoo = "foo-value", 42, None)).asEitherErrorPathMessageStrings shouldBe
+        Right(ModelForV3("foo-value", 42L, "default qux"))
     }
   }
 }

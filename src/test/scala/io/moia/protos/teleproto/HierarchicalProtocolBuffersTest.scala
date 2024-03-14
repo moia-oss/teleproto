@@ -2,7 +2,9 @@ package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
 
-import scala.annotation.nowarn
+import io.scalaland.chimney.dsl._
+import io.scalaland.chimney.protobufs._
+import io.scalaland.chimney.{Transformer, PartialTransformer, partial}
 
 /** Tests correct behaviour of generated mappings regarding hierarchical types where a reader/writer for an inner case class can be
   * generated, too.
@@ -78,48 +80,49 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
 
     "generate a writer for all types in hierarchy of a generated type pair" in {
 
-      val writer = ProtocolBuffers.writer[model.Foo, protobuf.Foo]
+      val writer = Transformer.derive[model.Foo, protobuf.Foo]
 
-      writer.write(model.Foo(1.2, model.Bar(42))) shouldBe
+      writer.transform(model.Foo(1.2, model.Bar(42))) shouldBe
         protobuf.Foo("1.2", protobuf.BarOrBaz.Bar(protobuf.Bar(Some(42))))
 
-      writer.write(model.Foo(1.2, model.Baz(model.Qux("some text")))) shouldBe
+      writer.transform(model.Foo(1.2, model.Baz(model.Qux("some text")))) shouldBe
         protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("some text"))))
     }
 
     "use an 'explicit' implicit writer before generating a writer for a type in hierarchy of a generated type pair" in {
 
-      @nowarn("cat=unused")
-      implicit val explicitQuxWriter: Writer[model.Qux, protobuf.Qux] =
-        (p: model.Qux) => protobuf.Qux("other text")
+      given Transformer[model.Qux, protobuf.Qux] = (p: model.Qux) => protobuf.Qux("other text")
 
-      val writer = ProtocolBuffers.writer[model.Foo, protobuf.Foo]
+      val writer = Transformer.derive[model.Foo, protobuf.Foo]
 
-      writer.write(model.Foo(1.2, model.Baz(model.Qux("some text")))) shouldBe
+      writer.transform(model.Foo(1.2, model.Baz(model.Qux("some text")))) shouldBe
         protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("other text"))))
     }
 
     "generate a reader for all types in hierarchy of a generated type pair" in {
 
-      val reader = ProtocolBuffers.reader[protobuf.Foo, model.Foo]
+      val reader = PartialTransformer.derive[protobuf.Foo, model.Foo]
 
-      reader.read(protobuf.Foo("1.2", protobuf.BarOrBaz.Bar(protobuf.Bar(Some(42))))) shouldBe
-        PbSuccess(model.Foo(1.2, model.Bar(42)))
+      reader.transform(protobuf.Foo("1.2", protobuf.BarOrBaz.Bar(protobuf.Bar(Some(42))))).asEitherErrorPathMessageStrings shouldBe
+        Right(model.Foo(1.2, model.Bar(42)))
 
-      reader.read(protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("some text"))))) shouldBe
-        PbSuccess(model.Foo(1.2, model.Baz(model.Qux("some text"))))
+      reader
+        .transform(protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("some text")))))
+        .asEitherErrorPathMessageStrings shouldBe
+        Right(model.Foo(1.2, model.Baz(model.Qux("some text"))))
     }
 
     "use an 'explicit' implicit reader before generating a reader for a type in hierarchy of a generated type pair" in {
 
-      @nowarn("cat=unused")
-      implicit val explicitQuxReader: Reader[protobuf.Qux, model.Qux] =
-        (p: protobuf.Qux) => PbFailure("Used the 'explicit' implicit!")
+      given PartialTransformer[protobuf.Qux, model.Qux] = PartialTransformer: (p: protobuf.Qux) =>
+        partial.Result.fromErrorString("Used the 'explicit' implicit!")
 
-      val reader = ProtocolBuffers.reader[protobuf.Foo, model.Foo]
+      val reader = PartialTransformer.derive[protobuf.Foo, model.Foo]
 
-      reader.read(protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("some text"))))) shouldBe
-        PbFailure("/barOrBaz/baz/qux", "Used the 'explicit' implicit!")
+      reader
+        .transform(protobuf.Foo("1.2", protobuf.BarOrBaz.Baz(protobuf.Baz(protobuf.Qux("some text")))))
+        .asEitherErrorPathMessageStrings shouldBe
+        Left(List(("barOrBaz.qux", "Used the 'explicit' implicit!")))
     }
   }
 }

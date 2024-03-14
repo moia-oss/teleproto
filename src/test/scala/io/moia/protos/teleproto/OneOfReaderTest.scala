@@ -21,8 +21,7 @@ class OneOfReaderTest extends UnitTest {
         def foo: scala.Option[protobuf.Foo] = None
         def bar: scala.Option[protobuf.Bar] = None
       }
-      object Value extends {
-
+      object Value {
         case object Empty extends Value {
           override def isEmpty: Boolean   = true
           override def isDefined: Boolean = false
@@ -52,9 +51,8 @@ class OneOfReaderTest extends UnitTest {
   }
 
   "Reader for one-of to sealed trait" should {
-
     implicit val fooReader: Reader[protobuf.Foo, model.Foo] =
-      (p: protobuf.Foo) => transform[String, BigDecimal](p.price, "/price").map(model.Foo)
+      (p: protobuf.Foo) => transform[String, BigDecimal](p.price, "/price").map(model.Foo.apply)
 
     implicit val barReader: Reader[protobuf.Bar, model.Bar] =
       (p: protobuf.Bar) => PbSuccess(model.Bar(p.number))
@@ -67,7 +65,6 @@ class OneOfReaderTest extends UnitTest {
           .getOrElse(PbFailure("Value is required."))
 
     val reader = new Reader[protobuf.Protobuf, model.Model] {
-
       def read(p: protobuf.Protobuf): PbResult[model.Model] =
         for {
           fooOrBar <- transform[protobuf.FooOrBar, model.FooOrBar](p.fooOrBar, "/fooOrBar")

@@ -196,7 +196,7 @@ object Reader extends LowPriorityReads {
       valueReader: Reader[PV, MV],
       ordering: Ordering[MK]
   ): Reader[Map[PK, PV], TreeMap[MK, MV]] = instance { protobuf =>
-    mapReader(keyReader, valueReader).read(protobuf).map(entries => TreeMap[MK, MV](entries.toSeq: _*))
+    mapReader(keyReader, valueReader).read(protobuf).map(entries => TreeMap[MK, MV](entries.toSeq*))
   }
 
   /** A reader that gives access to the inner [[PbResult]]. Use this if you want to allow failures in nested structures and therefore get
@@ -229,7 +229,7 @@ private[teleproto] trait LowPriorityReads extends LowestPriorityReads {
     }
 
     if (errors.nonEmpty) PbFailure(errors)
-    else PbSuccess(Map[MK, MV](modelResults.map(_.get): _*))
+    else PbSuccess(Map[MK, MV](modelResults.map(_.get)*))
   }
 }
 

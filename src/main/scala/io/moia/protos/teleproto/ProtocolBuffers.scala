@@ -48,12 +48,12 @@ object ProtocolBuffers {
     *
     * {{{ProtocolBuffers.reader[v1.PriceTrips.PriceTrip, PriceTrip]}}}
     */
-  def reader[P, M]: Reader[P, M] = macro ReaderImpl.reader_impl[P, M]
+  def reader[P, M]: Reader[P, M] = ???
 
   /** Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible. See User's Guide for
     * details.
     */
-  def writer[M, P]: Writer[M, P] = macro WriterImpl.writer_impl[M, P]
+  def writer[M, P]: Writer[M, P] = ???
 
   /** Constructs a migration from Protocol Buffer class `P` to PB class `Q`. The migration tries to copy/convert fields from a `P` to a new
     * `Q` automatically.
@@ -71,6 +71,5 @@ object ProtocolBuffers {
     *
     * To use it, just write `migration[P, Q]()`, compile and let the compiler explain the required migration functions.
     */
-  def migration[P, Q](args: (P => Any)*): Migration[P, Q] =
-    macro MigrationImpl.migration_impl[P, Q]
+  def migration[P, Q](args: (P => Any)*): Migration[P, Q] = ???
 }
