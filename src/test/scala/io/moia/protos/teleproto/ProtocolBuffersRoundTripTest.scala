@@ -10,17 +10,7 @@ import scalapb.json4s.{Parser, Printer}
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest._
 
-  given PartialTransformer[food.Meal.Color, Color] = PartialTransformer.apply {
-    case food.Meal.Color.COLOR_YELLOW    => partial.Result.fromValue(Color.Yellow)
-    case food.Meal.Color.COLOR_RED       => partial.Result.fromValue(Color.Red)
-    case food.Meal.Color.COLOR_ORANGE    => partial.Result.fromValue(Color.orange)
-    case food.Meal.Color.COLOR_PINK      => partial.Result.fromValue(Color.pink)
-    case food.Meal.Color.COLOR_BLUE      => partial.Result.fromValue(Color.Blue)
-    case food.Meal.Color.COLOR_INVALID   => partial.Result.fromErrorString("Invalid color")
-    case food.Meal.Color.Unrecognized(_) => partial.Result.fromErrorString("Unrecognized color")
-  }
-
-  PartialTransformer
+  given PartialTransformer[food.Meal.Color, Color] = PartialTransformer
     .define[food.Meal.Color, Color]
     .withCoproductInstance[food.Meal.Color.COLOR_YELLOW.type](_ => Color.Yellow)
     .withCoproductInstance[food.Meal.Color.COLOR_RED.type](_ => Color.Red)
