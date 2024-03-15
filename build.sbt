@@ -70,7 +70,7 @@ lazy val commonSettings = Seq.concat(
 
 lazy val compilerSettings = Seq(
   scalaVersion                                                                     := crossScalaVersions.value.head,
-  crossScalaVersions                                                               := List("3.3.3"),
+  crossScalaVersions                                                               := List("3.4.0"),
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= scalacOptions3
 )
