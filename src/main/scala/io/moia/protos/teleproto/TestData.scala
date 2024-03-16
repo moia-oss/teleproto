@@ -18,7 +18,7 @@ package io.moia.protos.teleproto
 
 import java.time.Instant
 
-import com.google.protobuf.duration.{Duration => PBDuration}
+import com.google.protobuf.duration.Duration as PBDuration
 import com.google.protobuf.timestamp.Timestamp
 
 import scala.concurrent.duration.Duration

@@ -8,7 +8,7 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import scalapb.json4s.{Parser, Printer}
 
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
-  import ProtocolBuffersRoundTripTest._
+  import ProtocolBuffersRoundTripTest.*
 
   given PartialTransformer[food.Meal.Color, Color] = PartialTransformer
     .define[food.Meal.Color, Color]

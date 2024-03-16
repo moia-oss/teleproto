@@ -13,7 +13,7 @@ object ProtocolBuffersEnumMigrationTest {
 }
 
 class ProtocolBuffersEnumMigrationTest extends UnitTest {
-  import ProtocolBuffersEnumMigrationTest._
+  import ProtocolBuffersEnumMigrationTest.*
 
   "ProtocolBuffers (migration for enums)" should {
     "prepare a valid migration for similar enums" in {

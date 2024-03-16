@@ -86,8 +86,7 @@ lazy val scalacOptions3 = Seq(
   "-release",
   "8",
   "-rewrite",
-//  "-source",
-//  "3.4-migration",
+  "-source:future",
   "-unchecked",
   "-Xfatal-warnings"
 )
@@ -135,5 +134,5 @@ lazy val mimaSettings = Seq(
 )
 
 Compile / PB.targets   := Seq(scalapb.gen() -> (Compile / sourceManaged).value / "scalapb")
-Test / PB.targets      := Seq(scalapb.gen(flatPackage = false) -> (Test / sourceManaged).value / "scalapb")
+Test / PB.targets      := Seq(scalapb.gen(flatPackage = false, scala3Sources = true) -> (Test / sourceManaged).value / "scalapb")
 Test / PB.protoSources := Seq(baseDirectory.value / "src" / "test" / "protobuf")

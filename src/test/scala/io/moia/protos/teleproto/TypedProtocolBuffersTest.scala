@@ -22,7 +22,7 @@ object GenericProtobuf {
 
 class TypedProtocolBuffersTest extends UnitTest {
 
-  import GenericProtobuf._
+  import GenericProtobuf.*
 
   "TypedProtocolBuffers" should {
 

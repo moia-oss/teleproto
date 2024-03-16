@@ -127,7 +127,7 @@ object Protobuf {
 
 class ProtocolBuffersTest extends UnitTest {
 
-  import Protobuf._
+  import Protobuf.*
 
   "ProtocolBuffers" should {
 

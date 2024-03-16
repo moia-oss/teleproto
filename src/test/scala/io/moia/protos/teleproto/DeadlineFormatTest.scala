@@ -1,6 +1,6 @@
 package io.moia.protos.teleproto
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class DeadlineFormatTest extends UnitTest {
 

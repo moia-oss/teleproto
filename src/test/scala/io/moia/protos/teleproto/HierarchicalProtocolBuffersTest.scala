@@ -2,8 +2,8 @@ package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
 
-import io.scalaland.chimney.dsl._
-import io.scalaland.chimney.protobufs._
+import io.scalaland.chimney.dsl.{*, given}
+import io.scalaland.chimney.protobufs.{*, given}
 import io.scalaland.chimney.{Transformer, PartialTransformer, partial}
 
 /** Tests correct behaviour of generated mappings regarding hierarchical types where a reader/writer for an inner case class can be
@@ -74,7 +74,7 @@ object HierarchicalProtocolBuffersTest {
 
 class HierarchicalProtocolBuffersTest extends UnitTest {
 
-  import HierarchicalProtocolBuffersTest._
+  import HierarchicalProtocolBuffersTest.*
 
   "ProtocolBuffers for hierarchical types" should {
 

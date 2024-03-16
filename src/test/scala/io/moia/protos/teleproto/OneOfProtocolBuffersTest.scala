@@ -1,8 +1,8 @@
 package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
-import io.scalaland.chimney.dsl._
-import io.scalaland.chimney.protobufs._
+import io.scalaland.chimney.dsl.{*, given}
+import io.scalaland.chimney.protobufs.{*, given}
 import io.scalaland.chimney.{Transformer, PartialTransformer}
 
 /** Tests correct behaviour of generated mappings regarding traits.
@@ -83,7 +83,7 @@ object OneOfProtocolBuffersTest {
 
 class OneOfProtocolBuffersTest extends UnitTest {
 
-  import OneOfProtocolBuffersTest.{_, given}
+  import OneOfProtocolBuffersTest.{*, given}
 
   "ProtocolBuffers for one-of" should {
 

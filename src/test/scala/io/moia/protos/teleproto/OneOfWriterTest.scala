@@ -2,7 +2,7 @@ package io.moia.protos.teleproto
 
 class OneOfWriterTest extends UnitTest {
 
-  import Writer._
+  import Writer.*
 
   object protobuf {
 

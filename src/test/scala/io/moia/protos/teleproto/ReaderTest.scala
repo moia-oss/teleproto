@@ -3,14 +3,14 @@ package io.moia.protos.teleproto
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
-import com.google.protobuf.duration.{Duration => PBDuration}
+import com.google.protobuf.duration.Duration as PBDuration
 import com.google.protobuf.timestamp.Timestamp
 
 import scala.concurrent.duration.{Duration, DurationLong, FiniteDuration}
 
 class ReaderTest extends UnitTest {
-  import Reader._
-  import TestData._
+  import Reader.*
+  import TestData.*
 
   "Reader" should {
     val readerLight: Reader[Protobuf, ModelLight] = protobuf =>

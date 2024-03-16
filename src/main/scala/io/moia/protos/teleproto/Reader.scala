@@ -17,13 +17,13 @@
 package io.moia.protos.teleproto
 
 import java.time.{Instant, LocalTime}
-import com.google.protobuf.duration.{Duration => PBDuration}
+import com.google.protobuf.duration.Duration as PBDuration
 import com.google.protobuf.timestamp.Timestamp
 import scalapb.GeneratedMessage
 
 import java.util.UUID
 import scala.annotation.implicitNotFound
-import scala.collection.compat._
+import scala.collection.compat.*
 import scala.collection.immutable.TreeMap
 import scala.concurrent.duration.{Deadline, Duration, FiniteDuration, MILLISECONDS, NANOSECONDS, SECONDS}
 import scala.util.Try

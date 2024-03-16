@@ -2,7 +2,7 @@ package io.moia.protos.teleproto
 
 class OneOfReaderTest extends UnitTest {
 
-  import Reader._
+  import Reader.*
 
   object protobuf {
 
