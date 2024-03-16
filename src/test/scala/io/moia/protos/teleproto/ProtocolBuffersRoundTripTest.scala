@@ -9,25 +9,21 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest.*
 
-  given Transformer[Color, food.Meal.Color] = {
-    val foo = Transformer
-      .define[Color, food.Meal.Color]
-      .withCoproductInstance[Color.Yellow.type](_ => food.Meal.Color.COLOR_YELLOW)
-      .withCoproductInstance[Color.Red.type](_ => food.Meal.Color.COLOR_RED)
-      .withCoproductInstance[Color.orange.type](_ => food.Meal.Color.COLOR_ORANGE)
-      .withCoproductInstance[Color.pink.type](_ => food.Meal.Color.COLOR_PINK)
-      .withCoproductInstance[Color.Blue.type](_ => food.Meal.Color.COLOR_BLUE)
-      .enableMacrosLogging
-    val x = foo.runtimeData
-    println(x)
-    foo.buildTransformer
-  }
+  val writer: Transformer[Color, food.Meal.Color] = Transformer
+    .define[Color, food.Meal.Color]
+    .withCoproductInstance[Color.Yellow.type](_ => food.Meal.Color.COLOR_YELLOW)
+    .withCoproductInstance[Color.Red.type](_ => food.Meal.Color.COLOR_RED)
+    .withCoproductInstance[Color.orange.type](_ => food.Meal.Color.COLOR_ORANGE)
+    .withCoproductInstance[Color.pink.type](_ => food.Meal.Color.COLOR_PINK)
+    .withCoproductInstance[Color.Blue.type](_ => food.Meal.Color.COLOR_BLUE)
+    .enableMacrosLogging
+    .buildTransformer
 
   "ProtocolBuffers" should {
     "generate writer and reader that round trip successful" in {
       val color: Color = Color.Yellow
 
-      color.into[food.Meal.Color].transform
+      writer.transform(color)
     }
   }
 }
