@@ -5,21 +5,40 @@ import io.scalaland.chimney.{PartialTransformer, Transformer, partial}
 import io.scalaland.chimney.protobufs.{*, given}
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+import scalapb.GeneratedEnum
 import scalapb.json4s.{Parser, Printer}
 
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest.*
 
-  given PartialTransformer[food.Meal.Color, Color] = PartialTransformer
-    .define[food.Meal.Color, Color]
-    .withCoproductInstance[food.Meal.Color.COLOR_YELLOW.type](_ => Color.Yellow)
-    .withCoproductInstance[food.Meal.Color.COLOR_RED.type](_ => Color.Red)
-    .withCoproductInstance[food.Meal.Color.COLOR_ORANGE.type](_ => Color.orange)
-    .withCoproductInstance[food.Meal.Color.COLOR_PINK.type](_ => Color.pink)
-    .withCoproductInstance[food.Meal.Color.COLOR_BLUE.type](_ => Color.Blue)
-    .withCoproductInstancePartial[food.Meal.Color.COLOR_INVALID.type](_ => partial.Result.fromErrorString("Invalid color"))
-    .withCoproductInstancePartial[food.Meal.Color.Unrecognized](_ => partial.Result.fromErrorString("Unrecognized color"))
-    .buildTransformer
+  def fn(e: food.Meal.Color & GeneratedEnum): Color = {
+    val name: String = e.name // "COLOR_YELLOW"
+
+    val className = classOf[food.Meal.Color].getSimpleName // "Color"
+
+    val x = className + "_" // "Color_"
+
+    val y = name.toLowerCase.replace(x.toLowerCase, "") // "yellow"
+    
+    val z = y.capitalize // "Yellow"
+    
+    Color.valueOf(z) // Yellow
+  }
+
+  given PartialTransformer[food.Meal.Color & GeneratedEnum, Color] =
+    PartialTransformer.fromFunction[food.Meal.Color & GeneratedEnum, Color](fn)
+
+//  given PartialTransformer[food.Meal.Color, Color] = PartialTransformer
+//    .define[food.Meal.Color, Color]
+//    .enableCustomSubtypeNameComparison(io.moia.protos.comparison.GeneratedEnumComparison)
+////    .withCoproductInstance[food.Meal.Color.COLOR_YELLOW.type](_ => Color.Yellow)
+////    .withCoproductInstance[food.Meal.Color.COLOR_RED.type](_ => Color.Red)
+////    .withCoproductInstance[food.Meal.Color.COLOR_ORANGE.type](_ => Color.orange)
+////    .withCoproductInstance[food.Meal.Color.COLOR_PINK.type](_ => Color.pink)
+////    .withCoproductInstance[food.Meal.Color.COLOR_BLUE.type](_ => Color.Blue)
+//    .withCoproductInstancePartial[food.Meal.Color.COLOR_INVALID.type](_ => partial.Result.fromErrorString("Invalid color"))
+//    .withCoproductInstancePartial[food.Meal.Color.Unrecognized](_ => partial.Result.fromErrorString("Unrecognized color"))
+//    .buildTransformer
 
   val reader: PartialTransformer[food.Meal, Meal] = PartialTransformer.derive[food.Meal, Meal]
 
@@ -27,15 +46,15 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
     .define[Color, food.Meal.Color]
     .withCoproductInstance[Color.Yellow.type](_ => food.Meal.Color.COLOR_YELLOW)
     .withCoproductInstance[Color.Red.type](_ => food.Meal.Color.COLOR_RED)
-    .withCoproductInstance[Color.orange.type](_ => food.Meal.Color.COLOR_ORANGE)
-    .withCoproductInstance[Color.pink.type](_ => food.Meal.Color.COLOR_PINK)
+    .withCoproductInstance[Color.Orange.type](_ => food.Meal.Color.COLOR_ORANGE)
+    .withCoproductInstance[Color.Pink.type](_ => food.Meal.Color.COLOR_PINK)
     .withCoproductInstance[Color.Blue.type](_ => food.Meal.Color.COLOR_BLUE)
     .buildTransformer
 
   val writer: Transformer[Meal, food.Meal] = Transformer.define[Meal, food.Meal].enableDefaultValues.buildTransformer
 
   val colorGen: Gen[Color] =
-    Gen.oneOf(Color.Red, Color.orange, Color.Yellow, Color.pink, Color.Blue)
+    Gen.oneOf(Color.Red, Color.Orange, Color.Yellow, Color.Pink, Color.Blue)
 
   val fruitGen: Gen[Fruit] = for {
     name  <- Gen.alphaStr
@@ -85,7 +104,7 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
 
 object ProtocolBuffersRoundTripTest {
   enum Color {
-    case Red, orange, Yellow, pink, Blue
+    case Red, Orange, Yellow, Pink, Blue
   }
 
   final case class Fruit(name: String, color: Color)
