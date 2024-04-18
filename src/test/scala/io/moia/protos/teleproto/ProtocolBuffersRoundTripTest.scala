@@ -8,25 +8,27 @@ import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 import scalapb.GeneratedEnum
 import scalapb.json4s.{Parser, Printer}
 
+import scala.reflect.ClassTag
+
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest.*
 
-  def fn(e: food.Meal.Color & GeneratedEnum): Color = {
+  def fn[T <: GeneratedEnum](e: T)(implicit classTag: ClassTag[T]): Color = {
     val name: String = e.name // "COLOR_YELLOW"
 
-    val className = classOf[food.Meal.Color].getSimpleName // "Color"
+    val className = classTag.runtimeClass.getSimpleName // "Color"
 
     val x = className + "_" // "Color_"
 
     val y = name.toLowerCase.replace(x.toLowerCase, "") // "yellow"
-    
+
     val z = y.capitalize // "Yellow"
-    
+
     Color.valueOf(z) // Yellow
   }
 
-  given PartialTransformer[food.Meal.Color & GeneratedEnum, Color] =
-    PartialTransformer.fromFunction[food.Meal.Color & GeneratedEnum, Color](fn)
+  given PartialTransformer[food.Meal.Color, Color] =
+    PartialTransformer.fromFunction(fn)
 
 //  given PartialTransformer[food.Meal.Color, Color] = PartialTransformer
 //    .define[food.Meal.Color, Color]
