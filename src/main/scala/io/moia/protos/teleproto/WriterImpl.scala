@@ -16,6 +16,7 @@
 
 package io.moia.protos.teleproto
 
+import io.scalaland.chimney
 import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
@@ -75,11 +76,12 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     def ask: Compiled = (compileInner(q"implicitly[$writerType]"), Compatibility.full)
 
     if (existingWriter == EmptyTree)
-      if (checkClassTypes(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
-        val result                         = compileInner(implicitValue)
-        (result, compatibility)
-      } else if (checkEnumerationTypes(protobufType, modelType)) {
+//      if (checkClassTypes(protobufType, modelType)) {
+//        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
+//        val result                         = compileInner(implicitValue)
+//        (result, compatibility)
+//      } else
+      if (checkEnumerationTypes(protobufType, modelType)) {
         val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
@@ -87,8 +89,20 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
         val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else
-        ask // let the compiler explain the problem
+      } else {
+        // look for an implicit transformer
+        val transformerType     = appliedType(c.weakTypeTag[chimney.Transformer[_, _]].tpe, modelType, protobufType)
+        val existingTransformer = c.inferImplicitValue(transformerType)
+
+        // "ask" for the implicit transformer or use the found one
+        def askTransformer: Compiled = (compileInner(q"${writerType}.fromTransformer(implicitly[$transformerType])"), Compatibility.full)
+
+        if (existingTransformer != EmptyTree) {
+          askTransformer // use the available transformer implicit
+        } else {
+          ask // let the compiler explain the problem
+        }
+      }
     else
       ask // use the available implicit
   }

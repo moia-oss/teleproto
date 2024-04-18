@@ -18,6 +18,7 @@ package io.moia.protos.teleproto
 
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
+import io.scalaland.chimney.Transformer
 
 import java.time.{Instant, LocalTime}
 import java.util.UUID
@@ -90,6 +91,10 @@ object Writer extends LowPriorityWrites {
   // Opposite of required on Reader side
   def present[MV, PV](model: MV)(implicit valueWriter: Writer[MV, PV]): Option[PV] =
     Some(valueWriter.write(model))
+//  def present[MV, PV](model: MV)(implicit valueTransformer: Transformer[MV, PV]): Option[PV] =
+//    Some(valueTransformer.transform(model))
+
+  def fromTransformer[MV, PV](transformer: Transformer[MV, PV]): Writer[MV, PV] = (model) => transformer.transform(model)
 
   /* Type Writers */
 
