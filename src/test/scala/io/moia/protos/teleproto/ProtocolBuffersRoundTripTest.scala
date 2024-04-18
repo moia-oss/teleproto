@@ -22,7 +22,7 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
 
     val y = name.toLowerCase.replace(x.toLowerCase, "") // "yellow"
 
-    val z = y.capitalize // "Yellow"
+    val z = y.split('_').map(_.capitalize).mkString // "Yellow"
 
     Color.valueOf(z) // Yellow
   }
