@@ -17,6 +17,8 @@
 package io.moia.protos.teleproto
 
 import io.scalaland.chimney
+import io.scalaland.chimney.Transformer
+
 import scala.collection.compat._
 import scala.reflect.macros.blackbox
 
@@ -24,8 +26,9 @@ import scala.reflect.macros.blackbox
 class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   import c.universe._
 
-  private[this] val writerObj = objectRef[Writer.type]
-  private[this] val seqTpe    = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
+  private[this] val writerObj      = objectRef[Writer.type]
+  private[this] val transformerObj = objectRef[Transformer.type]
+  private[this] val seqTpe         = typeOf[scala.collection.immutable.Seq[_]].typeConstructor
 
   /** Validates if business model type can be written to the Protocol Buffers type (matching case classes or matching sealed trait
     * hierarchy). If just forward compatible then raise a warning.
@@ -95,13 +98,16 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
         val existingTransformer = c.inferImplicitValue(transformerType)
 
         // "ask" for the implicit transformer or use the found one
-        def askTransformer: Compiled = (compileInner(q"${writerType}.fromTransformer(implicitly[$transformerType])"), Compatibility.full)
-
-        if (existingTransformer != EmptyTree) {
-          askTransformer // use the available transformer implicit
+        def askTransformer = if (existingTransformer != EmptyTree) {
+          q"implicitly[$transformerType]"
         } else {
-          ask // let the compiler explain the problem
+          q"$transformerObj.derive[$modelType, $protobufType]"
         }
+
+        def writerFromTransformer: Compiled =
+          (compileInner(q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)"), Compatibility.full)
+
+        writerFromTransformer // use the available transformer implicit
       }
     else
       ask // use the available implicit
