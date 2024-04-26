@@ -32,11 +32,13 @@ import scala.concurrent.duration.{Deadline, Duration}
 @implicitNotFound(
   "No mapper from business model type ${M} to Protocol Buffers type ${P} was found. Try to implement an implicit Writer for this type."
 )
-trait Writer[-M, +P] {
+trait Writer[M, P] extends Transformer[M, P] {
 
   /** Returns the written Protocol Buffer object.
     */
   def write(model: M): P
+
+  def transform(src: M): P = write(src)
 
   /** Transforms each written result.
     */
