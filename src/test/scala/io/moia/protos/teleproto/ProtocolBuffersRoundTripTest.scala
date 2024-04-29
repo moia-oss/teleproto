@@ -13,22 +13,9 @@ import scala.reflect.ClassTag
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest.*
 
-  def fn[T <: GeneratedEnum](e: T)(implicit classTag: ClassTag[T]): Color = {
-    val name: String = e.name // "COLOR_YELLOW"
-
-    val className = classTag.runtimeClass.getSimpleName // "Color"
-
-    val x = className + "_" // "Color_"
-
-    val y = name.toLowerCase.replace(x.toLowerCase, "") // "yellow"
-
-    val z = y.split('_').map(_.capitalize).mkString // "Yellow"
-
-    Color.valueOf(z) // Yellow
-  }
-
   given PartialTransformer[food.Meal.Color, Color] =
-    PartialTransformer.fromFunction(fn)
+    // types have to be provided explicitly!
+    PartialTransformer.fromFunction(EnumMacros.fromProtobufToEnum[food.Meal.Color, Color])
 
 //  given PartialTransformer[food.Meal.Color, Color] = PartialTransformer
 //    .define[food.Meal.Color, Color]
@@ -76,6 +63,18 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   } yield LunchBox(fruit, drink)
 
   val mealGen: Gen[Meal] = Gen.oneOf(fruitBasketGen, lunchBoxGen).map(Meal.apply)
+
+  "Macro transform for enums" should {
+    "convert from Protocol Buffers to model" in {
+      val fun: food.Meal.Color => Color = EnumMacros.fromProtobufToEnum[food.Meal.Color, Color]
+
+      fun(food.Meal.Color.COLOR_YELLOW) shouldBe Color.Yellow
+      fun(food.Meal.Color.COLOR_RED) shouldBe Color.Red
+      fun(food.Meal.Color.COLOR_ORANGE) shouldBe Color.Orange
+      fun(food.Meal.Color.COLOR_PINK) shouldBe Color.Pink
+      fun(food.Meal.Color.COLOR_BLUE) shouldBe Color.Blue
+    }
+  }
 
   "ProtocolBuffers" should {
     "generate writer and reader that round trip successfully" in {
