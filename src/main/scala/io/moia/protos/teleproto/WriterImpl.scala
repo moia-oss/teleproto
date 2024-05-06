@@ -72,7 +72,12 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     println(s"writerType ${writerType}")
 
     // TODO: ERROR HAPPENS HERE
-    val existingWriter = c.inferImplicitValue(writerType)
+    val existingWriter = try {
+      c.inferImplicitValue(writerType)
+    } catch {
+      // Return EmptyTree in case of errors
+      case _: Throwable => EmptyTree
+    }
 
     println(s"existingWriter ${existingWriter}")
 
