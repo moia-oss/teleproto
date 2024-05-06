@@ -1,7 +1,5 @@
 package io.moia.protos.teleproto
 
-import scala.annotation.nowarn
-
 object ProtocolBuffersMigrationHierarchyTest {
 
   // V2
