@@ -61,7 +61,6 @@ class ProtocolBuffersMigrationHierarchyTest extends UnitTest {
 
     "prefer a custom nested migration over a generated" in {
 
-      @nowarn("cat=unused")
       implicit val upperCasingMatchingSubProtoV1toV2: Migration[MatchingSubProtoV1, MatchingSubProtoV2] =
         Migration[MatchingSubProtoV1, MatchingSubProtoV2](src => MatchingSubProtoV2(src.same.toUpperCase))
 
