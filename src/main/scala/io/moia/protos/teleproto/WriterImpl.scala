@@ -66,12 +66,9 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     * The result is `f` applied to the writer expression with the (possible) compatibility issues of writer generation (if happened).
     */
   private def withImplicitWriter(modelType: Type, protobufType: Type)(compileInner: Tree => Tree): Compiled = {
-    println(s"withImplicitWriter ${modelType} => ${protobufType}")
     // look for an implicit writer
     val writerType = appliedType(c.weakTypeTag[Writer[_, _]].tpe, modelType, protobufType)
-    println(s"writerType ${writerType}")
 
-    // TODO: ERROR HAPPENS HERE
     val existingWriter = try {
       c.inferImplicitValue(writerType)
     } catch {
@@ -79,15 +76,10 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       case _: Throwable => EmptyTree
     }
 
-    println(s"existingWriter ${existingWriter}")
-
     // "ask" for the implicit writer or use the found one
     def ask: Compiled = (compileInner(q"implicitly[$writerType]"), Compatibility.full)
 
-    if (existingWriter == EmptyTree) {
-      println(
-        s"(${protobufType}, ${modelType}): checkClassTypes = ${checkClassTypes(protobufType, modelType)}; checkEnumerationTypes = ${checkEnumerationTypes(protobufType, modelType)}; checkHierarchyTypes = ${checkHierarchyTypes(protobufType, modelType)}"
-      )
+    if (existingWriter == EmptyTree)
       if (checkClassTypes(protobufType, modelType)) {
         val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
@@ -102,7 +94,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
         (result, compatibility)
       } else
         ask // let the compiler explain the problem
-    } else
+    else
       ask // use the available implicit
   }
 
@@ -115,7 +107,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     *   - Otherwise convert using `transform`, `optional` or `present`.
     */
   private def compileClassMapping(protobufType: Type, modelType: Type): Compiled = {
-    println(s"compileClassMapping ${modelType} => ${protobufType}")
     // at this point all errors are assumed to be due to evolution
     val protobufCompanion = protobufType.typeSymbol.companion
     val protobufCons      = protobufType.member(termNames.CONSTRUCTOR).asMethod
@@ -250,8 +241,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     * }}}
     */
   private def compileTraitMapping(protobufType: Type, modelType: Type): Compiled = {
-    println(s"compileTraitMapping ${protobufType} => ${modelType}")
-
     val protobufClass      = protobufType.typeSymbol.asClass
     val modelClass         = modelType.typeSymbol.asClass
     val protobufSubclasses = symbolsByName(protobufClass.knownDirectSubclasses)
@@ -274,7 +263,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       (className, protobufSubclass) <- protobufSubclasses
       modelSubclass                 <- modelSubclasses.get(className)
     } yield {
-      println(s"$model: $modelSubclass => new $protobufSubclass(WRITER.write($model))")
       withImplicitWriter(classTypeOf(modelSubclass), valueMethod.infoIn(classTypeOf(protobufSubclass))) { writer =>
         cq"$model: $modelSubclass => new $protobufSubclass($writer.write($model))"
       }
@@ -282,9 +270,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
 
     val (cases, compatibility) = subTypes.unzip
     val result                 = q"$writerObj.instance[$modelType, $protobufType] { case ..$cases }"
-    println(s"$writerObj.instance[$modelType, $protobufType] { case ..$cases }")
-    println("compileTraitMapping end")
-
     (result, compatibility.fold(ownCompatibility)(_ merge _))
   }
 
@@ -302,7 +287,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     * }}}
     */
   private def compileEnumerationMapping(protobufType: Type, modelType: Type): Compiled = {
-    println(s"compileEnumerationMapping ${modelType} => ${protobufType}")
     val protobufClass   = protobufType.typeSymbol.asClass
     val modelClass      = modelType.typeSymbol.asClass
     val protobufOptions = symbolsByTolerantName(protobufClass.knownDirectSubclasses.filter(_.isModuleClass), protobufClass)
