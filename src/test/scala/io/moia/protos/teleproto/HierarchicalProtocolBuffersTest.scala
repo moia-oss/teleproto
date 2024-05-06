@@ -89,7 +89,6 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
 
     "use an 'explicit' implicit writer before generating a writer for a type in hierarchy of a generated type pair" in {
 
-      @nowarn("cat=unused")
       implicit val explicitQuxWriter: Writer[model.Qux, protobuf.Qux] =
         (p: model.Qux) => protobuf.Qux("other text")
 
@@ -112,7 +111,6 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
 
     "use an 'explicit' implicit reader before generating a reader for a type in hierarchy of a generated type pair" in {
 
-      @nowarn("cat=unused")
       implicit val explicitQuxReader: Reader[protobuf.Qux, model.Qux] =
         (p: protobuf.Qux) => PbFailure("Used the 'explicit' implicit!")
 
