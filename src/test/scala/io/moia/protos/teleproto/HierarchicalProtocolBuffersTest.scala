@@ -2,8 +2,6 @@ package io.moia.protos.teleproto
 
 import scalapb.GeneratedOneof
 
-import scala.annotation.nowarn
-
 /** Tests correct behaviour of generated mappings regarding hierarchical types where a reader/writer for an inner case class can be
   * generated, too.
   */
