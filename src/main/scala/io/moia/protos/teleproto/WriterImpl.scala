@@ -69,12 +69,13 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     // look for an implicit writer
     val writerType = appliedType(c.weakTypeTag[Writer[_, _]].tpe, modelType, protobufType)
 
-    val existingWriter = try {
-      c.inferImplicitValue(writerType)
-    } catch {
-      // Return EmptyTree in case of errors
-      case _: Throwable => EmptyTree
-    }
+    val existingWriter =
+      try {
+        c.inferImplicitValue(writerType)
+      } catch {
+        // Return EmptyTree in case of errors
+        case _: Throwable => EmptyTree
+      }
 
     // "ask" for the implicit writer or use the found one
     def ask: Compiled = (compileInner(q"implicitly[$writerType]"), Compatibility.full)
