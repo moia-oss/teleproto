@@ -100,7 +100,13 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       } else {
         // look for an implicit transformer
         val transformerType     = appliedType(c.weakTypeTag[chimney.Transformer[_, _]].tpe, modelType, protobufType)
-        val existingTransformer = c.inferImplicitValue(transformerType)
+        val existingTransformer =
+          try {
+            c.inferImplicitValue(transformerType)
+          } catch {
+            // Return EmptyTree in case of errors
+            case _: Throwable => EmptyTree
+          }
 
         // "ask" for the implicit transformer or use the found one
         def askTransformer = if (existingTransformer != EmptyTree) {
