@@ -85,12 +85,11 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     def ask: Compiled = (compileInner(q"implicitly[$writerType]"), Compatibility.full)
 
     if (existingWriter == EmptyTree)
-//      if (checkClassTypes(protobufType, modelType)) {
-//        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
-//        val result                         = compileInner(implicitValue)
-//        (result, compatibility)
-//      } else
-      if (checkEnumerationTypes(protobufType, modelType)) {
+      if (checkClassTypes(protobufType, modelType)) {
+        val (implicitValue, compatibility) = compileClassMapping(protobufType, modelType)
+        val result                         = compileInner(implicitValue)
+        (result, compatibility)
+      } else if (checkEnumerationTypes(protobufType, modelType)) {
         val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
