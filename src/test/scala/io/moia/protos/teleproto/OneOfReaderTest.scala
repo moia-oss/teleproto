@@ -62,15 +62,15 @@ class OneOfReaderTest extends UnitTest {
     implicit val fooOrBarReader: Reader[protobuf.FooOrBar, model.FooOrBar] =
       (p: protobuf.FooOrBar) =>
         None
-          .orElse(p.value.foo.map(foo => transform[protobuf.Foo, model.Foo](foo, "/foo")))
-          .orElse(p.value.bar.map(bar => transform[protobuf.Bar, model.Bar](bar, "/bar")))
+          .orElse(p.value.foo.map(foo => Reader.transform[protobuf.Foo, model.Foo](foo, "/foo")))
+          .orElse(p.value.bar.map(bar => Reader.transform[protobuf.Bar, model.Bar](bar, "/bar")))
           .getOrElse(PbFailure("Value is required."))
 
     val reader = new Reader[protobuf.Protobuf, model.Model] {
 
       def read(p: protobuf.Protobuf): PbResult[model.Model] =
         for {
-          fooOrBar <- transform[protobuf.FooOrBar, model.FooOrBar](p.fooOrBar, "/fooOrBar")
+          fooOrBar <- Reader.transform[protobuf.FooOrBar, model.FooOrBar](p.fooOrBar, "/fooOrBar")
         } yield {
           model.Model(fooOrBar)
         }

@@ -19,6 +19,7 @@ package io.moia.protos.teleproto
 import java.time.{Instant, LocalTime}
 import com.google.protobuf.duration.{Duration => PBDuration}
 import com.google.protobuf.timestamp.Timestamp
+import io.scalaland.chimney.{PartialTransformer, partial}
 import scalapb.GeneratedMessage
 
 import java.util.UUID
@@ -31,11 +32,28 @@ import scala.util.Try
 /** Provides reading of a generated Protocol Buffers model into a business model.
   */
 @implicitNotFound("No Protocol Buffers mapper from type ${P} to ${M} was found. Try to implement an implicit Reader for this type.")
-trait Reader[P, M] {
+trait Reader[P, M] extends PartialTransformer[P, M] {
 
   /** Returns the read business model or an error message.
     */
   def read(protobuf: P): PbResult[M]
+
+  def transform(src: P, failFast: Boolean): partial.Result[M] = {
+    read(src) match {
+      case PbSuccess(value) => partial.Result.Value(value)
+      case PbFailure(errors) => {
+        def toError(pbError: (String, String)) = partial.Error(
+          partial.ErrorMessage.StringMessage(pbError._2),
+          partial.Path.Empty.prepend(partial.PathElement.Accessor(pbError._1))
+        )
+
+        errors.toList match {
+          case head :: tail => partial.Result.Errors(toError(head), tail.map(toError): _*)
+          case Nil          => partial.Result.Errors(partial.Error(partial.ErrorMessage.StringMessage("Unknown error")))
+        }
+      }
+    }
+  }
 
   /** Transforms successfully read results.
     */

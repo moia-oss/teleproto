@@ -40,16 +40,15 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnForwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-    } else
-      {
-        def askTransformer =
-          q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
+    } else {
+      def askTransformer =
+        q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
 
-        def writerFromTransformer: Tree =
-          (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
+      def writerFromTransformer: Tree =
+        (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
 
-        writerFromTransformer // use the available transformer implicit
-      }
+      writerFromTransformer // use the available transformer implicit
+    }
   }
 
   /** The protobuf and model types have to be sealed traits. Iterate through the known subclasses of the model and match the ScalaPB side.
