@@ -169,6 +169,17 @@ lazy val mimaSettings = Seq(
     ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$ParamMigration"),
     ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Required"),
     ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Required$"),
+    // Chimney migration stuff
+    ProblemFilters.exclude[DirectMissingMethodProblem]("io.moia.protos.teleproto.Writer.transform"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Compatible"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Compatible$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$ForwardCompatible"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$ForwardCompatible$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Matching"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$MatchingParam"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$SkippedDefaultParam$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$TransformParam"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$TransformParam$"),
   )
 )
 
