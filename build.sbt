@@ -157,7 +157,16 @@ lazy val mimaSettings = Seq(
   mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),
   mimaBinaryIssueFilters ++= Seq(
     // Method was added in 2.1.0
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toEither")
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toEither"),
+    // Classes were removed in 3.0.0
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Migration"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Migration$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Automatically"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Automatically$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$ParamMigration"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Required"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Required$"),
   )
 )
 
