@@ -92,6 +92,10 @@ object Protobuf {
 
   implicit val subReader: Reader[SubProtobuf, SubModel] = ProtocolBuffers.reader[SubProtobuf, SubModel]
 
+  // TODO: remove?
+  implicit val enumReader: Reader[ProtobufEnum, ModelEnum] = ProtocolBuffers.reader[ProtobufEnum, ModelEnum]
+  implicit val enumWriter: Writer[ModelEnum, ProtobufEnum] = ProtocolBuffers.writer[ModelEnum, ProtobufEnum]
+
   val reader: Reader[Protobuf, Model] = ProtocolBuffers.reader[Protobuf, Model]
 
   @backward("2e0e9b")

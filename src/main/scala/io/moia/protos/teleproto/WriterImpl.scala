@@ -90,15 +90,16 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
 //        val result                         = compileInner(implicitValue)
 //        (result, compatibility)
 //      } else
-      if (checkEnumerationTypes(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
-        val result                         = compileInner(implicitValue)
-        (result, compatibility)
-      } else if (checkHierarchyTypes(protobufType, modelType)) {
-        val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
-        val result                         = compileInner(implicitValue)
-        (result, compatibility)
-      } else {
+//      if (checkEnumerationTypes(protobufType, modelType)) {
+//        val (implicitValue, compatibility) = compileEnumerationMapping(protobufType, modelType)
+//        val result                         = compileInner(implicitValue)
+//        (result, compatibility)
+//      } else if (checkHierarchyTypes(protobufType, modelType)) {
+//        val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
+//        val result                         = compileInner(implicitValue)
+//        (result, compatibility)
+//      } else
+      {
         // look for an implicit transformer
         val transformerType = appliedType(c.weakTypeTag[chimney.Transformer[_, _]].tpe, modelType, protobufType)
         val existingTransformer =
@@ -113,15 +114,15 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
         def askTransformer = if (existingTransformer != EmptyTree) {
           q"implicitly[$transformerType]"
         } else {
-          q"import io.moia.protos.teleproto.Writer._; $transformerObj.derive[$modelType, $protobufType]"
+//          q"import io.moia.protos.teleproto.Writer._; $transformerObj.derive[$modelType, $protobufType]"
+          q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
         }
 
         def writerFromTransformer: Compiled =
           (compileInner(q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)"), Compatibility.full)
 
         writerFromTransformer // use the available transformer implicit
-      }
-    else
+      } else
       ask // use the available implicit
   }
 
