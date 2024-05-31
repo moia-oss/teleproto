@@ -83,7 +83,7 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
         val result                         = compileInner(implicitValue)
         (result, compatibility)
       } else {
-      ask
+        ask
 //      {
 //        // Derive a chimney transformer and use it
 //        def askTransformer =
@@ -94,7 +94,8 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
 //
 //        writerFromTransformer
 //      }
-      } else
+      }
+    else
       ask // use the available implicit
   }
 

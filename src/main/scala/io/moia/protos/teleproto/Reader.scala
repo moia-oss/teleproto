@@ -112,10 +112,11 @@ object Reader extends LowPriorityReads {
 
   def instance[P, M](f: P => PbResult[M]): Reader[P, M] = f(_)
 
-  def fromPartialTransformer[P, M](transformer: PartialTransformer[P, M]): Reader[P, M] = (model) => transformer.transform(model) match {
-    case Result.Value(value) => PbSuccess(value)
-    case Result.Errors(errors) => new PbFailure(errors.map(error => (error.path.asString, error.message.asString)).toSeq)
-  }
+  def fromPartialTransformer[P, M](transformer: PartialTransformer[P, M]): Reader[P, M] = (model) =>
+    transformer.transform(model) match {
+      case Result.Value(value)   => PbSuccess(value)
+      case Result.Errors(errors) => new PbFailure(errors.map(error => (error.path.asString, error.message.asString)).toSeq)
+    }
 
   /* Combinators */
 
