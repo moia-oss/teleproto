@@ -82,6 +82,8 @@ object Writer extends LowPriorityWrites {
 
   def instance[M, P](f: M => P): Writer[M, P] = f(_)
 
+  def fromTransformer[M, P](transformer: Transformer[M, P]): Writer[M, P] = (model) => transformer.transform(model)
+
   /* Combinators */
 
   def transform[MV, PV](model: MV)(implicit valueWriter: Writer[MV, PV]): PV =
@@ -93,10 +95,6 @@ object Writer extends LowPriorityWrites {
   // Opposite of required on Reader side
   def present[MV, PV](model: MV)(implicit valueWriter: Writer[MV, PV]): Option[PV] =
     Some(valueWriter.write(model))
-//  def present[MV, PV](model: MV)(implicit valueTransformer: Transformer[MV, PV]): Option[PV] =
-//    Some(valueTransformer.transform(model))
-
-  def fromTransformer[MV, PV](transformer: Transformer[MV, PV]): Writer[MV, PV] = (model) => transformer.transform(model)
 
   /* Type Writers */
 

@@ -41,13 +41,14 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       warnForwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
     } else {
+      // Derive a chimney transformer and use it
       def askTransformer =
         q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
 
       def writerFromTransformer: Tree =
         (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
 
-      writerFromTransformer // use the available transformer implicit
+      writerFromTransformer
     }
   }
 

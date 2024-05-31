@@ -82,9 +82,19 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
         val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
+      } else {
+      ask
+//      {
+//        // Derive a chimney transformer and use it
+//        def askTransformer =
+//          q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
+//
+//        def writerFromTransformer: Tree =
+//          (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
+//
+//        writerFromTransformer
+//      }
       } else
-        ask // let the compiler explain the problem
-    else
       ask // use the available implicit
   }
 
