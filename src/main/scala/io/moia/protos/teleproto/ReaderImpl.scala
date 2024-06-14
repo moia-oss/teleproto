@@ -16,15 +16,18 @@
 
 package io.moia.protos.teleproto
 
+import io.scalaland.chimney.PartialTransformer
+
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
 class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
   import c.universe._
 
-  private[this] val readerObj    = objectRef[Reader.type]
-  private[this] val pbSuccessObj = objectRef[PbSuccess.type]
-  private[this] val pbFailureObj = objectRef[PbFailure.type]
+  private[this] val readerObj      = objectRef[Reader.type]
+  private[this] val pbSuccessObj   = objectRef[PbSuccess.type]
+  private[this] val pbFailureObj   = objectRef[PbFailure.type]
+  private[this] val transformerObj = objectRef[PartialTransformer.type]
 
   def reader_impl[P: WeakTypeTag, M: WeakTypeTag]: Expr[Reader[P, M]] =
     c.Expr(compile[P, M])
@@ -33,22 +36,30 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     val protobufType = weakTypeTag[P].tpe
     val modelType    = weakTypeTag[M].tpe
 
-    if (checkClassTypes(protobufType, modelType)) {
-      val (result, compatibility) = compileClassMapping(protobufType, modelType)
-      warnBackwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
-    } else if (checkEnumerationTypes(protobufType, modelType)) {
+//    if (checkClassTypes(protobufType, modelType)) {
+//      val (result, compatibility) = compileClassMapping(protobufType, modelType)
+//      warnBackwardCompatible(protobufType, modelType, compatibility)
+//      traceCompiled(result)
+//    } else
+    if (checkEnumerationTypes(protobufType, modelType)) {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-    } else if (checkHierarchyTypes(protobufType, modelType)) {
-      val (result, compatibility) = compileTraitMapping(protobufType, modelType)
-      warnBackwardCompatible(protobufType, modelType, compatibility)
-      traceCompiled(result)
+//    } else if (checkHierarchyTypes(protobufType, modelType)) {
+//      val (result, compatibility) = compileTraitMapping(protobufType, modelType)
+//      warnBackwardCompatible(protobufType, modelType, compatibility)
+//      traceCompiled(result)
     } else {
-      abort(
-        s"Cannot create a reader from `$protobufType` to `$modelType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
-      )
+      // Derive a chimney transformer and use it
+      def askTransformer =
+        q"import io.moia.protos.teleproto.Reader._; $transformerObj.define[$protobufType, $modelType].enableDefaultValues.buildTransformer"
+
+      def writerFromTransformer: Tree =
+        (q"$readerObj.fromPartialTransformer[$protobufType, $modelType]($askTransformer)")
+
+//      println(writerFromTransformer)
+
+      writerFromTransformer
     }
   }
 
@@ -82,19 +93,8 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
         val (implicitValue, compatibility) = compileTraitMapping(protobufType, modelType)
         val result                         = compileInner(implicitValue)
         (result, compatibility)
-      } else {
+      } else
         ask
-//      {
-//        // Derive a chimney transformer and use it
-//        def askTransformer =
-//          q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
-//
-//        def writerFromTransformer: Tree =
-//          (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
-//
-//        writerFromTransformer
-//      }
-      }
     else
       ask // use the available implicit
   }

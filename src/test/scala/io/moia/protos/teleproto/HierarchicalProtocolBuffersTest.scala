@@ -1,5 +1,6 @@
 package io.moia.protos.teleproto
 
+import io.scalaland.chimney.{PartialTransformer, partial}
 import scalapb.GeneratedOneof
 
 /** Tests correct behaviour of generated mappings regarding hierarchical types where a reader/writer for an inner case class can be
@@ -71,6 +72,14 @@ object HierarchicalProtocolBuffersTest {
 class HierarchicalProtocolBuffersTest extends UnitTest {
 
   import HierarchicalProtocolBuffersTest._
+
+//  import Reader._
+  implicit val barOrBazReader: PartialTransformer[protobuf.BarOrBaz, model.BarOrBaz] = PartialTransformer
+    .define[protobuf.BarOrBaz, model.BarOrBaz]
+    .withEnumCaseHandledPartial[protobuf.BarOrBaz.Empty](_ => partial.Result.Errors.fromString(s"Empty value"))
+    .buildTransformer
+//  implicit val emptyBarOrBazReader: PartialTransformer[protobuf.BarOrBaz.Empty, model.BarOrBaz] = PartialTransformer
+//  (_ => partial.Result.Errors.fromString(s"Empty value"))
 
   "ProtocolBuffers for hierarchical types" should {
 
