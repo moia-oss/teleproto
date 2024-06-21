@@ -36,19 +36,18 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     val protobufType = weakTypeTag[P].tpe
     val modelType    = weakTypeTag[M].tpe
 
-//    if (checkClassTypes(protobufType, modelType)) {
-//      val (result, compatibility) = compileClassMapping(protobufType, modelType)
-//      warnBackwardCompatible(protobufType, modelType, compatibility)
-//      traceCompiled(result)
-//    } else
-    if (checkEnumerationTypes(protobufType, modelType)) {
+    if (checkClassTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileClassMapping(protobufType, modelType)
+      warnBackwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
+    } else if (checkEnumerationTypes(protobufType, modelType)) {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnBackwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
-//    } else if (checkHierarchyTypes(protobufType, modelType)) {
-//      val (result, compatibility) = compileTraitMapping(protobufType, modelType)
-//      warnBackwardCompatible(protobufType, modelType, compatibility)
-//      traceCompiled(result)
+    } else if (checkHierarchyTypes(protobufType, modelType)) {
+      val (result, compatibility) = compileTraitMapping(protobufType, modelType)
+      warnBackwardCompatible(protobufType, modelType, compatibility)
+      traceCompiled(result)
     } else {
       // Derive a chimney transformer and use it
       def askTransformer =

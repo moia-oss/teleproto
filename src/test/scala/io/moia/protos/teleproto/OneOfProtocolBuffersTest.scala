@@ -1,6 +1,5 @@
 package io.moia.protos.teleproto
 
-import io.scalaland.chimney.{PartialTransformer, partial}
 import scalapb.GeneratedOneof
 
 /** Tests correct behaviour of generated mappings regarding traits.
@@ -63,10 +62,10 @@ object OneOfProtocolBuffersTest {
   implicit val barReader: Reader[protobuf.Bar, model.Bar] =
     ProtocolBuffers.reader[protobuf.Bar, model.Bar]
 
-  implicit val fooOrBarPartialTransformer: PartialTransformer[protobuf.FooOrBar, model.FooOrBar] = PartialTransformer
-    .define[protobuf.FooOrBar, model.FooOrBar]
-    .withSealedSubtypeHandledPartial[protobuf.FooOrBar.Empty](_ => partial.Result.Errors.fromString(s"Empty value"))
-    .buildTransformer
+//  implicit val fooOrBarPartialTransformer: PartialTransformer[protobuf.FooOrBar, model.FooOrBar] = PartialTransformer
+//    .define[protobuf.FooOrBar, model.FooOrBar]
+//    .withSealedSubtypeHandledPartial[protobuf.FooOrBar.Empty](_ => partial.Result.Errors.fromString(s"Empty value"))
+//    .buildTransformer
 
   implicit val fooOrBarReader: Reader[protobuf.FooOrBar, model.FooOrBar] =
     ProtocolBuffers.reader[protobuf.FooOrBar, model.FooOrBar]
