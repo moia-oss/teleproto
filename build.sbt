@@ -67,32 +67,9 @@ lazy val commonSettings = Seq.concat(
 )
 
 lazy val compilerSettings = Seq(
-  scalaVersion                                                                     := crossScalaVersions.value.head,
-  crossScalaVersions                                                               := List("2.13.14", "2.13.14"),
+  scalaVersion                                                                     := "2.13.14",
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
-  scalacOptions ++= (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, 12)) => scalacOptions_2_12
-    case Some((2, 13)) => scalacOptions_2_13
-    case _             => Nil
-  })
-)
-
-lazy val scalacOptions_2_12 = Seq(
-  "-unchecked",
-  "-deprecation",
-  "-language:_",
-  "-release",
-  "8",
-  "-encoding",
-  "UTF-8",
-  "-Xfatal-warnings",
-  "-Ywarn-unused-import",
-  "-Yno-adapted-args",
-  "-Ywarn-dead-code",
-  "-Ywarn-inaccessible",
-  "-Ywarn-infer-any",
-  "-Ywarn-nullary-override",
-  "-Ywarn-nullary-unit"
+  scalacOptions ++= scalacOptions_2_13
 )
 
 lazy val scalacOptions_2_13 = Seq(
