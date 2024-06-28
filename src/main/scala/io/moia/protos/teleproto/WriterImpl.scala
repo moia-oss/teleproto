@@ -16,15 +16,19 @@
 
 package io.moia.protos.teleproto
 
-import io.scalaland.chimney.Transformer
+//import io.scalaland.chimney.Transformer
+//import io.scalaland.chimney.dsl
+import io.scalaland.chimney.internal.compiletime.derivation.transformer.FakeChimney
+//import io.scalaland.chimney.internal.runtime.{TransformerFlags, TransformerOverrides}
+
 import scala.reflect.macros.blackbox
 
 @SuppressWarnings(Array("all"))
 class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   import c.universe._
 
-  private[this] val writerObj      = objectRef[Writer.type]
-  private[this] val transformerObj = objectRef[Transformer.type]
+  private[this] val writerObj = objectRef[Writer.type]
+//  private[this] val transformerObj = objectRef[Transformer.type]
 
   /** Validates if business model type can be written to the Protocol Buffers type (matching case classes or matching sealed trait
     * hierarchy). If just forward compatible then raise a warning.
@@ -41,14 +45,24 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       warnForwardCompatible(protobufType, modelType, compatibility)
       traceCompiled(result)
     } else {
+      println(s"Deriving chimney transformer from `$modelType` to `$protobufType`")
+
       // Derive a chimney transformer and use it
-      def askTransformer =
-        q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
+      def askTransformer = new FakeChimney(c).deriveWriter[M, P]
 
-      def writerFromTransformer: Tree =
-        (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
+      println(askTransformer)
 
-      writerFromTransformer
+//      def askTransformer =
+//        q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
+
+      abort(
+        s"Cannot create a writer from `$modelType` to `$protobufType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
+      )
+
+//      def writerFromTransformer: Tree =
+//        (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
+//
+//      writerFromTransformer
     }
   }
 
