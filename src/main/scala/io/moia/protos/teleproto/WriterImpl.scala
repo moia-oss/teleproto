@@ -35,14 +35,18 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     */
   def writer_impl[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] =
     c.Expr(compile[M, P])
+//  compile[M, P]
+//    new FakeChimney(c).deriveWriter[M, P]
 
   private def compile[M: WeakTypeTag, P: WeakTypeTag]: Tree = {
+//  private def compile[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] = {
     val modelType    = weakTypeTag[M].tpe
     val protobufType = weakTypeTag[P].tpe
 
     if (checkEnumerationTypes(protobufType, modelType)) {
       val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
       warnForwardCompatible(protobufType, modelType, compatibility)
+//      c.Expr(traceCompiled(result))
       traceCompiled(result)
     } else {
       println(s"Deriving chimney transformer from `$modelType` to `$protobufType`")
@@ -50,19 +54,19 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
       // Derive a chimney transformer and use it
       def askTransformer = new FakeChimney(c).deriveWriter[M, P]
 
-      println(askTransformer)
+//      println(askTransformer)
 
-//      def askTransformer =
+      //      def askTransformer =
 //        q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
 
-      abort(
-        s"Cannot create a writer from `$modelType` to `$protobufType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
-      )
+//      abort(
+//        s"Cannot create a writer from `$modelType` to `$protobufType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
+//      )
 
-//      def writerFromTransformer: Tree =
-//        (q"$writerObj.fromTransformer[$modelType, $protobufType]($askTransformer)")
-//
-//      writerFromTransformer
+      def writerFromTransformer =
+        (q"$writerObj.fromTransformer[$modelType, $protobufType](${askTransformer.in(c.mirror)})")
+
+      writerFromTransformer
     }
   }
 

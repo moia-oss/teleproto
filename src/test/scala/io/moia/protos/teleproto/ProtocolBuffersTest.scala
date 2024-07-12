@@ -6,6 +6,7 @@ import com.google.protobuf.Descriptors
 import com.google.protobuf.timestamp.Timestamp
 import scalapb.descriptors.EnumDescriptor
 import scalapb.{GeneratedEnum, GeneratedEnumCompanion, UnrecognizedEnum}
+import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
 
 sealed abstract class ProtobufEnum(val value: Int) extends GeneratedEnum {
   type EnumType = ProtobufEnum

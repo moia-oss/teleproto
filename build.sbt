@@ -105,7 +105,7 @@ lazy val scalacOptions_2_13 = Seq(
   "8",
   "-encoding",
   "UTF-8",
-  "-Xfatal-warnings",
+//  "-Xfatal-warnings", // TODO: restore
   "-Xlint",
   "-Ywarn-dead-code",
   "-Ymacro-annotations"

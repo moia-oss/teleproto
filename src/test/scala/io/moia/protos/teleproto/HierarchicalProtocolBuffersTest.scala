@@ -72,6 +72,8 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
 
   import HierarchicalProtocolBuffersTest._
 
+  import io.moia.protos.teleproto.Writer._ // TODO: remove
+
 //  import Reader._
 //  implicit val barOrBazReader: PartialTransformer[protobuf.BarOrBaz, model.BarOrBaz] = PartialTransformer
 //    .define[protobuf.BarOrBaz, model.BarOrBaz]
@@ -81,6 +83,8 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
   "ProtocolBuffers for hierarchical types" should {
 
     "generate a writer for all types in hierarchy of a generated type pair" in {
+
+//      import io.moia.protos.teleproto.Writer._ // TODO: remove
 
       val writer = ProtocolBuffers.writer[model.Foo, protobuf.Foo]
 
