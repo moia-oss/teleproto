@@ -72,6 +72,12 @@ class HierarchicalProtocolBuffersTest extends UnitTest {
 
   import HierarchicalProtocolBuffersTest._
 
+//  import Reader._
+//  implicit val barOrBazReader: PartialTransformer[protobuf.BarOrBaz, model.BarOrBaz] = PartialTransformer
+//    .define[protobuf.BarOrBaz, model.BarOrBaz]
+//    .withEnumCaseHandledPartial[protobuf.BarOrBaz.Empty](_ => partial.Result.Errors.fromString(s"Empty value"))
+//    .buildTransformer
+
   "ProtocolBuffers for hierarchical types" should {
 
     "generate a writer for all types in hierarchy of a generated type pair" in {

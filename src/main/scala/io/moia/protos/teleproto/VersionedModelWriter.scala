@@ -125,7 +125,7 @@ object VersionedModelWriter {
     def writer: Writer[DetachedModel, SpecificModel]
 
     final def versioned[V](version: V): (V, Writer[DetachedModel, GeneratedMessage]) =
-      version -> writer
+      version -> writer.map[GeneratedMessage](m => m)
   }
 
   object CompanionWriter {
