@@ -18,7 +18,6 @@ package io.moia.protos.teleproto
 
 //import io.scalaland.chimney.Transformer
 //import io.scalaland.chimney.dsl
-import io.scalaland.chimney.internal.compiletime.derivation.transformer.FakeChimney
 //import io.scalaland.chimney.internal.runtime.{TransformerFlags, TransformerOverrides}
 
 import scala.reflect.macros.blackbox
@@ -30,45 +29,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   private[this] val writerObj = objectRef[Writer.type]
 //  private[this] val transformerObj = objectRef[Transformer.type]
 
-  /** Validates if business model type can be written to the Protocol Buffers type (matching case classes or matching sealed trait
-    * hierarchy). If just forward compatible then raise a warning.
-    */
-  def writer_impl[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] =
-    c.Expr(compile[M, P])
-//  compile[M, P]
-//    new FakeChimney(c).deriveWriter[M, P]
-
-  private def compile[M: WeakTypeTag, P: WeakTypeTag]: Tree = {
-//  private def compile[M: WeakTypeTag, P: WeakTypeTag]: c.Expr[Writer[M, P]] = {
-    val modelType    = weakTypeTag[M].tpe
-    val protobufType = weakTypeTag[P].tpe
-
-    if (checkEnumerationTypes(protobufType, modelType)) {
-      val (result, compatibility) = compileEnumerationMapping(protobufType, modelType)
-      warnForwardCompatible(protobufType, modelType, compatibility)
-//      c.Expr(traceCompiled(result))
-      traceCompiled(result)
-    } else {
-      println(s"Deriving chimney transformer from `$modelType` to `$protobufType`")
-
-      // Derive a chimney transformer and use it
-      def askTransformer = new FakeChimney(c).deriveWriter[M, P]
-
-//      println(askTransformer)
-
-      //      def askTransformer =
-//        q"import io.moia.protos.teleproto.Writer._; $transformerObj.define[$modelType, $protobufType].enableDefaultValues.buildTransformer"
-
-//      abort(
-//        s"Cannot create a writer from `$modelType` to `$protobufType`. Just mappings between a) case classes b) hierarchies + sealed traits c) sealed traits from enums are possible."
-//      )
-
-      def writerFromTransformer =
-        (q"$writerObj.fromTransformer[$modelType, $protobufType](${askTransformer.in(c.mirror)})")
-
-      writerFromTransformer
-    }
-  }
 
   /** The protobuf and model types have to be sealed traits. Iterate through the known subclasses of the model and match the ScalaPB side.
     *
