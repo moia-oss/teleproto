@@ -8,6 +8,7 @@ import io.scalaland.chimney.internal.runtime
 import scala.reflect.macros.blackbox
 //import scala.reflect.runtime.universe.Quasiquote
 
+// TODO: remove
 final class FakeChimney(val c: blackbox.Context) extends DerivationPlatform with Gateway {
 //  import c.universe._
 
@@ -35,18 +36,14 @@ final class FakeChimney(val c: blackbox.Context) extends DerivationPlatform with
           val context = TransformationContext.ForTotal
             .create[M, P](
               src,
-              TransformerConfiguration(flags = TransformerFlags(processDefaultValues = true)),
-              runtimeDataStore
+              TransformerConfiguration(flags = TransformerFlags(processDefaultValues = true))
             )
 
           await(enableLoggingIfFlagEnabled(deriveFinalTransformationResultExpr(context), context))
         }
       }
 
-      Expr.block(
-        List(Expr.suppressUnused(runtimeDataStore)),
-        extractExprAndLog[M, P, Transformer[M, P]](result)
-      )
+      extractExprAndLog[M, P, Transformer[M, P]](result)
     }
 
     expr

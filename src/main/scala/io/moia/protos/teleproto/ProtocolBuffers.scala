@@ -16,6 +16,8 @@
 
 package io.moia.protos.teleproto
 
+import io.moia.protos.teleproto.internal.WriterMacros
+
 import scala.concurrent.Future
 
 @SuppressWarnings(Array("all"))
@@ -53,5 +55,6 @@ object ProtocolBuffers {
   /** Compiles a generic writer instance from business model type `M` to Protocol Buffers type `P` if possible. See User's Guide for
     * details.
     */
-  def writer[M, P]: Writer[M, P] = macro WriterImpl.writer_impl[M, P]
+//  def writer[M, P]: Writer[M, P] = macro WriterImpl.writer_impl[M, P]
+  def writer[M, P]: Writer[M, P] = macro WriterMacros.derivingImpl[M, P]
 }

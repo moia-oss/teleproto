@@ -29,16 +29,17 @@ import scala.concurrent.duration.{Deadline, Duration}
 
 /** Provides writing Protocol Buffers model from a business model.
   */
-@implicitNotFound(
-  "No mapper from business model type ${M} to Protocol Buffers type ${P} was found. Try to implement an implicit Writer for this type."
-)
-trait Writer[M, P] extends Transformer[M, P] {
+//@implicitNotFound(
+//  "No mapper from business model type ${M} to Protocol Buffers type ${P} was found. Try to implement an implicit Writer for this type."
+//)
+//trait Writer[M, P] extends Transformer[M, P] {
+trait Writer[M, P] {
 
   /** Returns the written Protocol Buffer object.
     */
   def write(model: M): P
 
-  def transform(src: M): P = write(src)
+//  def transform(src: M): P = write(src)
 
   /** Transforms each written result.
     */
@@ -82,7 +83,7 @@ object Writer extends LowPriorityWrites {
 
   def instance[M, P](f: M => P): Writer[M, P] = f(_)
 
-  def fromTransformer[M, P](transformer: Transformer[M, P]): Writer[M, P] = (model) => transformer.transform(model)
+//  def fromTransformer[M, P](transformer: Transformer[M, P]): Writer[M, P] = (model) => transformer.transform(model)
 
   /* Combinators */
 
