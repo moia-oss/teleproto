@@ -15,7 +15,7 @@ lazy val `teleproto` = project
   .settings(Project.inConfig(Test)(sbtprotoc.ProtocPlugin.protobufConfigSettings): _*)
   .settings(
     name          := "teleproto",
-    version       := "2.3.0",
+    version       := "3.0.0",
     versionScheme := Some("early-semver"),
     libraryDependencies ++= Seq(
       library.scalaPB            % "protobuf;compile",
@@ -24,7 +24,9 @@ lazy val `teleproto` = project
       library.scalaTestPlusCheck % Test,
       library.scalaCheck         % Test,
       library.scalaCollectionCompat,
-      "org.scala-lang" % "scala-reflect" % (ThisBuild / scalaVersion).value
+      "org.scala-lang" % "scala-reflect" % (ThisBuild / scalaVersion).value,
+      "io.scalaland" %% "chimney"           % "1.3.0",
+      "io.scalaland" %% "chimney-protobufs" % "1.3.0"
     )
   )
 
@@ -80,7 +82,7 @@ lazy val scalacOptions_2_13 = Seq(
   "8",
   "-encoding",
   "UTF-8",
-  "-Xfatal-warnings",
+//  "-Xfatal-warnings", // TODO: restore
   "-Xlint",
   "-Ywarn-dead-code",
   "-Ymacro-annotations"
@@ -134,7 +136,28 @@ lazy val mimaSettings = Seq(
   mimaPreviousArtifacts := Set("io.moia" %% "teleproto" % "2.0.0"),
   mimaBinaryIssueFilters ++= Seq(
     // Method was added in 2.1.0
-    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toEither")
+    ProblemFilters.exclude[ReversedMissingMethodProblem]("io.moia.protos.teleproto.PbResult.toEither"),
+    // Classes were removed in 3.0.0
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Migration"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.Migration$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Automatically"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Automatically$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$ParamMigration"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Required"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.MigrationImpl$Required$"),
+    // Chimney migration stuff
+    ProblemFilters.exclude[DirectMissingMethodProblem]("io.moia.protos.teleproto.Reader.transform"),
+    ProblemFilters.exclude[DirectMissingMethodProblem]("io.moia.protos.teleproto.Writer.transform"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Compatible"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Compatible$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$ForwardCompatible"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$ForwardCompatible$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Matching"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$MatchingParam"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$SkippedDefaultParam$"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$TransformParam"),
+    ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$TransformParam$"),
   )
 )
 

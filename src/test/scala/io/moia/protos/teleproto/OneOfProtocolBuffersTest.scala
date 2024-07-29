@@ -56,11 +56,18 @@ object OneOfProtocolBuffersTest {
     case class Model(fooOrBar: FooOrBar)
   }
 
+  import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
+
   implicit val fooReader: Reader[protobuf.Foo, model.Foo] =
     ProtocolBuffers.reader[protobuf.Foo, model.Foo]
 
   implicit val barReader: Reader[protobuf.Bar, model.Bar] =
     ProtocolBuffers.reader[protobuf.Bar, model.Bar]
+
+//  implicit val fooOrBarPartialTransformer: PartialTransformer[protobuf.FooOrBar, model.FooOrBar] = PartialTransformer
+//    .define[protobuf.FooOrBar, model.FooOrBar]
+//    .withSealedSubtypeHandledPartial[protobuf.FooOrBar.Empty](_ => partial.Result.Errors.fromString(s"Empty value"))
+//    .buildTransformer
 
   implicit val fooOrBarReader: Reader[protobuf.FooOrBar, model.FooOrBar] =
     ProtocolBuffers.reader[protobuf.FooOrBar, model.FooOrBar]

@@ -3,11 +3,16 @@ package io.moia.protos.teleproto
 import io.moia.food.food
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
 
 import scala.util.Success
 
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest._
+
+  // TODO: remove?
+  implicit val colorReader: Reader[food.Meal.Color, Color] = ProtocolBuffers.reader[food.Meal.Color, Color]
+  implicit val colorWriter: Writer[Color, food.Meal.Color] = ProtocolBuffers.writer[Color, food.Meal.Color]
 
   implicit val reader: Reader[food.Meal, Meal] = ProtocolBuffers.reader[food.Meal, Meal]
   implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]

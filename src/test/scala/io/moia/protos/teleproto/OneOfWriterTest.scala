@@ -67,7 +67,7 @@ class OneOfWriterTest extends UnitTest {
     val writer = new Writer[model.Model, protobuf.Protobuf] {
 
       def write(m: model.Model): protobuf.Protobuf =
-        protobuf.Protobuf(transform[model.FooOrBar, protobuf.FooOrBar](m.fooOrBar))
+        protobuf.Protobuf(Writer.transform[model.FooOrBar, protobuf.FooOrBar](m.fooOrBar))
     }
 
     "write model with sealed trait" in {
