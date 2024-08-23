@@ -2,7 +2,7 @@ package io.scalaland.chimney.internal.compiletime
 
 /** All Rules implemented for this platform. */
 trait StandardRules
-  extends derivation.transformer.rules.TransformImplicitRuleModule
+    extends derivation.transformer.rules.TransformImplicitRuleModule
     with derivation.transformer.rules.TransformSubtypesRuleModule
     with derivation.transformer.rules.TransformToSingletonRuleModule
     with derivation.transformer.rules.TransformOptionToOptionRuleModule

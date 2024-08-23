@@ -1,7 +1,7 @@
 package io.scalaland.chimney.internal.compiletime
 
 trait DerivationEnginePlatform
-  extends DerivationEngine
+    extends DerivationEngine
     with ChimneyDefinitionsPlatform
     with datatypes.IterableOrArraysPlatform
     with datatypes.ProductTypesPlatform

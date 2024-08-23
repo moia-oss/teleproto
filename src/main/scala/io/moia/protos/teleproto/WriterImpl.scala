@@ -29,7 +29,6 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
   private[this] val writerObj = objectRef[Writer.type]
 //  private[this] val transformerObj = objectRef[Transformer.type]
 
-
   /** The protobuf and model types have to be sealed traits. Iterate through the known subclasses of the model and match the ScalaPB side.
     *
     * If there are more options on the protobuf side, the mapping is forward compatible. If there are more options on the model side, the

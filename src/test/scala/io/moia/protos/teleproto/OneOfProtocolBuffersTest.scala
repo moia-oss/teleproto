@@ -75,14 +75,18 @@ object OneOfProtocolBuffersTest {
   val reader: Reader[protobuf.Protobuf, model.Model] =
     ProtocolBuffers.reader[protobuf.Protobuf, model.Model]
 
-  implicit val fooWriter: Writer[model.Foo, protobuf.Foo] =
-    ProtocolBuffers.writer[model.Foo, protobuf.Foo]
+//  implicit val fooWriter: Writer[model.Foo, protobuf.Foo] =
+//    ProtocolBuffers.writer[model.Foo, protobuf.Foo]
+//
+//  implicit val barWriter: Writer[model.Bar, protobuf.Bar] =
+//    ProtocolBuffers.writer[model.Bar, protobuf.Bar]
 
-  implicit val barWriter: Writer[model.Bar, protobuf.Bar] =
-    ProtocolBuffers.writer[model.Bar, protobuf.Bar]
-
-  implicit val fooOrBarWriter: Writer[model.FooOrBar, protobuf.FooOrBar] =
-    ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]
+//  implicit val fooOrBarWriter: Writer[model.FooOrBar, protobuf.FooOrBar] = {
+//    println("calling ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]")
+//    val x = ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]
+//    println(s"finished calling ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]: ${x}")
+//    x
+//  }
 
   val writer: Writer[model.Model, protobuf.Protobuf] =
     ProtocolBuffers.writer[model.Model, protobuf.Protobuf]

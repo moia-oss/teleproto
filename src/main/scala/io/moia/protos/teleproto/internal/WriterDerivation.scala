@@ -25,47 +25,48 @@ trait WriterDerivation extends DerivationEngine {
     object Implicits {
 
       implicit def WriterType[From: Type, To: Type]: Type[Writer[From, To]] = Writer[From, To]
+//      implicit def WriterType[From: Type, To: Type]: Type[Writer[From, To]] = c.inferImplicitValue(writerType)
 
       // TODO: should it be here?
 
       /** Writes a big decimal as string.
-       */
+        */
       implicit object BigDecimalWriter extends Writer[BigDecimal, String] {
         def write(model: BigDecimal): String = model.toString
       }
 
       /** Writes a local time as ISO string.
-       */
+        */
       implicit object LocalTimeWriter extends Writer[LocalTime, String] {
         def write(model: LocalTime): String = model.toString
       }
 
       /** Writes an instant into timestamp.
-       */
+        */
       implicit object InstantWriter extends Writer[Instant, Timestamp] {
         def write(instant: Instant): Timestamp =
           Timestamp(instant.getEpochSecond, instant.getNano)
       }
 
       /** Writes a Scala duration into ScalaPB duration.
-       */
+        */
       implicit object DurationWriter extends Writer[Duration, PBDuration] {
         def write(duration: Duration): PBDuration =
           PBDuration(duration.toSeconds, (duration.toNanos % 1000000000).toInt)
       }
 
       /** Writes a UUID as string.
-       */
+        */
       implicit object UUIDWriter extends Writer[UUID, String] {
         def write(uuid: UUID): String = uuid.toString
       }
 
       /** Writes a Scala deadline into a ScalaPB Timestamp as fixed point in time.
-       *
-       * The decoding of this value is side-effect free but has a problem with divergent system clocks!
-       *
-       * Depending on the use case either this (based on fixed point in time) or the following writer (based on the time left) makes sense.
-       */
+        *
+        * The decoding of this value is side-effect free but has a problem with divergent system clocks!
+        *
+        * Depending on the use case either this (based on fixed point in time) or the following writer (based on the time left) makes sense.
+        */
       object FixedPointDeadlineWriter extends Writer[Deadline, Timestamp] {
         def write(deadline: Deadline): Timestamp = {
           val absoluteDeadline = Instant.now.plusNanos(deadline.timeLeft.toNanos)
@@ -74,11 +75,12 @@ trait WriterDerivation extends DerivationEngine {
       }
 
       /** Writes a Scala deadline into a ScalaPB int as time left duration.
-       *
-       * The decoding of this value is not side-effect free since it depends on the clock! Time between encoding and decoding does not count.
-       *
-       * Depending on the use case either this (based on time left) or the following writer (based on fixed point in time) makes sense.
-       */
+        *
+        * The decoding of this value is not side-effect free since it depends on the clock! Time between encoding and decoding does not
+        * count.
+        *
+        * Depending on the use case either this (based on time left) or the following writer (based on fixed point in time) makes sense.
+        */
       object TimeLeftDeadlineWriter extends Writer[Deadline, PBDuration] {
         def write(deadline: Deadline): PBDuration = {
           val timeLeft       = deadline.timeLeft
@@ -120,17 +122,17 @@ trait WriterDerivation extends DerivationEngine {
   object WriterImplicitRule extends Rule("WriterImplicit") {
 
     override def expand[From, To](implicit
-                                  ctx: TransformationContext[From, To]
-                                 ): DerivationResult[Rule.ExpansionResult[To]] =
+        ctx: TransformationContext[From, To]
+    ): DerivationResult[Rule.ExpansionResult[To]] =
       MyExprs.summonMyTypeClass[From, To] match {
         case Some(writer) => DerivationResult.expandedTotal(writer.write(ctx.src))
-        case None              => DerivationResult.attemptNextRule
+        case None         => DerivationResult.attemptNextRule
       }
   }
 
   def writerDerivation[From: Type, To: Type]: Expr[Writer[From, To]] =
     MyExprs.createTypeClass[From, To] { (from: Expr[From]) =>
-      val cfg = TransformerConfiguration() // customize, read config with DSL etc
+      val cfg     = TransformerConfiguration() // customize, read config with DSL etc
       val context = TransformationContext.ForTotal.create[From, To](from, cfg)
 
       deriveFinalTransformationResultExpr(context).toEither.fold(
