@@ -3,7 +3,7 @@ package io.moia.protos.teleproto
 import io.moia.food.food
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
+//import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
 
 import scala.util.Success
 
@@ -12,9 +12,24 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
 
   // TODO: remove?
   implicit val colorReader: Reader[food.Meal.Color, Color] = ProtocolBuffers.reader[food.Meal.Color, Color]
-  implicit val colorWriter: Writer[Color, food.Meal.Color] = ProtocolBuffers.writer[Color, food.Meal.Color]
+//  implicit val colorWriter: Writer[Color, food.Meal.Color] = ProtocolBuffers.writer[Color, food.Meal.Color]
+  // TODO: derive automatically
+  implicit val colorWriter: Writer[Color, food.Meal.Color] = new Writer[Color, food.Meal.Color] {
+
+    /** Returns the written Protocol Buffer object.
+      */
+    override def write(model: Color): food.Meal.Color = model match {
+      case Color.Red    => food.Meal.Color.COLOR_RED
+      case Color.orange => food.Meal.Color.COLOR_ORANGE
+      case Color.Yellow => food.Meal.Color.COLOR_YELLOW
+      case Color.pink   => food.Meal.Color.COLOR_PINK
+      case Color.Blue   => food.Meal.Color.COLOR_BLUE
+    }
+  }
 
   implicit val reader: Reader[food.Meal, Meal] = ProtocolBuffers.reader[food.Meal, Meal]
+//  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
+//  val writerL: Writer[Lunch, food.Meal.Lunch] = ProtocolBuffers.writer[Lunch, food.Meal.Lunch]
   implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
 
   val version     = 1
@@ -48,6 +63,7 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   "ProtocolBuffers" should {
     "generate writer and reader that round trip successfully" in {
       forAll(mealGen) { meal =>
+//        println(writer.write(meal))
         reader.read(writer.write(meal)) shouldBe PbSuccess(meal)
       }
     }

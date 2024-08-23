@@ -94,8 +94,20 @@ object Protobuf {
   implicit val subReader: Reader[SubProtobuf, SubModel] = ProtocolBuffers.reader[SubProtobuf, SubModel]
 
   // TODO: remove?
-//  implicit val enumReader: Reader[ProtobufEnum, ModelEnum] = ProtocolBuffers.reader[ProtobufEnum, ModelEnum]
+  implicit val enumReader: Reader[ProtobufEnum, ModelEnum] = ProtocolBuffers.reader[ProtobufEnum, ModelEnum]
 //  implicit val enumWriter: Writer[ModelEnum, ProtobufEnum] = ProtocolBuffers.writer[ModelEnum, ProtobufEnum]
+
+  // TODO: implement derivation
+  implicit val enumWriter: Writer[ModelEnum, ProtobufEnum] = new Writer[ModelEnum, ProtobufEnum] {
+
+    /** Returns the written Protocol Buffer object.
+      */
+    override def write(model: ModelEnum): ProtobufEnum = model match {
+      case ModelEnum.First_Case => ProtobufEnum.FirstCase
+      case ModelEnum.SecondCase => ProtobufEnum.SECOND_CASE
+      case ModelEnum.THIRD_CASE => ProtobufEnum.Third_Case
+    }
+  }
 
   val reader: Reader[Protobuf, Model] = ProtocolBuffers.reader[Protobuf, Model]
 
