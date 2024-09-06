@@ -4,6 +4,7 @@ import com.google.protobuf.timestamp.Timestamp
 import io.moia.protos.teleproto.Writer
 import io.scalaland.chimney.internal.compiletime.DerivationEngine
 import com.google.protobuf.duration.{Duration => PBDuration}
+import scalapb.UnknownFieldSet
 
 import java.time.{Instant, LocalTime}
 import java.util.UUID
@@ -123,16 +124,24 @@ trait WriterDerivation extends DerivationEngine {
 
     override def expand[From, To](implicit
         ctx: TransformationContext[From, To]
-    ): DerivationResult[Rule.ExpansionResult[To]] =
+    ): DerivationResult[Rule.ExpansionResult[To]] = {
+//      println(s"Inside WriterImplicitRule.expand for ${ctx.From.toString} => ${ctx.To.toString}")
+//      println(s"Found ${MyExprs.summonMyTypeClass[From, To]}")
+//      (new RuntimeException("op")).printStackTrace()
       MyExprs.summonMyTypeClass[From, To] match {
         case Some(writer) => DerivationResult.expandedTotal(writer.write(ctx.src))
         case None         => DerivationResult.attemptNextRule
       }
+    }
   }
 
-  def writerDerivation[From: Type, To: Type]: Expr[Writer[From, To]] =
+//  val flags = TransformerFlags().setDefaultValueOfType[UnknownFieldSet](true)
+
+  def writerDerivation[From: Type, To: Type](implicit ufst: Type[UnknownFieldSet]): Expr[Writer[From, To]] =
     MyExprs.createTypeClass[From, To] { (from: Expr[From]) =>
-      val cfg     = TransformerConfiguration() // customize, read config with DSL etc
+      val cfg = TransformerConfiguration(
+        flags = TransformerFlags().setDefaultValueOfType[UnknownFieldSet](true)
+      ) // customize, read config with DSL etc
       val context = TransformationContext.ForTotal.create[From, To](from, cfg)
 
       deriveFinalTransformationResultExpr(context).toEither.fold(

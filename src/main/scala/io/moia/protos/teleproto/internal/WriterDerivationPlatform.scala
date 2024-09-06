@@ -25,6 +25,7 @@ trait WriterDerivationPlatform extends DerivationEnginePlatform with WriterDeriv
       c.Expr[To](q"""$tc.write($from)""")
 
     def createTypeClass[From: Type, To: Type](body: Expr[From] => Expr[To]): Expr[Writer[From, To]] = {
+      println(s"Creating type class for _root_.io.moia.protos.teleproto.Writer[${Type[From]}, ${Type[To]}]")
       val name = freshTermName("from")
       // remember to use full qualified names in Scala 2 macros!!!
       c.Expr[Writer[From, To]](

@@ -25,8 +25,8 @@ lazy val `teleproto` = project
       library.scalaCheck         % Test,
       library.scalaCollectionCompat,
       "org.scala-lang" % "scala-reflect" % (ThisBuild / scalaVersion).value,
-      "io.scalaland" %% "chimney"           % "1.3.0",
-      "io.scalaland" %% "chimney-protobufs" % "1.3.0"
+      "io.scalaland" %% "chimney"           % "1.4.0",
+      "io.scalaland" %% "chimney-protobufs" % "1.4.0"
     )
   )
 
