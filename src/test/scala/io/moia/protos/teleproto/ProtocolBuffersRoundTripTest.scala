@@ -12,20 +12,6 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
 
   // TODO: remove?
   implicit val colorReader: Reader[food.Meal.Color, Color] = ProtocolBuffers.reader[food.Meal.Color, Color]
-//  implicit val colorWriter: Writer[Color, food.Meal.Color] = ProtocolBuffers.writer[Color, food.Meal.Color]
-  // TODO: derive automatically
-  implicit val colorWriter: Writer[Color, food.Meal.Color] = new Writer[Color, food.Meal.Color] {
-
-    /** Returns the written Protocol Buffer object.
-      */
-    override def write(model: Color): food.Meal.Color = model match {
-      case Color.Red    => food.Meal.Color.COLOR_RED
-      case Color.orange => food.Meal.Color.COLOR_ORANGE
-      case Color.Yellow => food.Meal.Color.COLOR_YELLOW
-      case Color.pink   => food.Meal.Color.COLOR_PINK
-      case Color.Blue   => food.Meal.Color.COLOR_BLUE
-    }
-  }
 
   implicit val reader: Reader[food.Meal, Meal] = ProtocolBuffers.reader[food.Meal, Meal]
 //  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
@@ -47,9 +33,9 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
   }
 //  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
 
-  val version = 1
-//  val modelReader = VersionedModelReader[Int, Meal](version -> food.Meal)
-//  val modelWriter = VersionedModelWriter[Int, Meal](version -> food.Meal)
+  val version     = 1
+  val modelReader = VersionedModelReader[Int, Meal](version -> food.Meal)
+  val modelWriter = VersionedModelWriter[Int, Meal](version -> food.Meal)
 
   val colorGen: Gen[Color] =
     Gen.oneOf(Color.Red, Color.orange, Color.Yellow, Color.pink, Color.Blue)
@@ -76,31 +62,42 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
     Gen.oneOf(fruitBasketGen, lunchBoxGen).map(Meal)
 
   "ProtocolBuffers" should {
-    "do nothing" in {
-//      println(writer.write _)
-      true shouldBe true
-    }
-
     "generate writer and reader that round trip successfully" in {
-      val meal = Meal(lunch = FruitBasket(List()))
-      reader.read(writer.write(meal)) shouldBe PbSuccess(meal)
-//      forAll(mealGen) { meal =>
-////        println(writer.write(meal))
-//        reader.read(writer.write(meal)) shouldBe PbSuccess(meal)
-//      }
+      forAll(mealGen) { meal =>
+        reader.read(writer.write(meal)) shouldBe PbSuccess(meal)
+      }
+    }
+    "do that thing" in {
+      val meal = Meal(
+        FruitBasket(
+          List(
+            Fruit("z", Color.Red),
+            Fruit("cqxnceqq", Color.pink),
+            Fruit("hXRwEsHU", Color.Red),
+            Fruit("ysBUXsSQDr", Color.Yellow),
+            Fruit("hMldwXGXA", Color.pink),
+            Fruit("oyg", Color.Yellow),
+            Fruit("dGQ", Color.Yellow),
+            Fruit("vpy", Color.Blue)
+          )
+        )
+      )
+      val proto = writer.write(meal)
+      println(s"proto ${proto}")
+      reader.read(proto) shouldBe PbSuccess(meal)
     }
 
-//    "create model writer and reader that round trip successfully via JSON" in {
-//      forAll(mealGen) { meal =>
-//        modelWriter.toJson(meal, version).flatMap(modelReader.fromJson(_, version)) shouldBe Success(PbSuccess(meal))
-//      }
-//    }
-//
-//    "create model writer and reader that round trip successfully via Protocol Buffers" in {
-//      forAll(mealGen) { meal =>
-//        modelWriter.toByteArray(meal, version).flatMap(modelReader.fromProto(_, version)) shouldBe Success(PbSuccess(meal))
-//      }
-//    }
+    "create model writer and reader that round trip successfully via JSON" in {
+      forAll(mealGen) { meal =>
+        modelWriter.toJson(meal, version).flatMap(modelReader.fromJson(_, version)) shouldBe Success(PbSuccess(meal))
+      }
+    }
+
+    "create model writer and reader that round trip successfully via Protocol Buffers" in {
+      forAll(mealGen) { meal =>
+        modelWriter.toByteArray(meal, version).flatMap(modelReader.fromProto(_, version)) shouldBe Success(PbSuccess(meal))
+      }
+    }
   }
 }
 

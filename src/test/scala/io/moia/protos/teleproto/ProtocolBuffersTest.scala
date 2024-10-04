@@ -6,7 +6,7 @@ import com.google.protobuf.Descriptors
 import com.google.protobuf.timestamp.Timestamp
 import scalapb.descriptors.EnumDescriptor
 import scalapb.{GeneratedEnum, GeneratedEnumCompanion, UnrecognizedEnum}
-import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
+//import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
 
 sealed abstract class ProtobufEnum(val value: Int) extends GeneratedEnum {
   type EnumType = ProtobufEnum
@@ -96,18 +96,7 @@ object Protobuf {
   // TODO: remove?
   implicit val enumReader: Reader[ProtobufEnum, ModelEnum] = ProtocolBuffers.reader[ProtobufEnum, ModelEnum]
 //  implicit val enumWriter: Writer[ModelEnum, ProtobufEnum] = ProtocolBuffers.writer[ModelEnum, ProtobufEnum]
-
-  // TODO: implement derivation
-  implicit val enumWriter: Writer[ModelEnum, ProtobufEnum] = new Writer[ModelEnum, ProtobufEnum] {
-
-    /** Returns the written Protocol Buffer object.
-      */
-    override def write(model: ModelEnum): ProtobufEnum = model match {
-      case ModelEnum.First_Case => ProtobufEnum.FirstCase
-      case ModelEnum.SecondCase => ProtobufEnum.SECOND_CASE
-      case ModelEnum.THIRD_CASE => ProtobufEnum.Third_Case
-    }
-  }
+//  val enumWriter: Writer[ModelEnum, ProtobufEnum] = ProtocolBuffers.writer[ModelEnum, ProtobufEnum]
 
   val reader: Reader[Protobuf, Model] = ProtocolBuffers.reader[Protobuf, Model]
 

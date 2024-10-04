@@ -2,7 +2,9 @@ package io.moia.protos.teleproto.internal
 
 import io.moia.protos.teleproto.Writer
 import io.scalaland.chimney.internal.compiletime.{DerivationEnginePlatform, StandardRules}
+import scalapb.GeneratedEnum
 
+/** Scala2-specific code */
 trait WriterDerivationPlatform extends DerivationEnginePlatform with WriterDerivation with StandardRules {
 
   // in Scala-2-specific code, remember to import content of the universe
@@ -25,7 +27,6 @@ trait WriterDerivationPlatform extends DerivationEnginePlatform with WriterDeriv
       c.Expr[To](q"""$tc.write($from)""")
 
     def createTypeClass[From: Type, To: Type](body: Expr[From] => Expr[To]): Expr[Writer[From, To]] = {
-      println(s"Creating type class for _root_.io.moia.protos.teleproto.Writer[${Type[From]}, ${Type[To]}]")
       val name = freshTermName("from")
       // remember to use full qualified names in Scala 2 macros!!!
       c.Expr[Writer[From, To]](
@@ -41,10 +42,29 @@ trait WriterDerivationPlatform extends DerivationEnginePlatform with WriterDeriv
     private def freshTermName(prefix: String): ExprPromiseName =
       // Scala 3 generate prefix$macro$[n] while Scala 2 prefix[n] and we want to align the behavior
       c.internal.reificationSupport.freshTermName(prefix.toLowerCase + "$macro$")
+
+    override def matchEnumValues[From: Type, To: Type](
+        src: Expr[From],
+        fromElements: Enum.Elements[From],
+        toElements: Enum.Elements[To],
+        mapping: Map[String, String]
+    ): Expr[To] = {
+      val fromElementsByName =
+        fromElements.map(element => element.value.name -> element).toMap
+      val toElementsByName = toElements.map(element => element.value.name -> element).toMap
+
+      val cases = mapping.map(c => {
+        val fromSymbol = fromElementsByName(c._1).Underlying
+        val toSymbol   = toElementsByName(c._2).Underlying.tpe.typeSymbol.asClass.selfType.termSymbol
+        cq""" _: ${fromSymbol} => ${toSymbol}"""
+      })
+      c.Expr[To](q"""$src match { case ..$cases }""")
+    }
   }
 
   final override protected val rulesAvailableForPlatform: List[Rule] = List(
     WriterImplicitRule, // replacing TransformImplicitRule
+    new ProtobufEnumRule(implicitly(Type[GeneratedEnum])),
     TransformSubtypesRule,
     TransformToSingletonRule,
     TransformOptionToOptionRule,
