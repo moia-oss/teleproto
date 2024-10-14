@@ -25,6 +25,6 @@ libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.17"
 
 addSbtPlugin("de.heikoseeberger" % "sbt-header"      % "5.10.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"    % "3.11.3")
-addSbtPlugin("com.github.sbt"    % "sbt-dynver"      % "5.0.1")
+addSbtPlugin("com.github.sbt"    % "sbt-dynver"      % "5.1.0")
 addSbtPlugin("com.github.sbt"    % "sbt-pgp"         % "2.3.0")
 addSbtPlugin("com.typesafe"      % "sbt-mima-plugin" % "1.1.4")
