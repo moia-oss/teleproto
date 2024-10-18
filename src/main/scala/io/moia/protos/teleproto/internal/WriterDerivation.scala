@@ -1,14 +1,8 @@
 package io.moia.protos.teleproto.internal
 
-import com.google.protobuf.duration.{Duration => PBDuration}
-import com.google.protobuf.timestamp.Timestamp
 import io.moia.protos.teleproto.Writer
 import io.scalaland.chimney.internal.compiletime.DerivationEngine
 import scalapb.UnknownFieldSet
-
-import java.time.{Instant, LocalTime}
-import java.util.UUID
-import scala.concurrent.duration.{Deadline, Duration}
 
 trait WriterDerivation extends DerivationEngine {
 
@@ -24,73 +18,7 @@ trait WriterDerivation extends DerivationEngine {
 
     // use in platform-independent code (it cannot generate Type instances, as opposed to Scala 2/Scala 3 macros)
     object Implicits {
-
       implicit def WriterType[From: Type, To: Type]: Type[Writer[From, To]] = Writer[From, To]
-//      implicit def WriterType[From: Type, To: Type]: Type[Writer[From, To]] = c.inferImplicitValue(writerType)
-
-      // TODO: should it be here?
-
-      /** Writes a big decimal as string.
-        */
-      implicit object BigDecimalWriter extends Writer[BigDecimal, String] {
-        def write(model: BigDecimal): String = model.toString
-      }
-
-      /** Writes a local time as ISO string.
-        */
-      implicit object LocalTimeWriter extends Writer[LocalTime, String] {
-        def write(model: LocalTime): String = model.toString
-      }
-
-      /** Writes an instant into timestamp.
-        */
-      implicit object InstantWriter extends Writer[Instant, Timestamp] {
-        def write(instant: Instant): Timestamp =
-          Timestamp(instant.getEpochSecond, instant.getNano)
-      }
-
-      /** Writes a Scala duration into ScalaPB duration.
-        */
-      implicit object DurationWriter extends Writer[Duration, PBDuration] {
-        def write(duration: Duration): PBDuration =
-          PBDuration(duration.toSeconds, (duration.toNanos % 1000000000).toInt)
-      }
-
-      /** Writes a UUID as string.
-        */
-      implicit object UUIDWriter extends Writer[UUID, String] {
-        def write(uuid: UUID): String = uuid.toString
-      }
-
-      /** Writes a Scala deadline into a ScalaPB Timestamp as fixed point in time.
-        *
-        * The decoding of this value is side-effect free but has a problem with divergent system clocks!
-        *
-        * Depending on the use case either this (based on fixed point in time) or the following writer (based on the time left) makes sense.
-        */
-      object FixedPointDeadlineWriter extends Writer[Deadline, Timestamp] {
-        def write(deadline: Deadline): Timestamp = {
-          val absoluteDeadline = Instant.now.plusNanos(deadline.timeLeft.toNanos)
-          Timestamp(absoluteDeadline.getEpochSecond, absoluteDeadline.getNano)
-        }
-      }
-
-      /** Writes a Scala deadline into a ScalaPB int as time left duration.
-        *
-        * The decoding of this value is not side-effect free since it depends on the clock! Time between encoding and decoding does not
-        * count.
-        *
-        * Depending on the use case either this (based on time left) or the following writer (based on fixed point in time) makes sense.
-        */
-      object TimeLeftDeadlineWriter extends Writer[Deadline, PBDuration] {
-        def write(deadline: Deadline): PBDuration = {
-          val timeLeft       = deadline.timeLeft
-          val nanoAdjustment = timeLeft.toNanos % 1000000000L
-          PBDuration(timeLeft.toSeconds, nanoAdjustment.toInt)
-        }
-      }
-
-//      implicit def WriterType[From: Type, To: Type]: Type[Writer[From, To]] = Writer[From, To]
     }
   }
 
