@@ -10,28 +10,8 @@ import scala.util.Success
 class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyChecks {
   import ProtocolBuffersRoundTripTest._
 
-  // TODO: remove?
-  implicit val colorReader: Reader[food.Meal.Color, Color] = ProtocolBuffers.reader[food.Meal.Color, Color]
-
   implicit val reader: Reader[food.Meal, Meal] = ProtocolBuffers.reader[food.Meal, Meal]
-//  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
-  val writerFB: Writer[FruitBasket, food.Meal.FruitBasket] = ProtocolBuffers.writer[FruitBasket, food.Meal.FruitBasket]
-//  val writerLFB: Writer[FruitBasket, food.Meal.Lunch.FruitBasket] = ProtocolBuffers.writer[FruitBasket, food.Meal.Lunch.FruitBasket]
-  val writerLFB: Writer[FruitBasket, food.Meal.Lunch.FruitBasket] = new Writer[FruitBasket, food.Meal.Lunch.FruitBasket] {
-    override def write(model: FruitBasket): food.Meal.Lunch.FruitBasket = food.Meal.Lunch.FruitBasket(value = writerFB.write(model))
-  }
-  val writerLB: Writer[LunchBox, food.Meal.LunchBox] = ProtocolBuffers.writer[LunchBox, food.Meal.LunchBox]
-//  val writerLLB: Writer[LunchBox, food.Meal.Lunch.LunchBox] = ProtocolBuffers.writer[LunchBox, food.Meal.Lunch.LunchBox]
-  val writerLLB: Writer[LunchBox, food.Meal.Lunch.LunchBox] = new Writer[LunchBox, food.Meal.Lunch.LunchBox] {
-    override def write(model: LunchBox): food.Meal.Lunch.LunchBox = food.Meal.Lunch.LunchBox(value = writerLB.write(model))
-  }
-  val writerL: Writer[Lunch, food.Meal.Lunch] = ProtocolBuffers.writer[Lunch, food.Meal.Lunch]
-  implicit val writer: Writer[Meal, food.Meal] = new Writer[Meal, food.Meal] {
-    override def write(model: Meal): food.Meal = food.Meal(
-      lunch = writerL.write(model.lunch)
-    )
-  }
-//  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
+  implicit val writer: Writer[Meal, food.Meal] = ProtocolBuffers.writer[Meal, food.Meal]
 
   val version     = 1
   val modelReader = VersionedModelReader[Int, Meal](version -> food.Meal)
@@ -66,25 +46,6 @@ class ProtocolBuffersRoundTripTest extends UnitTest with ScalaCheckPropertyCheck
       forAll(mealGen) { meal =>
         reader.read(writer.write(meal)) shouldBe PbSuccess(meal)
       }
-    }
-    "do that thing" in {
-      val meal = Meal(
-        FruitBasket(
-          List(
-            Fruit("z", Color.Red),
-            Fruit("cqxnceqq", Color.pink),
-            Fruit("hXRwEsHU", Color.Red),
-            Fruit("ysBUXsSQDr", Color.Yellow),
-            Fruit("hMldwXGXA", Color.pink),
-            Fruit("oyg", Color.Yellow),
-            Fruit("dGQ", Color.Yellow),
-            Fruit("vpy", Color.Blue)
-          )
-        )
-      )
-      val proto = writer.write(meal)
-      println(s"proto ${proto}")
-      reader.read(proto) shouldBe PbSuccess(meal)
     }
 
     "create model writer and reader that round trip successfully via JSON" in {
