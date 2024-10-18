@@ -3,7 +3,6 @@ package io.moia.protos.teleproto
 import io.moia.food.food
 import org.scalacheck.Gen
 import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
-//import io.moia.protos.teleproto.BaseTransformers._ // TODO: remove
 
 import scala.util.Success
 
