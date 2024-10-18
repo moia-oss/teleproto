@@ -62,29 +62,20 @@ object OneOfProtocolBuffersTest {
   implicit val barReader: Reader[protobuf.Bar, model.Bar] =
     ProtocolBuffers.reader[protobuf.Bar, model.Bar]
 
-//  implicit val fooOrBarPartialTransformer: PartialTransformer[protobuf.FooOrBar, model.FooOrBar] = PartialTransformer
-//    .define[protobuf.FooOrBar, model.FooOrBar]
-//    .withSealedSubtypeHandledPartial[protobuf.FooOrBar.Empty](_ => partial.Result.Errors.fromString(s"Empty value"))
-//    .buildTransformer
-
   implicit val fooOrBarReader: Reader[protobuf.FooOrBar, model.FooOrBar] =
     ProtocolBuffers.reader[protobuf.FooOrBar, model.FooOrBar]
 
   val reader: Reader[protobuf.Protobuf, model.Model] =
     ProtocolBuffers.reader[protobuf.Protobuf, model.Model]
 
-//  implicit val fooWriter: Writer[model.Foo, protobuf.Foo] =
-//    ProtocolBuffers.writer[model.Foo, protobuf.Foo]
-//
-//  implicit val barWriter: Writer[model.Bar, protobuf.Bar] =
-//    ProtocolBuffers.writer[model.Bar, protobuf.Bar]
+  implicit val fooWriter: Writer[model.Foo, protobuf.Foo] =
+    ProtocolBuffers.writer[model.Foo, protobuf.Foo]
 
-//  implicit val fooOrBarWriter: Writer[model.FooOrBar, protobuf.FooOrBar] = {
-//    println("calling ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]")
-//    val x = ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]
-//    println(s"finished calling ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]: ${x}")
-//    x
-//  }
+  implicit val barWriter: Writer[model.Bar, protobuf.Bar] =
+    ProtocolBuffers.writer[model.Bar, protobuf.Bar]
+
+  implicit val fooOrBarWriter: Writer[model.FooOrBar, protobuf.FooOrBar] =
+    ProtocolBuffers.writer[model.FooOrBar, protobuf.FooOrBar]
 
   val writer: Writer[model.Model, protobuf.Protobuf] =
     ProtocolBuffers.writer[model.Model, protobuf.Protobuf]

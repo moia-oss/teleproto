@@ -132,9 +132,14 @@ trait WriterDerivation extends DerivationEngine {
     override def expand[From, To](implicit
         ctx: TransformationContext[From, To]
     ): DerivationResult[Rule.ExpansionResult[To]] = {
-      MyExprs.summonMyTypeClass[From, To] match {
-        case Some(writer) => DerivationResult.expandedTotal(writer.write(ctx.src))
-        case None         => DerivationResult.attemptNextRule
+      if (ctx.config.isImplicitSummoningPreventedFor[From, To]) {
+        // Implicit summoning prevented so
+        DerivationResult.attemptNextRule
+      } else {
+        MyExprs.summonMyTypeClass[From, To] match {
+          case Some(writer) => DerivationResult.expandedTotal(writer.write(ctx.src))
+          case None         => DerivationResult.attemptNextRule
+        }
       }
     }
   }
