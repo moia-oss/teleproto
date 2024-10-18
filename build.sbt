@@ -172,6 +172,7 @@ lazy val mimaSettings = Seq(
     // Chimney migration stuff
     ProblemFilters.exclude[DirectMissingMethodProblem]("io.moia.protos.teleproto.Reader.transform"),
     ProblemFilters.exclude[DirectMissingMethodProblem]("io.moia.protos.teleproto.Writer.transform"),
+    ProblemFilters.exclude[DirectMissingMethodProblem]("io.moia.protos.teleproto.WriterImpl.writer_impl"),
     ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Compatible"),
     ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$Compatible$"),
     ProblemFilters.exclude[MissingClassProblem]("io.moia.protos.teleproto.WriterImpl$ForwardCompatible"),
