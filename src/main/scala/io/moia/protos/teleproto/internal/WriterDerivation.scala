@@ -108,7 +108,7 @@ trait WriterDerivation extends DerivationEngine {
 
         // Does not retrieve local names to compare (yet)
         val unmatchedModelOptions = fromElementsByTolerantName.collect {
-          case (name, element) if !toElementsByTolerantName.contains(name) => element
+          case (elementName, element) if !toElementsByTolerantName.contains(elementName) => element
         }
 
         if (unmatchedModelOptions.nonEmpty) {
