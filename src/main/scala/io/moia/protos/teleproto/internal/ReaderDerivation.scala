@@ -1,24 +1,25 @@
 package io.moia.protos.teleproto.internal
 
-import io.moia.protos.teleproto.Writer
+import io.moia.protos.teleproto.{PbFailure, PbResult, PbSuccess, Reader}
 import io.scalaland.chimney.internal.compiletime.DerivationEngine
+import io.scalaland.chimney.partial
 import scalapb.UnknownFieldSet
 
-trait WriterDerivation extends DerivationEngine {
+trait ReaderDerivation extends DerivationEngine {
 
   // example of platform-independent type definition
   protected val MyTypes: MyTypesModule
   protected trait MyTypesModule { this: MyTypes.type =>
 
     // Provides
-    //   - Writer.apply[From, To]: Type[MyTypeClass[From, To]]
-    //   - Writer.unapply(tpe: Type[Any]): Option[(??, ??)] // existential types
-    val Writer: WriterModule
-    trait WriterModule extends Type.Ctor2[Writer] { this: Writer.type => }
+    //   - Reader.apply[From, To]: Type[MyTypeClass[From, To]]
+    //   - Reader.unapply(tpe: Type[Any]): Option[(??, ??)] // existential types
+    val Reader: ReaderModule
+    trait ReaderModule extends Type.Ctor2[Reader] { this: Reader.type => }
 
     // use in platform-independent code (it cannot generate Type instances, as opposed to Scala 2/Scala 3 macros)
     object Implicits {
-      implicit def WriterType[From: Type, To: Type]: Type[Writer[From, To]] = Writer[From, To]
+      implicit def ReaderType[From: Type, To: Type]: Type[Reader[From, To]] = Reader[From, To]
     }
   }
 
@@ -28,12 +29,12 @@ trait WriterDerivation extends DerivationEngine {
 
     import MyTypes.Implicits._
 
-    def callWriter[From: Type, To: Type](tc: Expr[Writer[From, To]], from: Expr[From]): Expr[To]
+    def callReader[From: Type, To: Type](tc: Expr[Reader[From, To]], from: Expr[From]): Expr[partial.Result[To]]
 
-    def createWriter[From: Type, To: Type](body: Expr[From] => Expr[To]): Expr[Writer[From, To]]
+    def createReader[From: Type, To: Type](body: Expr[From] => Expr[To]): Expr[Reader[From, To]]
 
-    def summonWriter[From: Type, To: Type]: Option[Expr[Writer[From, To]]] =
-      Expr.summonImplicit[Writer[From, To]]
+    def summonReader[From: Type, To: Type]: Option[Expr[Reader[From, To]]] =
+      Expr.summonImplicit[Reader[From, To]]
 
     def matchEnumValues[From: Type, To: Type](
         src: Expr[From],
@@ -45,9 +46,9 @@ trait WriterDerivation extends DerivationEngine {
     // use in platform-independent code (since it does not have quotes nor quasiquotes)
     object Implicits {
 
-      implicit class WriterOps[From: Type, To: Type](private val tc: Expr[Writer[From, To]]) {
+      implicit class ReaderOps[From: Type, To: Type](private val tc: Expr[Reader[From, To]]) {
 
-        def write(from: Expr[From]): Expr[To] = callWriter(tc, from)
+        def read(from: Expr[From]): Expr[partial.Result[To]] = callReader(tc, from)
       }
     }
   }
@@ -55,7 +56,7 @@ trait WriterDerivation extends DerivationEngine {
   import MyExprs.Implicits._
 
   // example of a platform-independent Rule
-  object WriterImplicitRule extends Rule("WriterImplicit") {
+  object ReaderImplicitRule extends Rule("ReaderImplicit") {
 
     override def expand[From, To](implicit
         ctx: TransformationContext[From, To]
@@ -64,8 +65,8 @@ trait WriterDerivation extends DerivationEngine {
         // Implicit summoning prevented so
         DerivationResult.attemptNextRule
       } else {
-        MyExprs.summonWriter[From, To] match {
-          case Some(writer) => DerivationResult.expandedTotal(writer.write(ctx.src))
+        MyExprs.summonReader[From, To] match {
+          case Some(reader) => DerivationResult.expandedPartial(reader.read(ctx.src))
           case None         => DerivationResult.attemptNextRule
         }
       }
@@ -142,16 +143,31 @@ trait WriterDerivation extends DerivationEngine {
     }
   }
 
-//  val flags = TransformerFlags().setDefaultValueOfType[UnknownFieldSet](true)
+  // TODO: use?
+  protected def fromPbResult[T](result: PbResult[T]): partial.Result[T] = {
+    result match {
+      case PbSuccess(value) => partial.Result.Value(value)
+      case PbFailure(errors) => {
+        def toError(pbError: (String, String)) = partial.Error(
+          partial.ErrorMessage.StringMessage(pbError._2),
+          partial.Path.Empty.prepend(partial.PathElement.Accessor(pbError._1))
+        )
 
-  def writerDerivation[From: Type, To: Type](implicit
+        errors.toList match {
+          case head :: tail => partial.Result.Errors(toError(head), tail.map(toError): _*)
+          case Nil          => partial.Result.Errors(partial.Error(partial.ErrorMessage.StringMessage("Unknown error")))
+        }
+      }
+    }
+  }
+
+  def readerDerivation[From: Type, To: Type](implicit
       ufst: Type[UnknownFieldSet],
       ge: Type[scalapb.GeneratedEnum]
-  ): Expr[Writer[From, To]] =
-    MyExprs.createWriter[From, To] { (from: Expr[From]) =>
+  ): Expr[Reader[From, To]] =
+    MyExprs.createReader[From, To] { (from: Expr[From]) =>
       val cfg = TransformerConfiguration(
         flags = TransformerFlags()
-          .setDefaultValueOfType[UnknownFieldSet](true)
       ) // customize, read config with DSL etc
       val context = TransformationContext.ForTotal.create[From, To](from, cfg)
 

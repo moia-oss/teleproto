@@ -23,10 +23,10 @@ trait WriterDerivationPlatform extends DerivationEnginePlatform with WriterDeriv
 
   protected object MyExprs extends MyExprsModule {
 
-    def callMyTypeClass[From: Type, To: Type](tc: Expr[Writer[From, To]], from: Expr[From]): Expr[To] =
+    def callWriter[From: Type, To: Type](tc: Expr[Writer[From, To]], from: Expr[From]): Expr[To] =
       c.Expr[To](q"""$tc.write($from)""")
 
-    def createTypeClass[From: Type, To: Type](body: Expr[From] => Expr[To]): Expr[Writer[From, To]] = {
+    def createWriter[From: Type, To: Type](body: Expr[From] => Expr[To]): Expr[Writer[From, To]] = {
       val name = freshTermName("from")
       // remember to use full qualified names in Scala 2 macros!!!
       c.Expr[Writer[From, To]](
