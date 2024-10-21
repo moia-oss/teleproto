@@ -54,23 +54,4 @@ object ProtocolBuffers {
     * details.
     */
   def writer[M, P]: Writer[M, P] = macro WriterImpl.writer_impl[M, P]
-
-  /** Constructs a migration from Protocol Buffer class `P` to PB class `Q`. The migration tries to copy/convert fields from a `P` to a new
-    * `Q` automatically.
-    *
-    * That is possible for matching names if value types `VP` and `VQ`
-    *   - are equal or `VQ` is wider than `VP` (copied)
-    *   - `VQ` is `Option[VP]` (wrapped with `Some(...)`)
-    *   - there is an implicit view from `VP` to `VQ` (wrapped with the conversion)
-    *   - there is an implicit `Migration[VP, VQ]` (wrapped with the migration)
-    *   - `VP` and `VQ` are nested Protocol Buffers and a trivial migration can be generated (not yet implemented!)
-    *
-    * If all values of `Q` can be automatically filled by values from `P` the migration is considered trivial.
-    *
-    * A non-trivial migration requires a migration function for each field in `Q` that cannot be filled from `P`.
-    *
-    * To use it, just write `migration[P, Q]()`, compile and let the compiler explain the required migration functions.
-    */
-  def migration[P, Q](args: (P => Any)*): Migration[P, Q] =
-    macro MigrationImpl.migration_impl[P, Q]
 }
