@@ -31,7 +31,7 @@ import scala.util.Try
 /** Provides reading of a generated Protocol Buffers model into a business model.
   */
 @implicitNotFound("No Protocol Buffers mapper from type ${P} to ${M} was found. Try to implement an implicit Reader for this type.")
-trait Reader[-P, +M] {
+trait Reader[P, M] {
 
   /** Returns the read business model or an error message.
     */
@@ -146,6 +146,13 @@ object Reader extends LowPriorityReads {
   /** Transforms a ScalaPB duration into a finite Scala concurrent duration.
     */
   implicit object FiniteDurationReader extends Reader[PBDuration, FiniteDuration] {
+    def read(protobuf: PBDuration): PbResult[FiniteDuration] =
+      PbSuccess((Duration(protobuf.seconds, SECONDS) + Duration(protobuf.nanos.toLong, NANOSECONDS)).toCoarsest)
+  }
+
+  /** Transforms a ScalaPB duration into a Scala concurrent duration.
+    */
+  implicit object DurationReader extends Reader[PBDuration, Duration] {
     def read(protobuf: PBDuration): PbResult[FiniteDuration] =
       PbSuccess((Duration(protobuf.seconds, SECONDS) + Duration(protobuf.nanos.toLong, NANOSECONDS)).toCoarsest)
   }
