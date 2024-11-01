@@ -23,7 +23,7 @@ Reading/writing a previous model should reflect similar semantics regarding the 
 To use the library, add the following to your `build.sbt`:
 
 ```sbt
-libraryDependencies += "io.moia" %% "teleproto" % "2.3.0"
+libraryDependencies += "io.moia" %% "teleproto" % "2.4.1"
 ```
 
 If you also want to be able to write to (`VersionedModelWriter.toJson`) and read from (`VersionedModelReader.fromJson`)
