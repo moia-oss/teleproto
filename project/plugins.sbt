@@ -12,7 +12,7 @@ addSbtPlugin("com.github.sbt" % "sbt-git" % "2.1.0")
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.7")
 
 // Make sbt build information available to the runtime
-addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.0")
+addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
 // This plugin is able to generate a license report from all used licenses.
 // sbt> dumpLicenseReport
