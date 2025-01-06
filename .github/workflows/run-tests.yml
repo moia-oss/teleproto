@@ -19,5 +19,6 @@ jobs:
             ~/.ivy2/cache
             ~/.sbt
           key: ${{ runner.os }}-sbt-cache-${{ hashFiles('**/build.sbt') }}-${{ hashFiles('**/plugins.sbt') }}-${{ hashFiles('**/build.properties') }}
+      - uses: sbt/setup-sbt@v1
       - name: Compile and validate
         run: sbt +validate
