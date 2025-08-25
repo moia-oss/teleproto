@@ -21,7 +21,7 @@ addSbtPlugin("com.github.sbt" % "sbt-license-report" % "1.7.0")
 // Uses protoc to generate code from proto files. This SBT plugin is meant supercede sbt-protobuf and sbt-scalapb.
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.8")
 
-libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.19"
+libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.20"
 
 addSbtPlugin("de.heikoseeberger" % "sbt-header"      % "5.10.0")
 addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"    % "3.12.2")
