@@ -1,7 +1,7 @@
 import com.typesafe.tools.mima.core._
 import xerial.sbt.Sonatype._
 
-addCommandAlias("validate", "all test doc scapegoat mimaReportBinaryIssues")
+addCommandAlias("validate", "all test doc mimaReportBinaryIssues")
 
 // *****************************************************************************
 // Projects
@@ -39,7 +39,6 @@ lazy val library = new {
     val scalaCheck            = "1.19.0"
     val scalaTest             = "3.2.19"
     val scalaTestPlusCheck    = "3.2.14.0"
-    val scapeGoat             = "3.1.9"
     val scalaCollectionCompat = "2.14.0"
   }
 
@@ -62,12 +61,11 @@ lazy val commonSettings = Seq.concat(
   scmSettings,
   sbtSettings,
   scalaFmtSettings,
-  scapegoatSettings,
   mimaSettings
 )
 
 lazy val compilerSettings = Seq(
-  scalaVersion                                                                     := "2.13.16",
+  scalaVersion                                                                     := "2.13.17",
   Compile / packageBin / mappings += (ThisBuild / baseDirectory).value / "LICENSE" -> "LICENSE",
   scalacOptions ++= scalacOptions_2_13
 )
@@ -122,12 +120,6 @@ lazy val sbtSettings = Seq(
 
 lazy val scalaFmtSettings = Seq(
   scalafmtOnCompile := true
-)
-
-lazy val scapegoatSettings = Seq(
-  ThisBuild / scapegoatVersion := library.Version.scapeGoat,
-  // do not check generated files
-  scapegoatIgnoredFiles := Seq(".*/src_managed/.*")
 )
 
 lazy val mimaSettings = Seq(
