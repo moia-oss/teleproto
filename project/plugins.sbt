@@ -7,10 +7,6 @@ addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.5")
 // sbt> git <your git command>
 addSbtPlugin("com.github.sbt" % "sbt-git" % "2.1.0")
 
-// Static code analysis.
-// sbt> scapegoat
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.13")
-
 // Make sbt build information available to the runtime
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
