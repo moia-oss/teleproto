@@ -109,7 +109,7 @@ object Reader extends LowPriorityReads {
       valueReader: Reader[PV, MV]
   ): PbResult[F[MV]] = {
     val results = protobufs.map(valueReader.read).zipWithIndex
-    val errors = results.flatMap {
+    val errors  = results.flatMap {
       case (PbFailure(innerErrors), index) =>
         PbFailure(innerErrors).withPathPrefix(s"$path($index)").errors
       case _ =>

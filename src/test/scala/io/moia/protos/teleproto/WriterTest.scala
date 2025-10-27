@@ -77,7 +77,7 @@ class WriterTest extends UnitTest {
 
     "flatMap over the result" in {
       val pickupIdWriter: Writer[Model, Option[String]] = _.pickupId
-      val complexWriter = pickupIdWriter.flatMap {
+      val complexWriter                                 = pickupIdWriter.flatMap {
         case Some(_) => writer
         case None    => writerLight.map(_.complete())
       }

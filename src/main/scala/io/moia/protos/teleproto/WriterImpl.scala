@@ -114,10 +114,10 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
 
       val namedArguments = protobufParams.zip(parameters).flatMap {
         // unmatched parameters with default values are not passed: they get their defaults
-        case (_, SkippedDefaultParam) => None
+        case (_, SkippedDefaultParam)             => None
         case (paramSym, TransformParam(from, to)) =>
           val param = paramSym.name
-          val arg = if (from <:< to) {
+          val arg   = if (from <:< to) {
             (q"$model.$param", Compatibility.full)
           } else if (to <:< weakTypeOf[Option[_]] && !(from <:< weakTypeOf[Option[_]])) {
             withImplicitWriter(from, innerType(to)) { writer =>
@@ -299,7 +299,7 @@ class WriterImpl(val c: blackbox.Context) extends FormatImpl {
     }
 
     val compatibility = Compatibility(Nil, Nil, surplusProtobufOptions.map(name => (protobufType, name.toString)))
-    val cases = for {
+    val cases         = for {
       (optionName, protobufOption) <- protobufOptions.toList
       modelOption                  <- modelOptions.get(optionName)
     } yield cq"_: ${objectReferenceTo(modelOption)}.type => ${objectReferenceTo(protobufOption)}"

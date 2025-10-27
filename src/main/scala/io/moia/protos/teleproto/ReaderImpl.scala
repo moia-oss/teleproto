@@ -355,7 +355,7 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
     }
 
     val (cases, compatibility) = subTypes.unzip
-    val emptyCase =
+    val emptyCase              =
       for (protobufClass <- protobufSubClasses.get(EmptyOneOf) if !modelSubclasses.contains(EmptyOneOf))
         yield cq"""_: ${objectReferenceTo(protobufClass)}.type => $pbFailureObj("Oneof field is empty!")"""
 
@@ -414,7 +414,7 @@ class ReaderImpl(val c: blackbox.Context) extends FormatImpl {
       cq"""_: $reference.type => $pbFailureObj(s"Enumeration value $${$reference} is invalid!")"""
     }
 
-    val other = c.freshName(TermName("other"))
+    val other  = c.freshName(TermName("other"))
     val result = q"""$readerObj.instance[$protobufType, $modelType] {
       case ..$cases
       case ..${invalidCase.toList}
