@@ -117,7 +117,7 @@ class ReaderTest extends UnitTest {
 
     "flatMap over the result" in {
       val pickupIdReader: Reader[Protobuf, String] = proto => PbResult.fromOption(proto.pickupId)(PbFailure("pickupId is missing"))
-      val complexReader = pickupIdReader.flatMap {
+      val complexReader                            = pickupIdReader.flatMap {
         case "pickup" => reader
         case other    => readerLight.map(_.complete(pickupId = Some(other)))
       }
