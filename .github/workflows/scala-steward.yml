@@ -17,7 +17,7 @@ jobs:
           private_key: ${{ secrets.SCALA_STEWARD_APP_PRIVATE_KEY }}
       - uses: sbt/setup-sbt@v1
       - name: Launch Scala Steward
-        uses: scala-steward-org/scala-steward-action@v2
+        uses: scala-steward-org/scala-steward-action@v2.92.0
         env:
           GLOBAL_CI_JFROG_USER: ${{ secrets.GLOBAL_CI_JFROG_USER }}
           GLOBAL_CI_JFROG_PASSWORD: ${{ secrets.GLOBAL_CI_JFROG_PASSWORD }}
