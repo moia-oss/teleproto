@@ -38,7 +38,7 @@ lazy val library = new {
     val scalaPBJson           = "0.12.2"
     val scalaCheck            = "1.19.0"
     val scalaTest             = "3.2.20"
-    val scalaTestPlusCheck    = "3.2.18.0"
+    val scalaTestPlusCheck    = "3.2.19.0"
     val scalaCollectionCompat = "2.14.0"
   }
 
@@ -46,7 +46,7 @@ lazy val library = new {
   val scalaPBJson           = "com.thesamet.scalapb"   %% "scalapb-json4s"          % Version.scalaPBJson
   val scalaCheck            = "org.scalacheck"         %% "scalacheck"              % Version.scalaCheck
   val scalaTest             = "org.scalatest"          %% "scalatest"               % Version.scalaTest
-  val scalaTestPlusCheck    = "org.scalatestplus"      %% "scalacheck-1-17"         % Version.scalaTestPlusCheck
+  val scalaTestPlusCheck    = "org.scalatestplus"      %% "scalacheck-1-18"         % Version.scalaTestPlusCheck
   val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % Version.scalaCollectionCompat
 }
 
