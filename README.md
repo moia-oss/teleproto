@@ -1,3 +1,6 @@
+> [!WARNING]
+> This library is unmantained and archived.
+
 # teleproto
 
 [![Maven Central](https://img.shields.io/maven-central/v/io.moia/teleproto_2.13.svg)](https://search.maven.org/search?q=teleproto_2.13)
